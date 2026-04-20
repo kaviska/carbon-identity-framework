@@ -50,6 +50,7 @@ public class AuthServiceConstants {
     public static final String ERROR_CODE_PREFIX = "ABA-";
     public static final String REQ_ATTR_IS_INITIAL_API_BASED_AUTH_REQUEST = "isInitialAPIBasedAuthRequest";
     public static final String REQ_ATTR_RELYING_PARTY = "relyingParty";
+    public static final String APP_TENANT_DOMAIN = "appTenantDomain";
 
     /**
      * Enum for error messages.
@@ -95,6 +96,14 @@ public class AuthServiceConstants {
                         "is restricted."),
         ERROR_INVALID_AUTHENTICATOR("60012", "Invalid authenticator.",
                 "Requested authenticator is invalid."),
+        ERROR_RETRY_COUNT_EXCEEDED("60013",
+                "Maximum retry attempts exceeded.",
+                "Authentication failed. The maximum number of retry attempts has been exceeded."
+        ),
+        ERROR_RESEND_COUNT_EXCEEDED("60014",
+                "Maximum resend attempts exceeded.",
+                "Authentication failed. The maximum number of OTP resend attempts has been exceeded."
+        ),
         // Server Error starting from 650xx.
         /* The 65001 ERROR_UNABLE_TO_PROCEED is used as the default server error
          therefor be cautious if that is being changed.*/

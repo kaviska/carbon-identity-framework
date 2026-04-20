@@ -1290,7 +1290,7 @@ public class FrameworkUtils {
             cacheEntry.setLoggedInUser(authenticatedUser.getAuthenticatedSubjectIdentifier());
         }
         cacheEntry.setContext(sessionContext);
-        SessionContextCache.getInstance().addToCache(cacheKey, cacheEntry);
+        SessionContextCache.getInstance().addToCache(cacheKey, cacheEntry, getLoginTenantDomainFromContext());
     }
 
     @Deprecated
@@ -2463,7 +2463,7 @@ public class FrameworkUtils {
         } catch (UserSessionException e) {
             activeSessionCount = -1;
             log.error("An error occurred while retrieving the active session count. Therefore the active session " +
-                    "count is set to -1 in the analytics event.");
+                    "count is set to -1 in the analytics event.", e);
         }
         return activeSessionCount;
     }
@@ -2751,9 +2751,7 @@ public class FrameworkUtils {
             return Collections.emptyList();
         }
         IdPGroup[] possibleIdPGroups = identityProvider.getIdPGroupConfig();
-        if (ArrayUtils.isEmpty(possibleIdPGroups)) {
-            return Collections.emptyList();
-        }
+  
         String idpGroupValueAttr = remoteClaims.get(idpGroupClaimUri);
         if (StringUtils.isBlank(idpGroupValueAttr)) {
             return Collections.emptyList();
@@ -4177,10 +4175,26 @@ public class FrameworkUtils {
     public static ResolvedUserResult processMultiAttributeLoginIdentification(String loginIdentifier,
                                                                               String tenantDomain) {
 
+        return processMultiAttributeLoginIdentification(loginIdentifier, tenantDomain, false);
+    }
+
+    /**
+     * Gets resolvedUserResult from multi attribute login identifier if enable multi attribute login.
+     *
+     * @param loginIdentifier         Login identifier for multi attribute login.
+     * @param tenantDomain            User tenant domain.
+     * @param allowDuplicateUsernames Indicate whether to allow duplicate usernames across user stores.
+     * @return resolvedUserResult with SUCCESS status if enable multi attribute login. Otherwise, returns
+     * resolvedUserResult with FAIL status.
+     */
+    public static ResolvedUserResult processMultiAttributeLoginIdentification(String loginIdentifier,
+                                                                              String tenantDomain,
+                                                                              boolean allowDuplicateUsernames) {
+
         ResolvedUserResult resolvedUserResult = new ResolvedUserResult(ResolvedUserResult.UserResolvedStatus.FAIL);
         if (FrameworkServiceDataHolder.getInstance().getMultiAttributeLoginService().isEnabled(tenantDomain)) {
             resolvedUserResult = FrameworkServiceDataHolder.getInstance().getMultiAttributeLoginService().
-                    resolveUser(loginIdentifier, tenantDomain);
+                    resolveUser(loginIdentifier, tenantDomain, allowDuplicateUsernames);
         }
         return resolvedUserResult;
     }
@@ -4509,19 +4523,32 @@ public class FrameworkUtils {
          since custom domain branding capabilities are not provided for them.
          */
         if (!(MY_ACCOUNT_APP.equals(serviceProvider) || CONSOLE_APP.equals(serviceProvider))) {
-            if (callerPath != null && callerPath.startsWith(FrameworkConstants.TENANT_CONTEXT_PREFIX)) {
+            String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getAccessingOrganizationId();
+            if (callerPath != null && callerPath.startsWith(FrameworkConstants.TENANT_CONTEXT_PREFIX) &&
+                    StringUtils.isNotBlank(accessingOrgId)) {
                 String callerTenant = callerPath.split("/")[2];
                 String callerPathWithoutTenant = callerPath.replaceFirst("/t/[^/]+/", "/");
-                String redirectURL = ServiceURLBuilder.create().addPath(callerPathWithoutTenant)
+                String callerPathWithoutTenantAndOrgId = callerPathWithoutTenant;
+                /*
+                When accessing organization id is present, caller path can be in the format of
+                /t/{tenant-domain} or /t/{tenant-domain}/o/{org-id}.
+                 */
+                if (callerPathWithoutTenant.startsWith(FrameworkConstants.ORGANIZATION_CONTEXT_PREFIX)) {
+                    callerPathWithoutTenantAndOrgId = callerPathWithoutTenant.replaceFirst("/o/[^/]+/", "/");
+                }
+                return ServiceURLBuilder.create().addPath(callerPathWithoutTenantAndOrgId)
                         .setTenant(callerTenant, true).build().getAbsolutePublicURL();
-                return redirectURL;
+            } else if (callerPath != null && callerPath.startsWith(FrameworkConstants.TENANT_CONTEXT_PREFIX)) {
+                String callerTenant = callerPath.split("/")[2];
+                String callerPathWithoutTenant = callerPath.replaceFirst("/t/[^/]+/", "/");
+                return ServiceURLBuilder.create().addPath(callerPathWithoutTenant)
+                        .setTenant(callerTenant, true).build().getAbsolutePublicURL();
             } else if (callerPath != null && callerPath.startsWith(FrameworkConstants.ORGANIZATION_CONTEXT_PREFIX)) {
                 String callerOrgId = callerPath.split("/")[2];
                 String callerPathWithoutOrgId = callerPath.replaceFirst("/o/[^/]+/", "/");
-                String redirectURL = ServiceURLBuilder.create().addPath(callerPathWithoutOrgId)
+                return ServiceURLBuilder.create().addPath(callerPathWithoutOrgId)
                         .setTenant(context.getLoginTenantDomain()).setOrganization(callerOrgId)
                         .build().getAbsolutePublicURL();
-                return redirectURL;
             }
         }
         return callerPath;

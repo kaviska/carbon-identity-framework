@@ -165,6 +165,7 @@ public abstract class FrameworkConstants {
     public static final String AUTHENTICATION_CONTEXT_PROPERTIES = "AUTHENTICATION_CONTEXT_PROPERTIES";
     public static final String ORGANIZATION_USER_PROPERTIES = "ORGANIZATION_USER_PROPERTIES";
     public static final String ORGANIZATION_AUTHENTICATOR = "OrganizationAuthenticator";
+    public static final String ORGANIZATION_IDENTIFIER_HANDLER = "OrganizationIdentifierHandler";
     public static final String ORGANIZATION_LOGIN_HOME_REALM_IDENTIFIER = "OrganizationSSO";
     public static final String ORGANIZATION_LOGIN_IDP_NAME = "SSO";
     public static final String ORG_ID_PARAMETER = "orgId";
@@ -174,6 +175,10 @@ public abstract class FrameworkConstants {
     public static final String SERVICE_PROVIDER_SUBJECT_CLAIM_VALUE = "ServiceProviderSubjectClaimValue";
     public static final String CONFIG_ENABLE_SCOPE_BASED_CLAIM_FILTERING = "EnableScopeBasedClaimFiltering";
     public static final String CONFIG_ALLOW_SP_REQUESTED_FED_CLAIMS_ONLY = "AllowSPRequestedFedClaimsOnly";
+    public static final String INCLUDE_AUTH_FAILURE_REASON_IN_API_BASED_AUTH_RESPONSE =
+            "IncludeAuthFailureReasonInAPIBasedAuthResponse";
+    public static final String INCLUDE_MULTI_OPTIONS_IN_API_BASED_RESPONSE =
+            "IncludeMultiOptionsInAPIBasedAuthResponse";
 
     public static final String REMEMBER_ME_OPT_ON = "on";
     public static final String LAST_FAILED_AUTHENTICATOR = "LastFailedAuthenticator";
@@ -275,6 +280,10 @@ public abstract class FrameworkConstants {
     public static final String ERROR_DESCRIPTION_APP_DISABLED = "authentication.flow.app.disabled.description";
     public static final String ERROR_STATUS_AUTHENTICATOR_NOT_SUPPORTED = "authentication.api.based.unsupported" +
             ".authenticator";
+    public static final String ERROR_STATUS_ALLOWED_RETRY_LIMIT_EXCEEDED =
+            "authentication.failure.retry.limit.exceeded";
+    public static final String ERROR_STATUS_ALLOWED_RESEND_LIMIT_EXCEEDED =
+            "authentication.failure.resend.limit.exceeded";
     public static final String IS_SENT_TO_RETRY = "isSentToRetry";
     public static final String CONTEXT_IDENTIFIER = "contextIdentifier";
     public static final String REQ_ATTR_RETRY_STATUS = "retryStatus";
@@ -651,6 +660,7 @@ public abstract class FrameworkConstants {
         public static final String JS_FUNC_GET_SECRET_BY_NAME = "getSecretByName";
         public static final String JS_AUTH_FAILURE = "fail";
         public static final String JS_ENDPOINT_PARAMS = "endpointParams";
+        public static final String JS_PASSWORD_RESET_COMPLETE = "passwordResetComplete";
 
         public static final String IDP = "idp";
         public static final String AUTHENTICATOR = "authenticator";
@@ -836,6 +846,7 @@ public abstract class FrameworkConstants {
             public static final String PROCESS_CLAIM_CONSENT = "process-claim-consent";
             public static final String AUTHENTICATION_STEP_EXECUTION = "authentication-step-execution";
             public static final String EXECUTE_ADAPTIVE_SCRIPT = "execute-adaptive-script";
+            public static final String JIT_PROVISIONING = "jit-provisioning";
         }
     }
 

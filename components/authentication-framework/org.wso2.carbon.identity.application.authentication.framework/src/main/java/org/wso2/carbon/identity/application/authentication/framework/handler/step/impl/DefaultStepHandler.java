@@ -99,6 +99,12 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.BASIC_AUTH_MECHANISM;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ORGANIZATION_IDENTIFIER_HANDLER;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.OrgDiscoveryInputParameters.LOGIN_HINT;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.OrgDiscoveryInputParameters.ORG_DISCOVERY_TYPE;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.OrgDiscoveryInputParameters.ORG_HANDLE;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.OrgDiscoveryInputParameters.ORG_ID;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.OrgDiscoveryInputParameters.ORG_NAME;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkErrorConstants.ErrorMessages.ERROR_INVALID_AUTHENTICATOR;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkErrorConstants.ErrorMessages.ERROR_INVALID_USER_ASSERTION;
 import static org.wso2.carbon.identity.base.IdentityConstants.FEDERATED_IDP_SESSION_ID;
@@ -244,8 +250,15 @@ public class DefaultStepHandler implements StepHandler {
             return;
         }
 
-        // if Request has fidp param and if this is the first step
-        if (fidp != null && stepConfig.getOrder() == 1) {
+        if (stepConfig.getOrder() == 1 && canHandleOrgDiscovery(request, context, authConfigList)) {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Organization discovery parameters found in the request and sequence can handle " +
+                        "the organization discovery. Initiating organization login with discovery parameters.");
+            }
+            handleOrganizationDiscovery(request, response, context);
+            return;
+        } else if (fidp != null && stepConfig.getOrder() == 1) {
+            // if request has fidp param and if this is the first step.
             handleHomeRealmDiscovery(request, response, context);
             return;
         } else if (context.isReturning()) {
@@ -510,6 +523,23 @@ public class DefaultStepHandler implements StepHandler {
                     showAuthFailureReason, retryParam, loginPage));
         } catch (IOException | URISyntaxException e) {
             throw new FrameworkException(e.getMessage(), e);
+        }
+    }
+
+    private void handleOrganizationDiscovery(HttpServletRequest request, HttpServletResponse response,
+                                             AuthenticationContext context)
+            throws FrameworkException {
+
+        SequenceConfig sequenceConfig = context.getSequenceConfig();
+        StepConfig stepConfig = sequenceConfig.getStepMap().get(context.getCurrentStep());
+
+        // OrganizationIdentifierHandler presence in the step is guaranteed by the caller.
+        for (AuthenticatorConfig authConfig : stepConfig.getAuthenticatorList()) {
+            ApplicationAuthenticator authenticator = authConfig.getApplicationAuthenticator();
+            if (authenticator != null && ORGANIZATION_IDENTIFIER_HANDLER.equals(authenticator.getName())) {
+                doAuthentication(request, response, context, authConfig);
+                return;
+            }
         }
     }
 
@@ -809,6 +839,14 @@ public class DefaultStepHandler implements StepHandler {
             AuthenticatorFlowStatus status;
             if (isAuthenticationRequired) {
                 status = authenticator.process(request, response, context);
+                if (isOrgDiscoverySuccessful(authenticator, status)) {
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug("Organization is discovered to initiate an organization login." +
+                                " Setting up the necessary flags and returning to execute the organization login.");
+                    }
+                    context.setSharedAppLoginContextUpdateRequired(true);
+                    return;
+                }
             } else {
                 // If the authenticator does not require authentication based on the assertion, we can skip the process.
                 status = AuthenticatorFlowStatus.SUCCESS_COMPLETED;
@@ -859,6 +897,12 @@ public class DefaultStepHandler implements StepHandler {
                 context.getSubject().setUserResidentOrganization(userResidentOrganization);
                 // Set the accessing org as the user resident org. The accessing org will be changed when org switching.
                 context.getSubject().setAccessingOrganization(userResidentOrganization);
+            }
+
+            if (context.getSubject() != null && context.isSharedAppLogin()) {
+                String accessingOrgId = context.getOrganizationLoginData().getAccessingOrganization().getId();
+                context.getSubject().setAccessingOrganization(accessingOrgId);
+                context.getSubject().setUserResidentOrganization(accessingOrgId);
             }
 
             if (authenticator instanceof FederatedApplicationAuthenticator) {
@@ -1322,6 +1366,8 @@ public class DefaultStepHandler implements StepHandler {
                     } else {
                         baseURL = loginPage;
                     }
+                    // Construct retryParam with auth failure message for API based auth flows if user is locked.
+                    retryParam = updateRetryParamForAPIBasedAuthFlows(retryParam, request);
                     redirectURL = response.encodeRedirectURL(baseURL
                             + ("?" + context.getContextIdIncludedQueryParams()))
                             + String.format(
@@ -1423,6 +1469,8 @@ public class DefaultStepHandler implements StepHandler {
                                 + ("?" + context.getContextIdIncludedQueryParams()))
                                 + errorParamString;
                     }
+                    // Construct retryParam with auth failure message for API based auth flows if user is locked.
+                    retryParam = updateRetryParamForAPIBasedAuthFlows(retryParam, request);
                 }
                 return response.encodeRedirectURL(loginPage + ("?" + context.getContextIdIncludedQueryParams())) +
                         "&authenticators=" + URLEncoder.encode(authenticatorNames, "UTF-8") + retryParam +
@@ -1742,5 +1790,46 @@ public class DefaultStepHandler implements StepHandler {
             return false;
         }
         return true;
+    }
+
+    private boolean isOrgDiscoverySuccessful(ApplicationAuthenticator authenticator, AuthenticatorFlowStatus status) {
+
+        return ORGANIZATION_IDENTIFIER_HANDLER.equals(authenticator.getName()) &&
+                status == AuthenticatorFlowStatus.SUCCESS_COMPLETED;
+    }
+
+    private boolean canHandleOrgDiscovery(HttpServletRequest request, AuthenticationContext context,
+                                          List<AuthenticatorConfig> authConfigList) {
+
+        return !context.isSharedAppLogin() && hasOrgDiscoveryParam(request) && authConfigList.stream()
+                .anyMatch(ac -> ac.getApplicationAuthenticator() != null
+                        && ORGANIZATION_IDENTIFIER_HANDLER.equals(ac.getApplicationAuthenticator().getName()));
+    }
+
+    private boolean hasOrgDiscoveryParam(HttpServletRequest request) {
+
+        return request.getParameter(ORG_ID) != null
+                || request.getParameter(ORG_HANDLE) != null
+                || request.getParameter(ORG_NAME) != null
+                || (request.getParameter(LOGIN_HINT) != null && request.getParameter(ORG_DISCOVERY_TYPE) != null);
+    }
+
+    private String updateRetryParamForAPIBasedAuthFlows(String retryParam, HttpServletRequest request) {
+
+        if (FrameworkUtils.isAPIBasedAuthenticationFlow(request) && Boolean.parseBoolean(IdentityUtil.getProperty(
+                FrameworkConstants.INCLUDE_AUTH_FAILURE_REASON_IN_API_BASED_AUTH_RESPONSE))) {
+            // Set user account lock message for authFailureMsg if authFailure is true.
+            if (!StringUtils.contains(retryParam, "authFailureMsg")) {
+                if (StringUtils.contains(retryParam, "authFailure=true")) {
+                    return retryParam + "&authFailureMsg=user.account.locked";
+                } else {
+                    return retryParam + "&authFailure=true&authFailureMsg=user.account.locked";
+                }
+            } else {
+                return retryParam.replaceFirst("authFailureMsg=[^&]*",
+                        "authFailureMsg=user.account.locked");
+            }
+        }
+        return retryParam;
     }
 }

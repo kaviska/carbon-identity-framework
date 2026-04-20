@@ -56,9 +56,6 @@ public class WorkflowRuleFieldRegistryTest {
             "user.domain",
             "user.groups",
             "user.roles",
-            "initiator.domain",
-            "initiator.groups",
-            "initiator.roles",
             "role.id",
             "role.audience",
             "role.permissions",
@@ -82,10 +79,10 @@ public class WorkflowRuleFieldRegistryTest {
     }
 
     @Test
-    public void testFieldsMapHasExactlyElevenEntries() {
+    public void testFieldsMapHasExactlyEightEntries() {
 
-        assertEquals(WorkflowRuleFieldRegistry.FIELDS.size(), 11,
-                "FIELDS map should have exactly 11 entries.");
+        assertEquals(WorkflowRuleFieldRegistry.FIELDS.size(), 8,
+                "FIELDS map should have exactly 8 entries.");
     }
 
     @Test
@@ -170,7 +167,7 @@ public class WorkflowRuleFieldRegistryTest {
 
         FieldDefinition field = WorkflowRuleFieldRegistry.FIELDS.get("user.groups");
         assertNotNull(field);
-        assertEquals(field.getOperators().size(), 1);
+        assertEquals(field.getOperators().size(), 2);
         assertEquals(field.getOperators().get(0).getName(), "contains");
     }
 
@@ -197,22 +194,6 @@ public class WorkflowRuleFieldRegistryTest {
     }
 
     @Test
-    public void testInitiatorFieldsMirrorUserFields() {
-
-        // Initiator fields should mirror the user fields structure.
-        FieldDefinition userDomain = WorkflowRuleFieldRegistry.FIELDS.get("user.domain");
-        FieldDefinition initiatorDomain = WorkflowRuleFieldRegistry.FIELDS.get("initiator.domain");
-        assertNotNull(initiatorDomain);
-        assertEquals(initiatorDomain.getOperators().size(), userDomain.getOperators().size());
-        assertEquals(initiatorDomain.getValue().getValueType(), userDomain.getValue().getValueType());
-
-        FieldDefinition userGroups = WorkflowRuleFieldRegistry.FIELDS.get("user.groups");
-        FieldDefinition initiatorGroups = WorkflowRuleFieldRegistry.FIELDS.get("initiator.groups");
-        assertNotNull(initiatorGroups);
-        assertEquals(initiatorGroups.getOperators().size(), userGroups.getOperators().size());
-    }
-
-    @Test
     public void testRolePermissionsField_isInputTypeString() {
 
         FieldDefinition field = WorkflowRuleFieldRegistry.FIELDS.get("role.permissions");
@@ -221,7 +202,7 @@ public class WorkflowRuleFieldRegistryTest {
                 "role.permissions value should be InputValue.");
         assertEquals(field.getValue().getValueType(), Value.ValueType.STRING);
         assertEquals(field.getValue().getInputType(), Value.InputType.INPUT);
-        assertEquals(field.getOperators().size(), 1);
+        assertEquals(field.getOperators().size(), 2);
         assertEquals(field.getOperators().get(0).getName(), "contains");
     }
 

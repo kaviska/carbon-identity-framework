@@ -33,4 +33,6 @@ public interface PolicyManagementService {
     void deletePolicy(String policyId, String tenantDomain) throws PolicyManagementException;
 
     Policy getPolicyById(String policyId, String tenantDomain) throws PolicyManagementException;
+
+    Policy getPolicyByName(String policyName, String tenantDomain) throws PolicyManagementException;
 }

@@ -28,8 +28,13 @@ import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
+import org.wso2.carbon.identity.application.authentication.framework.JsFunctionRegistry;
+import org.wso2.carbon.identity.rule.evaluation.api.provider.RuleEvaluationDataProvider;
+import org.wso2.carbon.identity.rule.evaluation.api.service.RuleEvaluationService;
 import org.wso2.carbon.identity.rule.management.api.service.RuleManagementService;
 import org.wso2.carbon.identity.device.policy.management.api.service.PolicyManagementService;
+import org.wso2.carbon.identity.device.policy.management.internal.rule.DevicePolicyEvaluationDataProvider;
+import org.wso2.carbon.identity.device.policy.management.internal.rule.DevicePolicyJsFunction;
 import org.wso2.carbon.identity.device.policy.management.internal.service.impl.PolicyManagementServiceImpl;
 
 /**
@@ -48,8 +53,20 @@ public class DevicePolicyMgtServiceComponent {
 
         try {
             BundleContext bundleCtx = context.getBundleContext();
+            PolicyManagementServiceImpl policyManagementService = PolicyManagementServiceImpl.getInstance();
             bundleCtx.registerService(PolicyManagementService.class.getName(),
-                    PolicyManagementServiceImpl.getInstance(), null);
+                    policyManagementService, null);
+            bundleCtx.registerService(RuleEvaluationDataProvider.class.getName(),
+                    new DevicePolicyEvaluationDataProvider(), null);
+            DevicePolicyMgtComponentServiceHolder.getInstance()
+                    .setPolicyManagementService(policyManagementService);
+
+            // Register the device policy compliance function with the JS function registry.
+            // Uses BiFunction to be directly callable from JavaScript.
+            DevicePolicyMgtComponentServiceHolder.getInstance().getJsFunctionRegistry()
+                    .register(JsFunctionRegistry.Subsystem.SEQUENCE_HANDLER,
+                            "isDevicePolicyCompliant",
+                            new DevicePolicyJsFunction());
             LOG.debug("Device policy management bundle is activated.");
         } catch (Throwable e) {
             LOG.error("Error while initializing device policy management service component.", e);
@@ -81,6 +98,48 @@ public class DevicePolicyMgtServiceComponent {
         DevicePolicyMgtComponentServiceHolder.getInstance()
                 .setRuleManagementService(null);
         LOG.debug("RuleManagementService is unset in the Device Policy Management component.");
+    }
+
+    @Reference(
+            name = "rule.evaluation.service",
+            service = RuleEvaluationService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetRuleEvaluationService"
+    )
+    protected void setRuleEvaluationService(RuleEvaluationService ruleEvaluationService) {
+
+        DevicePolicyMgtComponentServiceHolder.getInstance()
+                .setRuleEvaluationService(ruleEvaluationService);
+        LOG.debug("RuleEvaluationService is set in the Device Policy Management component.");
+    }
+
+    protected void unsetRuleEvaluationService(RuleEvaluationService ruleEvaluationService) {
+
+        DevicePolicyMgtComponentServiceHolder.getInstance()
+                .setRuleEvaluationService(null);
+        LOG.debug("RuleEvaluationService is unset in the Device Policy Management component.");
+    }
+
+    @Reference(
+            name = "js.function.registry",
+            service = JsFunctionRegistry.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetJsFunctionRegistry"
+    )
+    protected void setJsFunctionRegistry(JsFunctionRegistry jsFunctionRegistry) {
+
+        DevicePolicyMgtComponentServiceHolder.getInstance()
+                .setJsFunctionRegistry(jsFunctionRegistry);
+        LOG.debug("JsFunctionRegistry is set in the Device Policy Management component.");
+    }
+
+    protected void unsetJsFunctionRegistry(JsFunctionRegistry jsFunctionRegistry) {
+
+        DevicePolicyMgtComponentServiceHolder.getInstance()
+                .setJsFunctionRegistry(null);
+        LOG.debug("JsFunctionRegistry is unset in the Device Policy Management component.");
     }
 
 }

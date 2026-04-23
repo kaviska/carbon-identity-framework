@@ -73,6 +73,7 @@
         <module>components/trusted-app-mgt</module>
         <module>components/rule-mgt</module>
         <module>components/device-policy-mgt</module>
+        <module>components/device-mgt</module>
         <module>components/webhook-mgt</module>
         <module>components/action-mgt</module>
         <module>components/ai-services-mgt</module>

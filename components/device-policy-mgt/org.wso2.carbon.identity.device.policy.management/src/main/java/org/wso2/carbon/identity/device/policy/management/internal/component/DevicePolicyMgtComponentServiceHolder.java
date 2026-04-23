@@ -18,7 +18,10 @@
 
 package org.wso2.carbon.identity.device.policy.management.internal.component;
 
+import org.wso2.carbon.identity.application.authentication.framework.JsFunctionRegistry;
+import org.wso2.carbon.identity.rule.evaluation.api.service.RuleEvaluationService;
 import org.wso2.carbon.identity.rule.management.api.service.RuleManagementService;
+import org.wso2.carbon.identity.device.policy.management.api.service.PolicyManagementService;
 
 /**
  * Service holder for Device Policy Management component.
@@ -28,6 +31,9 @@ public class DevicePolicyMgtComponentServiceHolder {
     private static final DevicePolicyMgtComponentServiceHolder INSTANCE =
             new DevicePolicyMgtComponentServiceHolder();
     private RuleManagementService ruleManagementService;
+    private RuleEvaluationService ruleEvaluationService;
+    private PolicyManagementService policyManagementService;
+    private JsFunctionRegistry jsFunctionRegistry;
 
     private DevicePolicyMgtComponentServiceHolder() {
 
@@ -46,5 +52,33 @@ public class DevicePolicyMgtComponentServiceHolder {
     public void setRuleManagementService(RuleManagementService ruleManagementService) {
 
         this.ruleManagementService = ruleManagementService;
+    }
+
+    public RuleEvaluationService getRuleEvaluationService() {
+        return ruleEvaluationService;
+    }
+
+    public void setRuleEvaluationService(RuleEvaluationService ruleEvaluationService) {
+        this.ruleEvaluationService = ruleEvaluationService;
+    }
+
+    public PolicyManagementService getPolicyManagementService() {
+
+        return policyManagementService;
+    }
+
+    public void setPolicyManagementService(PolicyManagementService policyManagementService) {
+
+        this.policyManagementService = policyManagementService;
+    }
+
+    public JsFunctionRegistry getJsFunctionRegistry() {
+
+        return jsFunctionRegistry;
+    }
+
+    public void setJsFunctionRegistry(JsFunctionRegistry jsFunctionRegistry) {
+
+        this.jsFunctionRegistry = jsFunctionRegistry;
     }
 }

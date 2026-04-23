@@ -67,12 +67,12 @@ public class PolicyManagementServiceImpl implements PolicyManagementService {
                 tenantDomain,
                 policy.getRule());
 
-        policyManagementDAO.addPolicy(policyWithId, tenantId);
+        Policy createdPolicy = policyManagementDAO.addPolicy(policyWithId, tenantId);
         if (LOG.isDebugEnabled()) {
             LOG.debug("Policy added successfully with ID: " + policyWithId.getId() +
                     " for tenant: " + tenantDomain);
         }
-        return policyManagementDAO.getPolicyById(policyWithId.getId(), tenantId);
+        return createdPolicy;
     }
 
     @Override
@@ -83,12 +83,12 @@ public class PolicyManagementServiceImpl implements PolicyManagementService {
         validateIfPolicyExists(policy.getId(), tenantDomain);
 
         int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
-        policyManagementDAO.updatePolicy(policy, tenantId);
+        Policy updatedPolicy = policyManagementDAO.updatePolicy(policy, tenantId);
         if (LOG.isDebugEnabled()) {
             LOG.debug("Policy updated successfully with ID: " + policy.getId() +
                     " for tenant: " + tenantDomain);
         }
-        return policyManagementDAO.getPolicyById(policy.getId(), tenantId);
+        return updatedPolicy;
     }
 
     @Override
@@ -112,6 +112,15 @@ public class PolicyManagementServiceImpl implements PolicyManagementService {
 
         return policyManagementDAO.getPolicyById(
                 policyId,
+                IdentityTenantUtil.getTenantId(tenantDomain));
+    }
+
+    @Override
+    public Policy getPolicyByName(String policyName, String tenantDomain)
+            throws PolicyManagementException {
+
+        return policyManagementDAO.getPolicyByName(
+                policyName,
                 IdentityTenantUtil.getTenantId(tenantDomain));
     }
 

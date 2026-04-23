@@ -46,7 +46,7 @@ public class PolicyManagementDAOImpl implements PolicyManagementDAO {
         NamedJdbcTemplate jdbcTemplate =
                 new NamedJdbcTemplate(IdentityDatabaseUtil.getDataSource());
         try {
-            jdbcTemplate.withTransaction(template -> {
+            jdbcTemplate.<Void, RuntimeException>withTransaction(template -> {
                 template.executeInsert(
                         PolicyMgtSQLConstants.Query.ADD_POLICY,
                         preparedStatement -> {
@@ -86,7 +86,7 @@ public class PolicyManagementDAOImpl implements PolicyManagementDAO {
         NamedJdbcTemplate jdbcTemplate =
                 new NamedJdbcTemplate(IdentityDatabaseUtil.getDataSource());
         try {
-            jdbcTemplate.withTransaction(template -> {
+            jdbcTemplate.<Void, RuntimeException>withTransaction(template -> {
                 template.executeUpdate(
                         PolicyMgtSQLConstants.Query.UPDATE_POLICY,
                         preparedStatement -> {
@@ -124,7 +124,7 @@ public class PolicyManagementDAOImpl implements PolicyManagementDAO {
         NamedJdbcTemplate jdbcTemplate =
                 new NamedJdbcTemplate(IdentityDatabaseUtil.getDataSource());
         try {
-            jdbcTemplate.withTransaction(template -> {
+            jdbcTemplate.<Void, RuntimeException>withTransaction(template -> {
                 template.executeUpdate(
                         PolicyMgtSQLConstants.Query.DELETE_POLICY,
                         preparedStatement -> {
@@ -155,7 +155,7 @@ public class PolicyManagementDAOImpl implements PolicyManagementDAO {
         NamedJdbcTemplate jdbcTemplate =
                 new NamedJdbcTemplate(IdentityDatabaseUtil.getDataSource());
         try {
-            return jdbcTemplate.withTransaction(
+            return jdbcTemplate.<Policy, RuntimeException>withTransaction(
                     template -> template.fetchSingleRecord(
                             PolicyMgtSQLConstants.Query.GET_POLICY_BY_ID,
                             (resultSet, rowNumber) -> new Policy(
@@ -171,6 +171,41 @@ public class PolicyManagementDAOImpl implements PolicyManagementDAO {
                                 preparedStatement.setString(
                                         PolicyMgtSQLConstants.Column.POLICY_ID,
                                         policyId);
+                                preparedStatement.setInt(
+                                        PolicyMgtSQLConstants.Column.TENANT_ID,
+                                        tenantId);
+                            }));
+        } catch (TransactionException e) {
+            throw new PolicyManagementServerException(
+                    ErrorMessage.ERROR_WHILE_RETRIEVING_POLICY.getMessage(),
+                    ErrorMessage.ERROR_WHILE_RETRIEVING_POLICY.getDescription(),
+                    ErrorMessage.ERROR_WHILE_RETRIEVING_POLICY.getCode(), e);
+        }
+    }
+
+    @Override
+    public Policy getPolicyByName(String policyName, int tenantId)
+            throws PolicyManagementException {
+
+        NamedJdbcTemplate jdbcTemplate =
+                new NamedJdbcTemplate(IdentityDatabaseUtil.getDataSource());
+        try {
+            return jdbcTemplate.<Policy, RuntimeException>withTransaction(
+                    template -> template.fetchSingleRecord(
+                            PolicyMgtSQLConstants.Query.GET_POLICY_BY_NAME,
+                            (resultSet, rowNumber) -> new Policy(
+                                    resultSet.getString(
+                                            PolicyMgtSQLConstants.Column.POLICY_ID),
+                                    resultSet.getString(
+                                            PolicyMgtSQLConstants.Column.POLICY_NAME),
+                                    resultSet.getString(
+                                            PolicyMgtSQLConstants.Column.RULE_ID),
+                                    IdentityTenantUtil.getTenantDomain(tenantId),
+                                    null),
+                            preparedStatement -> {
+                                preparedStatement.setString(
+                                        PolicyMgtSQLConstants.Column.POLICY_NAME,
+                                        policyName);
                                 preparedStatement.setInt(
                                         PolicyMgtSQLConstants.Column.TENANT_ID,
                                         tenantId);

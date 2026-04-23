@@ -113,6 +113,59 @@
       }
     }
   ],
+  "devicePolicy": [
+    {
+      "fieldName": "platform"
+    },
+    {
+      "fieldName": "osVersion"
+    },
+    {
+      "fieldName": "isRooted"
+    },
+    {
+      "fieldName": "usbDebugging"
+    },
+    {
+      "fieldName": "lockScreen"
+    },
+    {
+      "fieldName": "biometric"
+    },
+    {
+      "fieldName": "screenLockComplexity"
+    },
+    {
+      "fieldName": "hardwareKeystore"
+    },
+    {
+      "fieldName": "diskEncryption"
+    },
+    {
+      "fieldName": "networkProxies"
+    },
+    {
+      "fieldName": "wifiNetworkSecurity"
+    },
+    {
+      "fieldName": "passcode"
+    },
+    {
+      "fieldName": "touchIdOrFaceId"
+    },
+    {
+      "fieldName": "jailbreak"
+    },
+    {
+      "fieldName": "secureEnclave"
+    },
+    {
+      "fieldName": "windowsHello"
+    },
+    {
+      "fieldName": "trustedPlatformModule"
+    }
+  ],
   "preUpdateProfile": [
     {
       "fieldName": "flow",

@@ -56,6 +56,10 @@ public class PolicyMgtSQLConstants {
                 "SELECT POLICY_ID, POLICY_NAME, RULE_ID FROM IDN_DEVICE_POLICY " +
                         "WHERE POLICY_ID = :POLICY_ID; AND TENANT_ID = :TENANT_ID;";
 
+        public static final String GET_POLICY_BY_NAME =
+                "SELECT POLICY_ID, POLICY_NAME, RULE_ID FROM IDN_DEVICE_POLICY " +
+                        "WHERE POLICY_NAME = :POLICY_NAME; AND TENANT_ID = :TENANT_ID;";
+
         private Query() {
 
         }

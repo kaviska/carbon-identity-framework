@@ -25,7 +25,7 @@
     <parent>
         <groupId>org.wso2.carbon.identity.framework</groupId>
         <artifactId>device-policy-mgt</artifactId>
-        <version>7.10.34-SNAPSHOT</version>
+        <version>7.10.149-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -70,6 +70,24 @@
         <dependency>
             <groupId>org.wso2.carbon.identity.framework</groupId>
             <artifactId>org.wso2.carbon.identity.rule.management</artifactId>
+        </dependency>
+
+        <!-- Rule evaluation - RuleEvaluationService, RuleEvaluationDataProvider, FlowContext -->
+        <dependency>
+            <groupId>org.wso2.carbon.identity.framework</groupId>
+            <artifactId>org.wso2.carbon.identity.rule.evaluation</artifactId>
+        </dependency>
+
+        <!-- Authentication framework - JsFunctionRegistry, JsAuthenticationContext -->
+        <dependency>
+            <groupId>org.wso2.carbon.identity.framework</groupId>
+            <artifactId>org.wso2.carbon.identity.application.authentication.framework</artifactId>
+        </dependency>
+
+        <!-- GraalVM SDK - HostAccess annotation for JS function exposure -->
+        <dependency>
+            <groupId>org.wso2.orbit.graalvm.sdk</groupId>
+            <artifactId>graal-sdk</artifactId>
         </dependency>
 
         <!-- Test dependencies -->
@@ -133,7 +151,28 @@
                             org.wso2.carbon.identity.rule.management.api.model;
                             version="${carbon.identity.package.import.version.range}",
                             org.wso2.carbon.identity.rule.management.api.service;
-                            version="${carbon.identity.package.import.version.range}"
+                            version="${carbon.identity.package.import.version.range}",
+                            org.wso2.carbon.identity.rule.management.api.util;
+                            version="${carbon.identity.package.import.version.range}",
+                            org.wso2.carbon.identity.rule.evaluation.api.exception;
+                            version="${carbon.identity.package.import.version.range}",
+                            org.wso2.carbon.identity.rule.evaluation.api.model;
+                            version="${carbon.identity.package.import.version.range}",
+                            org.wso2.carbon.identity.rule.evaluation.api.provider;
+                            version="${carbon.identity.package.import.version.range}",
+                            org.wso2.carbon.identity.rule.evaluation.api.service;
+                            version="${carbon.identity.package.import.version.range}",
+                            org.graalvm.polyglot;
+                            version="${graalvm.version.range}",
+                            org.wso2.carbon.identity.application.authentication.framework;
+                            version="${carbon.identity.package.import.version.range}",
+                            org.wso2.carbon.identity.application.authentication.framework.config.model.graph.js.base;
+                            version="${carbon.identity.package.import.version.range}",
+                            org.wso2.carbon.identity.application.authentication.framework.context;
+                            version="${carbon.identity.package.import.version.range}",
+                            org.wso2.carbon.identity.application.authentication.framework.util;
+                            version="${carbon.identity.package.import.version.range}",
+                            javax.servlet.http
                         </Import-Package>
                     </instructions>
                 </configuration>

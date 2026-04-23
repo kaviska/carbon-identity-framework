@@ -33,4 +33,6 @@ public interface PolicyManagementDAO {
     void deletePolicy(String policyId, int tenantId) throws PolicyManagementException;
 
     Policy getPolicyById(String policyId, int tenantId) throws PolicyManagementException;
+
+    Policy getPolicyByName(String policyName, int tenantId) throws PolicyManagementException;
 }

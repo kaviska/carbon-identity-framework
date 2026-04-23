@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd">
+<suite name="Device_Management_Test_Suite">
+    <test name="Device_Management_DAO_Tests">
+        <classes>
+            <class name="org.wso2.carbon.identity.device.mgt.dao.DeviceManagementDAOImplTest"/>
+        </classes>
+    </test>
+</suite>
+

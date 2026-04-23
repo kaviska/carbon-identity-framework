@@ -25,6 +25,8 @@ public enum ErrorMessage {
             "No policy found for the given policy id: %s."),
     ERROR_INVALID_POLICY_REQUEST_FIELD("DPM-60002", "Invalid request.",
             "%s is empty or invalid."),
+    ERROR_INVALID_POLICY_RULE("DPM-60003", "Invalid policy rule.",
+            "Policy rule validation failed: %s"),
 
     // Server errors.
     ERROR_WHILE_ADDING_POLICY("DPM-65001", "Error while adding Policy.",

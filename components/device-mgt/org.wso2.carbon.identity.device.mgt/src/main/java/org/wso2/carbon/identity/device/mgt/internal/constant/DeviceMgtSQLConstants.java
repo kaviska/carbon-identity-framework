@@ -24,7 +24,6 @@ package org.wso2.carbon.identity.device.mgt.internal.constant;
 public class DeviceMgtSQLConstants {
 
     private DeviceMgtSQLConstants() {
-
     }
 
     /**
@@ -36,18 +35,13 @@ public class DeviceMgtSQLConstants {
         public static final String USER_ID = "USER_ID";
         public static final String DEVICE_NAME = "DEVICE_NAME";
         public static final String DEVICE_MODEL = "DEVICE_MODEL";
-        public static final String DEVICE_OS = "DEVICE_OS";
-        public static final String DEVICE_TYPE = "DEVICE_TYPE";
         public static final String PUBLIC_KEY = "PUBLIC_KEY";
-        public static final String CHALLENGE_USED = "CHALLENGE_USED";
         public static final String STATUS = "STATUS";
         public static final String REGISTERED_AT = "REGISTERED_AT";
-        public static final String LAST_USED_AT = "LAST_USED_AT";
         public static final String METADATA = "METADATA";
         public static final String TENANT_ID = "TENANT_ID";
 
         private Column() {
-
         }
     }
 
@@ -58,21 +52,20 @@ public class DeviceMgtSQLConstants {
 
         public static final String REGISTER_DEVICE =
                 "INSERT INTO IDN_REGISTERED_DEVICE " +
-                        "(ID, USER_ID, DEVICE_NAME, DEVICE_MODEL, DEVICE_OS, DEVICE_TYPE, " +
-                        " PUBLIC_KEY, CHALLENGE_USED, STATUS, REGISTERED_AT, TENANT_ID, METADATA) " +
-                        "VALUES (:ID;, :USER_ID;, :DEVICE_NAME;, :DEVICE_MODEL;, :DEVICE_OS;, " +
-                        ":DEVICE_TYPE;, :PUBLIC_KEY;, :CHALLENGE_USED;, :STATUS;, " +
+                        "(ID, USER_ID, DEVICE_NAME, DEVICE_MODEL, PUBLIC_KEY, STATUS, REGISTERED_AT, " +
+                        "TENANT_ID, METADATA) " +
+                        "VALUES (:ID;, :USER_ID;, :DEVICE_NAME;, :DEVICE_MODEL;, :PUBLIC_KEY;, :STATUS;, " +
                         ":REGISTERED_AT;, :TENANT_ID;, :METADATA;)";
 
         public static final String GET_DEVICE_BY_ID =
-                "SELECT ID, USER_ID, DEVICE_NAME, DEVICE_MODEL, DEVICE_OS, DEVICE_TYPE, " +
-                        "PUBLIC_KEY, CHALLENGE_USED, STATUS, REGISTERED_AT, LAST_USED_AT, METADATA, TENANT_ID " +
+                "SELECT ID, USER_ID, DEVICE_NAME, DEVICE_MODEL, PUBLIC_KEY, STATUS, REGISTERED_AT, " +
+                        "METADATA, TENANT_ID " +
                         "FROM IDN_REGISTERED_DEVICE " +
                         "WHERE ID = :ID; AND TENANT_ID = :TENANT_ID;";
 
         public static final String GET_DEVICES_BY_USER_ID =
-                "SELECT ID, USER_ID, DEVICE_NAME, DEVICE_MODEL, DEVICE_OS, DEVICE_TYPE, " +
-                        "PUBLIC_KEY, CHALLENGE_USED, STATUS, REGISTERED_AT, LAST_USED_AT, METADATA, TENANT_ID " +
+                "SELECT ID, USER_ID, DEVICE_NAME, DEVICE_MODEL, PUBLIC_KEY, STATUS, REGISTERED_AT, " +
+                        "METADATA, TENANT_ID " +
                         "FROM IDN_REGISTERED_DEVICE " +
                         "WHERE USER_ID = :USER_ID; AND STATUS = 'ACTIVE' AND TENANT_ID = :TENANT_ID;";
 
@@ -85,7 +78,6 @@ public class DeviceMgtSQLConstants {
                         "WHERE ID = :ID; AND TENANT_ID = :TENANT_ID;";
 
         private Query() {
-
         }
     }
 }

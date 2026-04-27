@@ -29,13 +29,9 @@ public class RegisteredDevice {
     private final String userId;
     private final String deviceName;
     private final String deviceModel;
-    private final String deviceOs;
-    private final String deviceType;
     private final String publicKey;
-    private final String challengeUsed;
     private final String status;
     private final Timestamp registeredAt;
-    private final Timestamp lastUsedAt;
     private final String metadata;
 
     private RegisteredDevice(Builder builder) {
@@ -44,13 +40,9 @@ public class RegisteredDevice {
         this.userId = builder.userId;
         this.deviceName = builder.deviceName;
         this.deviceModel = builder.deviceModel;
-        this.deviceOs = builder.deviceOs;
-        this.deviceType = builder.deviceType;
         this.publicKey = builder.publicKey;
-        this.challengeUsed = builder.challengeUsed;
         this.status = builder.status;
         this.registeredAt = builder.registeredAt;
-        this.lastUsedAt = builder.lastUsedAt;
         this.metadata = builder.metadata;
     }
 
@@ -95,26 +87,6 @@ public class RegisteredDevice {
     }
 
     /**
-     * Returns the device operating system.
-     *
-     * @return Device OS.
-     */
-    public String getDeviceOs() {
-
-        return deviceOs;
-    }
-
-    /**
-     * Returns the device type.
-     *
-     * @return Device type.
-     */
-    public String getDeviceType() {
-
-        return deviceType;
-    }
-
-    /**
      * Returns the registered public key.
      *
      * @return Public key.
@@ -124,15 +96,7 @@ public class RegisteredDevice {
         return publicKey;
     }
 
-    /**
-     * Returns the signed challenge value.
-     *
-     * @return Challenge value.
-     */
-    public String getChallengeUsed() {
 
-        return challengeUsed;
-    }
 
     /**
      * Returns the current device status.
@@ -154,15 +118,6 @@ public class RegisteredDevice {
         return registeredAt;
     }
 
-    /**
-     * Returns the last-used timestamp.
-     *
-     * @return Last-used timestamp.
-     */
-    public Timestamp getLastUsedAt() {
-
-        return lastUsedAt;
-    }
 
     /**
      * Returns the metadata payload.
@@ -183,13 +138,9 @@ public class RegisteredDevice {
         private String userId;
         private String deviceName;
         private String deviceModel;
-        private String deviceOs;
-        private String deviceType;
         private String publicKey;
-        private String challengeUsed;
         private String status = "ACTIVE";
         private Timestamp registeredAt;
-        private Timestamp lastUsedAt;
         private String metadata;
 
         /**
@@ -240,29 +191,6 @@ public class RegisteredDevice {
             return this;
         }
 
-        /**
-         * Sets the device OS.
-         *
-         * @param deviceOs Device OS.
-         * @return Builder instance.
-         */
-        public Builder deviceOs(String deviceOs) {
-
-            this.deviceOs = deviceOs;
-            return this;
-        }
-
-        /**
-         * Sets the device type.
-         *
-         * @param deviceType Device type.
-         * @return Builder instance.
-         */
-        public Builder deviceType(String deviceType) {
-
-            this.deviceType = deviceType;
-            return this;
-        }
 
         /**
          * Sets the public key.
@@ -273,18 +201,6 @@ public class RegisteredDevice {
         public Builder publicKey(String publicKey) {
 
             this.publicKey = publicKey;
-            return this;
-        }
-
-        /**
-         * Sets the challenge value.
-         *
-         * @param challengeUsed Challenge value.
-         * @return Builder instance.
-         */
-        public Builder challengeUsed(String challengeUsed) {
-
-            this.challengeUsed = challengeUsed;
             return this;
         }
 
@@ -312,17 +228,6 @@ public class RegisteredDevice {
             return this;
         }
 
-        /**
-         * Sets the last-used timestamp.
-         *
-         * @param lastUsedAt Last-used timestamp.
-         * @return Builder instance.
-         */
-        public Builder lastUsedAt(Timestamp lastUsedAt) {
-
-            this.lastUsedAt = lastUsedAt;
-            return this;
-        }
 
         /**
          * Sets metadata.

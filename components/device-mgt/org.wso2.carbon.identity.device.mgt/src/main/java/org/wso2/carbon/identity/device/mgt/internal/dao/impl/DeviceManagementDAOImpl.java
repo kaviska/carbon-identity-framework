@@ -39,14 +39,12 @@ public class DeviceManagementDAOImpl implements DeviceManagementDAO {
 
     private static final Log LOG = LogFactory.getLog(DeviceManagementDAOImpl.class);
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public RegisteredDevice registerDevice(RegisteredDevice device, int tenantId)
             throws DeviceMgtException {
 
         NamedJdbcTemplate jdbcTemplate = new NamedJdbcTemplate(IdentityDatabaseUtil.getDataSource());
+
         try {
             jdbcTemplate.<Void, RuntimeException>withTransaction(template -> {
                 template.executeInsert(
@@ -54,21 +52,14 @@ public class DeviceManagementDAOImpl implements DeviceManagementDAO {
                         preparedStatement -> {
                             preparedStatement.setString(DeviceMgtSQLConstants.Column.ID, device.getId());
                             preparedStatement.setString(DeviceMgtSQLConstants.Column.USER_ID, device.getUserId());
-                            preparedStatement.setString(DeviceMgtSQLConstants.Column.DEVICE_NAME,
-                                    device.getDeviceName());
-                            preparedStatement.setString(DeviceMgtSQLConstants.Column.DEVICE_MODEL,
-                                    device.getDeviceModel());
-                            preparedStatement.setString(DeviceMgtSQLConstants.Column.DEVICE_OS,
-                                    device.getDeviceOs());
-                            preparedStatement.setString(DeviceMgtSQLConstants.Column.DEVICE_TYPE,
-                                    device.getDeviceType());
-                            preparedStatement.setString(DeviceMgtSQLConstants.Column.PUBLIC_KEY,
-                                    device.getPublicKey());
-                            preparedStatement.setString(DeviceMgtSQLConstants.Column.CHALLENGE_USED,
-                                    device.getChallengeUsed());
+                            preparedStatement.setString(
+                                    DeviceMgtSQLConstants.Column.DEVICE_NAME, device.getDeviceName());
+                            preparedStatement.setString(
+                                    DeviceMgtSQLConstants.Column.DEVICE_MODEL, device.getDeviceModel());
+                            preparedStatement.setString(DeviceMgtSQLConstants.Column.PUBLIC_KEY, device.getPublicKey());
                             preparedStatement.setString(DeviceMgtSQLConstants.Column.STATUS, device.getStatus());
-                            preparedStatement.setObject(DeviceMgtSQLConstants.Column.REGISTERED_AT,
-                                    device.getRegisteredAt());
+                            preparedStatement.setObject(
+                                    DeviceMgtSQLConstants.Column.REGISTERED_AT, device.getRegisteredAt());
                             preparedStatement.setInt(DeviceMgtSQLConstants.Column.TENANT_ID, tenantId);
                             preparedStatement.setString(DeviceMgtSQLConstants.Column.METADATA, device.getMetadata());
                         },
@@ -76,6 +67,7 @@ public class DeviceManagementDAOImpl implements DeviceManagementDAO {
                         false);
                 return null;
             });
+
         } catch (TransactionException e) {
             throw new DeviceMgtServerException(
                     ErrorMessage.ERROR_WHILE_REGISTERING_DEVICE.getMessage(),
@@ -89,14 +81,12 @@ public class DeviceManagementDAOImpl implements DeviceManagementDAO {
         return device;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public RegisteredDevice getDeviceById(String deviceId, int tenantId)
             throws DeviceMgtException {
 
         NamedJdbcTemplate jdbcTemplate = new NamedJdbcTemplate(IdentityDatabaseUtil.getDataSource());
+
         try {
             return jdbcTemplate.<RegisteredDevice, RuntimeException>withTransaction(
                     template -> template.fetchSingleRecord(
@@ -106,19 +96,16 @@ public class DeviceManagementDAOImpl implements DeviceManagementDAO {
                                     .userId(resultSet.getString(DeviceMgtSQLConstants.Column.USER_ID))
                                     .deviceName(resultSet.getString(DeviceMgtSQLConstants.Column.DEVICE_NAME))
                                     .deviceModel(resultSet.getString(DeviceMgtSQLConstants.Column.DEVICE_MODEL))
-                                    .deviceOs(resultSet.getString(DeviceMgtSQLConstants.Column.DEVICE_OS))
-                                    .deviceType(resultSet.getString(DeviceMgtSQLConstants.Column.DEVICE_TYPE))
                                     .publicKey(resultSet.getString(DeviceMgtSQLConstants.Column.PUBLIC_KEY))
-                                    .challengeUsed(resultSet.getString(DeviceMgtSQLConstants.Column.CHALLENGE_USED))
                                     .status(resultSet.getString(DeviceMgtSQLConstants.Column.STATUS))
                                     .registeredAt(resultSet.getTimestamp(DeviceMgtSQLConstants.Column.REGISTERED_AT))
-                                    .lastUsedAt(resultSet.getTimestamp(DeviceMgtSQLConstants.Column.LAST_USED_AT))
                                     .metadata(resultSet.getString(DeviceMgtSQLConstants.Column.METADATA))
                                     .build(),
                             preparedStatement -> {
                                 preparedStatement.setString(DeviceMgtSQLConstants.Column.ID, deviceId);
                                 preparedStatement.setInt(DeviceMgtSQLConstants.Column.TENANT_ID, tenantId);
                             }));
+
         } catch (TransactionException e) {
             throw new DeviceMgtServerException(
                     ErrorMessage.ERROR_WHILE_RETRIEVING_DEVICE.getMessage(),
@@ -127,14 +114,12 @@ public class DeviceManagementDAOImpl implements DeviceManagementDAO {
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public List<RegisteredDevice> getDevicesByUserId(String userId, int tenantId)
             throws DeviceMgtException {
 
         NamedJdbcTemplate jdbcTemplate = new NamedJdbcTemplate(IdentityDatabaseUtil.getDataSource());
+
         try {
             return jdbcTemplate.<List<RegisteredDevice>, RuntimeException>withTransaction(
                     template -> template.executeQuery(
@@ -144,19 +129,16 @@ public class DeviceManagementDAOImpl implements DeviceManagementDAO {
                                     .userId(resultSet.getString(DeviceMgtSQLConstants.Column.USER_ID))
                                     .deviceName(resultSet.getString(DeviceMgtSQLConstants.Column.DEVICE_NAME))
                                     .deviceModel(resultSet.getString(DeviceMgtSQLConstants.Column.DEVICE_MODEL))
-                                    .deviceOs(resultSet.getString(DeviceMgtSQLConstants.Column.DEVICE_OS))
-                                    .deviceType(resultSet.getString(DeviceMgtSQLConstants.Column.DEVICE_TYPE))
                                     .publicKey(resultSet.getString(DeviceMgtSQLConstants.Column.PUBLIC_KEY))
-                                    .challengeUsed(resultSet.getString(DeviceMgtSQLConstants.Column.CHALLENGE_USED))
                                     .status(resultSet.getString(DeviceMgtSQLConstants.Column.STATUS))
                                     .registeredAt(resultSet.getTimestamp(DeviceMgtSQLConstants.Column.REGISTERED_AT))
-                                    .lastUsedAt(resultSet.getTimestamp(DeviceMgtSQLConstants.Column.LAST_USED_AT))
                                     .metadata(resultSet.getString(DeviceMgtSQLConstants.Column.METADATA))
                                     .build(),
                             preparedStatement -> {
                                 preparedStatement.setString(DeviceMgtSQLConstants.Column.USER_ID, userId);
                                 preparedStatement.setInt(DeviceMgtSQLConstants.Column.TENANT_ID, tenantId);
                             }));
+
         } catch (TransactionException e) {
             throw new DeviceMgtServerException(
                     ErrorMessage.ERROR_WHILE_RETRIEVING_DEVICE.getMessage(),
@@ -165,14 +147,12 @@ public class DeviceManagementDAOImpl implements DeviceManagementDAO {
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public RegisteredDevice updateDeviceName(String deviceId, String deviceName, int tenantId)
             throws DeviceMgtException {
 
         NamedJdbcTemplate jdbcTemplate = new NamedJdbcTemplate(IdentityDatabaseUtil.getDataSource());
+
         try {
             jdbcTemplate.<Void, RuntimeException>withTransaction(template -> {
                 template.executeUpdate(
@@ -184,6 +164,7 @@ public class DeviceManagementDAOImpl implements DeviceManagementDAO {
                         });
                 return null;
             });
+
         } catch (TransactionException e) {
             throw new DeviceMgtServerException(
                     ErrorMessage.ERROR_WHILE_UPDATING_DEVICE.getMessage(),
@@ -194,17 +175,16 @@ public class DeviceManagementDAOImpl implements DeviceManagementDAO {
         if (LOG.isDebugEnabled()) {
             LOG.debug("Device name updated for device ID: " + deviceId);
         }
+
         return getDeviceById(deviceId, tenantId);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void deleteDevice(String deviceId, int tenantId)
             throws DeviceMgtException {
 
         NamedJdbcTemplate jdbcTemplate = new NamedJdbcTemplate(IdentityDatabaseUtil.getDataSource());
+
         try {
             jdbcTemplate.<Void, RuntimeException>withTransaction(template -> {
                 template.executeUpdate(
@@ -215,6 +195,7 @@ public class DeviceManagementDAOImpl implements DeviceManagementDAO {
                         });
                 return null;
             });
+
         } catch (TransactionException e) {
             throw new DeviceMgtServerException(
                     ErrorMessage.ERROR_WHILE_DELETING_DEVICE.getMessage(),

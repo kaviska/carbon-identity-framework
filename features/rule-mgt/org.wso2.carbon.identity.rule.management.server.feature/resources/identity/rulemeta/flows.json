@@ -118,7 +118,11 @@
       "fieldName": "platform"
     },
     {
-      "fieldName": "osVersion"
+      "fieldName": "osVersion",
+      "appliesTo": [
+        "android",
+        "ios"
+      ]
     },
     {
       "fieldName": "isRooted"

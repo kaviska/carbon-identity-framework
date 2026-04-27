@@ -29,6 +29,13 @@ public enum ErrorMessage {
             "%s is empty or invalid."),
     ERROR_DEVICE_ALREADY_REGISTERED("DM-60003", "Device already registered.",
             "A device with the same public key is already registered for user: %s."),
+    ERROR_REGISTRATION_CONTEXT_NOT_FOUND("DM-60004", "Registration context not found.",
+            "No pending registration found for registration ID: %s. The context may have expired."),
+    ERROR_INVALID_DEVICE_SIGNATURE("DM-60005", "Invalid device signature.",
+            "The device signature verification failed for registration ID: %s."),
+
+    ERROR_USER_NOT_IDENTIFIED("DM-60006", "User not identified.",
+            "Cannot initiate device registration: no authenticated user found in the flow context."),
 
     ERROR_WHILE_REGISTERING_DEVICE("DM-65001", "Error while registering device.",
             "Error while persisting device registration in the system."),
@@ -37,7 +44,10 @@ public enum ErrorMessage {
     ERROR_WHILE_UPDATING_DEVICE("DM-65003", "Error while updating device.",
             "Error while updating device in the system."),
     ERROR_WHILE_DELETING_DEVICE("DM-65004", "Error while deleting device.",
-            "Error while deleting device from the system.");
+            "Error while deleting device from the system."),
+    ERROR_WHILE_VERIFYING_SIGNATURE("DM-65005", "Error while verifying device signature.",
+            "An unexpected error occurred during signature verification for registration ID: %s.");
+
 
     private final String code;
     private final String message;

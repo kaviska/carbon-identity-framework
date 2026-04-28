@@ -16,7 +16,7 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.device.policy.management.internal.rule;
+package org.wso2.carbon.identity.device.policy.management.api.rule;
 
 import org.wso2.carbon.identity.device.policy.management.api.exception.PolicyManagementException;
 import org.wso2.carbon.identity.device.policy.management.api.model.Policy;
@@ -28,34 +28,38 @@ import org.wso2.carbon.identity.rule.evaluation.api.model.FlowContext;
 import org.wso2.carbon.identity.rule.evaluation.api.model.FlowType;
 import org.wso2.carbon.identity.rule.evaluation.api.model.RuleEvaluationResult;
 
-import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import javax.servlet.http.HttpServletRequest;
+import java.util.stream.Collectors;
 
 /**
- * Evaluates device policy compliance by reading device attributes from HTTP request headers
- * and running them through the rule evaluation engine.
- * Field-to-header mapping is driven by device-fields.json via DeviceFieldConfigLoader.
+ * Evaluates device policy compliance against a named policy using pre-extracted device attribute data.
+ * This class is OSGi-exported and can be used by any bundle that needs policy evaluation
+ * (e.g., adaptive auth JS functions, flow executors).
+ *
+ * <p>Callers are responsible for extracting device attributes from their source
+ * (HTTP headers, flow userInputData, etc.) and passing them as a plain Map.
+ * Use {@link #getFieldNames()} to discover which field names the evaluator expects.
  */
 public class DevicePolicyEvaluator {
 
     /**
-     * Evaluates device policy compliance for the given policy and request.
+     * Evaluates device policy compliance for the given policy and device data.
      *
-     * @return null if compliant, or a comma-separated string of failed field names if not compliant.
+     * @param policyName   Name of the policy to evaluate against.
+     * @param deviceData   Map of device field names to their values. Unknown keys are ignored.
+     * @param tenantDomain Tenant domain for policy lookup and rule evaluation.
+     * @return {@code null} if the device is compliant, or a comma-separated string of failed
+     *         field names if not compliant.
+     * @throws PolicyManagementException If the policy cannot be retrieved.
+     * @throws RuleEvaluationException   If rule evaluation fails.
      */
-    public String evaluate(String policyName, HttpServletRequest request, String tenantDomain)
+    public String evaluate(String policyName, Map<String, Object> deviceData, String tenantDomain)
             throws PolicyManagementException, RuleEvaluationException {
 
         Policy policy = DevicePolicyMgtComponentServiceHolder.getInstance()
                 .getPolicyManagementService()
                 .getPolicyByName(policyName, tenantDomain);
-
-        Map<String, Object> deviceData = new HashMap<>();
-        for (DeviceFieldConfig field : DeviceFieldConfigLoader.getInstance().getFields()) {
-            String value = request.getHeader(field.getHeader());
-            deviceData.put(field.getName(), value != null ? value : "not_available");
-        }
 
         FlowContext flowContext = new FlowContext(FlowType.DEVICE_POLICY, deviceData);
         RuleEvaluationResult result = DevicePolicyMgtComponentServiceHolder.getInstance()
@@ -66,5 +70,19 @@ public class DevicePolicyEvaluator {
             return null;
         }
         return String.join(", ", result.getFailedFields());
+    }
+
+    /**
+     * Returns the list of device field names the evaluator recognises.
+     * Callers should use this to know which keys to populate in the {@code deviceData} map
+     * passed to {@link #evaluate(String, Map, String)}.
+     *
+     * @return Unmodifiable list of field names (e.g., "platform", "osVersion", "isRooted").
+     */
+    public List<String> getFieldNames() {
+
+        return DeviceFieldConfigLoader.getInstance().getFields().stream()
+                .map(DeviceFieldConfig::getName)
+                .collect(Collectors.toList());
     }
 }

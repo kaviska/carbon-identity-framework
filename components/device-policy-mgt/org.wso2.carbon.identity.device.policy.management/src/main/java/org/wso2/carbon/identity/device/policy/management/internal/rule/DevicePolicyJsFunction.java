@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com) All Rights Reserved.
+ * Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -11,7 +11,7 @@
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -25,10 +25,15 @@ import org.wso2.carbon.identity.application.authentication.framework.config.mode
 import org.wso2.carbon.identity.application.authentication.framework.context.TransientObjectWrapper;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.device.policy.management.api.exception.PolicyManagementException;
+import org.wso2.carbon.identity.device.policy.management.api.rule.DevicePolicyEvaluator;
+import org.wso2.carbon.identity.device.policy.management.internal.config.DeviceFieldConfig;
+import org.wso2.carbon.identity.device.policy.management.internal.config.DeviceFieldConfigLoader;
 import org.wso2.carbon.identity.rule.evaluation.api.exception.RuleEvaluationException;
 
-import javax.servlet.http.HttpServletRequest;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.BiFunction;
+import javax.servlet.http.HttpServletRequest;
 
 /**
  * JS function implementation for device policy compliance check.
@@ -49,10 +54,10 @@ public class DevicePolicyJsFunction implements BiFunction<JsBaseAuthenticationCo
                     (TransientObjectWrapper<HttpServletRequest>) context.getWrapped()
                             .getProperty(FrameworkConstants.RequestAttribute.HTTP_REQUEST);
             HttpServletRequest request = requestWrapper.getWrapped();
-
             String tenantDomain = context.getWrapped().getTenantDomain();
 
-            return new DevicePolicyEvaluator().evaluate(policyName, request, tenantDomain);
+            Map<String, Object> deviceData = extractDeviceDataFromRequest(request);
+            return new DevicePolicyEvaluator().evaluate(policyName, deviceData, tenantDomain);
 
         } catch (PolicyManagementException e) {
             LOG.error("Error while evaluating device policy: " + policyName, e);
@@ -61,5 +66,15 @@ public class DevicePolicyJsFunction implements BiFunction<JsBaseAuthenticationCo
             LOG.error("Rule evaluation failed for device policy: " + policyName, e);
             return policyName + ":evaluation_error";
         }
+    }
+
+    private Map<String, Object> extractDeviceDataFromRequest(HttpServletRequest request) {
+
+        Map<String, Object> deviceData = new HashMap<>();
+        for (DeviceFieldConfig field : DeviceFieldConfigLoader.getInstance().getFields()) {
+            String value = request.getHeader(field.getHeader());
+            deviceData.put(field.getName(), value != null ? value : "not_available");
+        }
+        return deviceData;
     }
 }

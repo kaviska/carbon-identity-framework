@@ -1,0 +1,80 @@
+{
+  "fields": [
+    {
+      "name": "platform",
+      "header": "X-Device-Platform"
+    },
+    {
+      "name": "osVersion",
+      "header": "X-Device-OS-Version"
+    },
+    {
+      "name": "isRooted",
+      "header": "X-Device-Is-Rooted",
+      "applicablePlatforms": ["android"]
+    },
+    {
+      "name": "usbDebugging",
+      "header": "X-Device-USB-Debugging",
+      "applicablePlatforms": ["android"]
+    },
+    {
+      "name": "hardwareKeystore",
+      "header": "X-Device-Hardware-Keystore",
+      "applicablePlatforms": ["android"]
+    },
+    {
+      "name": "lockScreen",
+      "header": "X-Device-Lock-Screen"
+    },
+    {
+      "name": "biometric",
+      "header": "X-Device-Biometric"
+    },
+    {
+      "name": "screenLockComplexity",
+      "header": "X-Device-Screen-Lock-Complexity"
+    },
+    {
+      "name": "diskEncryption",
+      "header": "X-Device-Disk-Encryption"
+    },
+    {
+      "name": "networkProxies",
+      "header": "X-Device-Network-Proxies"
+    },
+    {
+      "name": "wifiNetworkSecurity",
+      "header": "X-Device-Wifi-Network-Security"
+    },
+    {
+      "name": "passcode",
+      "header": "X-Device-Passcode"
+    },
+    {
+      "name": "touchIdOrFaceId",
+      "header": "X-Device-Touch-Id-Or-Face-Id",
+      "applicablePlatforms": ["ios"]
+    },
+    {
+      "name": "jailbreak",
+      "header": "X-Device-Jailbreak",
+      "applicablePlatforms": ["ios"]
+    },
+    {
+      "name": "secureEnclave",
+      "header": "X-Device-Secure-Enclave",
+      "applicablePlatforms": ["macos"]
+    },
+    {
+      "name": "windowsHello",
+      "header": "X-Device-Windows-Hello",
+      "applicablePlatforms": ["windows"]
+    },
+    {
+      "name": "trustedPlatformModule",
+      "header": "X-Device-Trusted-Platform-Module",
+      "applicablePlatforms": ["windows"]
+    }
+  ]
+}

@@ -34,7 +34,7 @@ import java.util.function.BiFunction;
  * JS function implementation for device policy compliance check.
  * Implements BiFunction to be directly callable from JavaScript via GraalVM polyglot engine.
  * Parameters: JsBaseAuthenticationContext (authentication context), String (policy name).
- * Returns: null if compliant, or a comma-separated string of failed field names if not compliant.
+ * Returns: empty string ("") if compliant, or a comma-separated string of failed field names if not compliant.
  */
 public class DevicePolicyJsFunction implements BiFunction<JsBaseAuthenticationContext, String, String> {
 
@@ -56,10 +56,10 @@ public class DevicePolicyJsFunction implements BiFunction<JsBaseAuthenticationCo
 
         } catch (PolicyManagementException e) {
             LOG.error("Error while evaluating device policy: " + policyName, e);
-            return "policy_error";
+            return policyName + ":policy_error";
         } catch (RuleEvaluationException e) {
-            LOG.debug("Device policy evaluation failed for policy: " + policyName + ". " + e.getMessage());
-            return "evaluation_error";
+            LOG.error("Rule evaluation failed for device policy: " + policyName, e);
+            return policyName + ":evaluation_error";
         }
     }
 }

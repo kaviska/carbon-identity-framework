@@ -1,95 +1,67 @@
+/*
+ * Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
+ *
+ * WSO2 LLC. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package org.wso2.carbon.identity.device.policy.management.internal.rule;
 
+import org.wso2.carbon.identity.device.policy.management.api.exception.PolicyManagementException;
+import org.wso2.carbon.identity.device.policy.management.api.model.Policy;
+import org.wso2.carbon.identity.device.policy.management.internal.component.DevicePolicyMgtComponentServiceHolder;
+import org.wso2.carbon.identity.device.policy.management.internal.config.DeviceFieldConfig;
+import org.wso2.carbon.identity.device.policy.management.internal.config.DeviceFieldConfigLoader;
 import org.wso2.carbon.identity.rule.evaluation.api.exception.RuleEvaluationException;
 import org.wso2.carbon.identity.rule.evaluation.api.model.FlowContext;
 import org.wso2.carbon.identity.rule.evaluation.api.model.FlowType;
 import org.wso2.carbon.identity.rule.evaluation.api.model.RuleEvaluationResult;
-import org.wso2.carbon.identity.device.policy.management.api.exception.PolicyManagementException;
-import org.wso2.carbon.identity.device.policy.management.api.model.Policy;
-import org.wso2.carbon.identity.device.policy.management.internal.component.DevicePolicyMgtComponentServiceHolder;
 
 import java.util.HashMap;
 import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 
+/**
+ * Evaluates device policy compliance by reading device attributes from HTTP request headers
+ * and running them through the rule evaluation engine.
+ * Field-to-header mapping is driven by device-fields.json via DeviceFieldConfigLoader.
+ */
 public class DevicePolicyEvaluator {
 
-    private static final String HEADER_PREFIX = "X-Device-";
-
-    private static final String[] DEVICE_FIELDS = {
-            "platform",
-            "osVersion",
-            "isRooted",
-            "usbDebugging",
-            "lockScreen",
-            "biometric",
-            "screenLockComplexity",
-            "hardwareKeystore",
-            "diskEncryption",
-            "networkProxies",
-            "wifiNetworkSecurity",
-            "passcode",
-            "touchIdOrFaceId",
-            "jailbreak",
-            "secureEnclave",
-            "windowsHello",
-            "trustedPlatformModule"
-    };
-
-    private static final Map<String, String> FIELD_TO_HEADER = new HashMap<>();
-
-    static {
-        FIELD_TO_HEADER.put("platform",             "X-Device-Platform");
-        FIELD_TO_HEADER.put("osVersion",            "X-Device-OS-Version");
-        FIELD_TO_HEADER.put("isRooted",             "X-Device-Is-Rooted");
-        FIELD_TO_HEADER.put("usbDebugging",         "X-Device-USB-Debugging");
-        FIELD_TO_HEADER.put("lockScreen",           "X-Device-Lock-Screen");
-        FIELD_TO_HEADER.put("biometric",            "X-Device-Biometric");
-        FIELD_TO_HEADER.put("screenLockComplexity", "X-Device-Screen-Lock-Complexity");
-        FIELD_TO_HEADER.put("hardwareKeystore",     "X-Device-Hardware-Keystore");
-        FIELD_TO_HEADER.put("diskEncryption",       "X-Device-Disk-Encryption");
-        FIELD_TO_HEADER.put("networkProxies",       "X-Device-Network-Proxies");
-        FIELD_TO_HEADER.put("wifiNetworkSecurity",  "X-Device-Wifi-Network-Security");
-        FIELD_TO_HEADER.put("passcode",             "X-Device-Passcode");
-        FIELD_TO_HEADER.put("touchIdOrFaceId",      "X-Device-Touch-Id-Or-Face-Id");
-        FIELD_TO_HEADER.put("jailbreak",            "X-Device-Jailbreak");
-        FIELD_TO_HEADER.put("secureEnclave",        "X-Device-Secure-Enclave");
-        FIELD_TO_HEADER.put("windowsHello",         "X-Device-Windows-Hello");
-        FIELD_TO_HEADER.put("trustedPlatformModule","X-Device-Trusted-Platform-Module");
-    }
-
     /**
-     * Evaluates device policy compliance.
+     * Evaluates device policy compliance for the given policy and request.
      *
      * @return null if compliant, or a comma-separated string of failed field names if not compliant.
      */
     public String evaluate(String policyName, HttpServletRequest request, String tenantDomain)
             throws PolicyManagementException, RuleEvaluationException {
 
-        // Step 1 - get the policy to find ruleId
         Policy policy = DevicePolicyMgtComponentServiceHolder.getInstance()
                 .getPolicyManagementService()
                 .getPolicyByName(policyName, tenantDomain);
 
-        // Step 2 - build device data map from request headers
         Map<String, Object> deviceData = new HashMap<>();
-        for (String field : DEVICE_FIELDS) {
-            String headerName = FIELD_TO_HEADER.get(field);
-            String value = request.getHeader(headerName);
-            if (value != null) {
-                deviceData.put(field, value);
-            }
+        for (DeviceFieldConfig field : DeviceFieldConfigLoader.getInstance().getFields()) {
+            String value = request.getHeader(field.getHeader());
+            deviceData.put(field.getName(), value != null ? value : "not_available");
         }
 
-        // Step 3 - build FlowContext
         FlowContext flowContext = new FlowContext(FlowType.DEVICE_POLICY, deviceData);
-
-        // Step 4 - evaluate
         RuleEvaluationResult result = DevicePolicyMgtComponentServiceHolder.getInstance()
                 .getRuleEvaluationService()
                 .evaluate(policy.getRuleId(), flowContext, tenantDomain);
 
-        // Step 5 - return null if satisfied, or the failed field names joined
         if (result.isRuleSatisfied()) {
             return null;
         }

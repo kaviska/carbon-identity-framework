@@ -6,6 +6,9 @@ import org.wso2.carbon.identity.device.mgt.api.model.RegisteredDevice;
 
 import java.util.List;
 
+/**
+ * Service interface for device management operations.
+ */
 public interface DeviceManagementService {
 
     /**
@@ -97,6 +100,15 @@ public interface DeviceManagementService {
      * @return List of active RegisteredDevice objects. Empty list if none found.
      */
     List<RegisteredDevice> getDevicesByUserId(String userId, String tenantDomain)
+            throws DeviceMgtException;
+
+    /**
+     * Retrieves all devices registered in the tenant.
+     *
+     * @param tenantDomain Tenant domain.
+     * @return List of all RegisteredDevice objects. Empty list if none found.
+     */
+    List<RegisteredDevice> getAllDevices(String tenantDomain)
             throws DeviceMgtException;
 
     /**

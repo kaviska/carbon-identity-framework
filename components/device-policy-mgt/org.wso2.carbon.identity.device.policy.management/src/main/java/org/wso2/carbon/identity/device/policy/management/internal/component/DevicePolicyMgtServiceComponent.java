@@ -36,6 +36,8 @@ import org.wso2.carbon.identity.device.policy.management.api.service.PolicyManag
 import org.wso2.carbon.identity.device.policy.management.internal.rule.DevicePolicyEvaluationDataProvider;
 import org.wso2.carbon.identity.device.policy.management.internal.rule.DevicePolicyJsFunction;
 import org.wso2.carbon.identity.device.policy.management.internal.service.impl.PolicyManagementServiceImpl;
+import org.wso2.carbon.identity.device.mgt.api.service.DeviceManagementService;
+
 
 /**
  * Device Policy Management Service Component.
@@ -140,6 +142,22 @@ public class DevicePolicyMgtServiceComponent {
         DevicePolicyMgtComponentServiceHolder.getInstance()
                 .setJsFunctionRegistry(null);
         LOG.debug("JsFunctionRegistry is unset in the Device Policy Management component.");
+    }
+
+    @Reference(
+            name = "device.management.service",
+            service = DeviceManagementService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetDeviceManagementService"
+    )
+    protected void setDeviceManagementService(DeviceManagementService deviceManagementService) {
+        DevicePolicyMgtComponentServiceHolder.getInstance()
+                .setDeviceManagementService(deviceManagementService);
+    }
+    protected void unsetDeviceManagementService(DeviceManagementService deviceManagementService) {
+        DevicePolicyMgtComponentServiceHolder.getInstance()
+                .setDeviceManagementService(null);
     }
 
 }

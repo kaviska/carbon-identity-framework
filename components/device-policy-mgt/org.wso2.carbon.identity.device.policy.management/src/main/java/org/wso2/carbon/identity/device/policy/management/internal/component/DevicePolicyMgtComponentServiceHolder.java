@@ -22,6 +22,8 @@ import org.wso2.carbon.identity.application.authentication.framework.JsFunctionR
 import org.wso2.carbon.identity.rule.evaluation.api.service.RuleEvaluationService;
 import org.wso2.carbon.identity.rule.management.api.service.RuleManagementService;
 import org.wso2.carbon.identity.device.policy.management.api.service.PolicyManagementService;
+import org.wso2.carbon.identity.device.mgt.api.service.DeviceManagementService;
+
 
 /**
  * Service holder for Device Policy Management component.
@@ -34,6 +36,7 @@ public class DevicePolicyMgtComponentServiceHolder {
     private RuleEvaluationService ruleEvaluationService;
     private PolicyManagementService policyManagementService;
     private JsFunctionRegistry jsFunctionRegistry;
+    private DeviceManagementService deviceManagementService;
 
 
     private DevicePolicyMgtComponentServiceHolder() {
@@ -81,5 +84,13 @@ public class DevicePolicyMgtComponentServiceHolder {
     public void setJsFunctionRegistry(JsFunctionRegistry jsFunctionRegistry) {
 
         this.jsFunctionRegistry = jsFunctionRegistry;
+    }
+
+    public DeviceManagementService getDeviceManagementService() {
+        return deviceManagementService;
+    }
+
+    public void setDeviceManagementService(DeviceManagementService deviceManagementService) {
+        this.deviceManagementService = deviceManagementService;
     }
 }

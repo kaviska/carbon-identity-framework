@@ -26,11 +26,9 @@ import org.wso2.carbon.identity.application.authentication.framework.context.Tra
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.device.policy.management.api.exception.PolicyManagementException;
 import org.wso2.carbon.identity.device.policy.management.api.rule.DevicePolicyEvaluator;
-import org.wso2.carbon.identity.device.policy.management.internal.config.DeviceFieldConfig;
-import org.wso2.carbon.identity.device.policy.management.internal.config.DeviceFieldConfigLoader;
+import org.wso2.carbon.identity.device.policy.management.internal.jwt.DeviceTokenExtractor;
 import org.wso2.carbon.identity.rule.evaluation.api.exception.RuleEvaluationException;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.function.BiFunction;
 import javax.servlet.http.HttpServletRequest;
@@ -39,7 +37,7 @@ import javax.servlet.http.HttpServletRequest;
  * JS function implementation for device policy compliance check.
  * Implements BiFunction to be directly callable from JavaScript via GraalVM polyglot engine.
  * Parameters: JsBaseAuthenticationContext (authentication context), String (policy name).
- * Returns: empty string ("") if compliant, or a comma-separated string of failed field names if not compliant.
+ * Returns: null if compliant, or a comma-separated string of failed field names if not compliant.
  */
 public class DevicePolicyJsFunction implements BiFunction<JsBaseAuthenticationContext, String, String> {
 
@@ -56,7 +54,7 @@ public class DevicePolicyJsFunction implements BiFunction<JsBaseAuthenticationCo
             HttpServletRequest request = requestWrapper.getWrapped();
             String tenantDomain = context.getWrapped().getTenantDomain();
 
-            Map<String, Object> deviceData = extractDeviceDataFromRequest(request);
+            Map<String, Object> deviceData = new DeviceTokenExtractor().extract(request, tenantDomain);
             return new DevicePolicyEvaluator().evaluate(policyName, deviceData, tenantDomain);
 
         } catch (PolicyManagementException e) {
@@ -66,15 +64,5 @@ public class DevicePolicyJsFunction implements BiFunction<JsBaseAuthenticationCo
             LOG.error("Rule evaluation failed for device policy: " + policyName, e);
             return policyName + ":evaluation_error";
         }
-    }
-
-    private Map<String, Object> extractDeviceDataFromRequest(HttpServletRequest request) {
-
-        Map<String, Object> deviceData = new HashMap<>();
-        for (DeviceFieldConfig field : DeviceFieldConfigLoader.getInstance().getFields()) {
-            String value = request.getHeader(field.getHeader());
-            deviceData.put(field.getName(), value != null ? value : "not_available");
-        }
-        return deviceData;
     }
 }

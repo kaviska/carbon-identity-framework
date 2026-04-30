@@ -148,6 +148,36 @@ public class DeviceManagementDAOImpl implements DeviceManagementDAO {
     }
 
     @Override
+    public List<RegisteredDevice> getAllDevices(int tenantId) throws DeviceMgtException {
+
+        NamedJdbcTemplate jdbcTemplate = new NamedJdbcTemplate(IdentityDatabaseUtil.getDataSource());
+
+        try {
+            return jdbcTemplate.<List<RegisteredDevice>, RuntimeException>withTransaction(
+                    template -> template.executeQuery(
+                            DeviceMgtSQLConstants.Query.GET_ALL_DEVICES,
+                            (resultSet, rowNumber) -> new RegisteredDevice.Builder()
+                                    .id(resultSet.getString(DeviceMgtSQLConstants.Column.ID))
+                                    .userId(resultSet.getString(DeviceMgtSQLConstants.Column.USER_ID))
+                                    .deviceName(resultSet.getString(DeviceMgtSQLConstants.Column.DEVICE_NAME))
+                                    .deviceModel(resultSet.getString(DeviceMgtSQLConstants.Column.DEVICE_MODEL))
+                                    .publicKey(resultSet.getString(DeviceMgtSQLConstants.Column.PUBLIC_KEY))
+                                    .status(resultSet.getString(DeviceMgtSQLConstants.Column.STATUS))
+                                    .registeredAt(resultSet.getTimestamp(DeviceMgtSQLConstants.Column.REGISTERED_AT))
+                                    .metadata(resultSet.getString(DeviceMgtSQLConstants.Column.METADATA))
+                                    .build(),
+                            preparedStatement -> preparedStatement.setInt(
+                                    DeviceMgtSQLConstants.Column.TENANT_ID, tenantId)));
+
+        } catch (TransactionException e) {
+            throw new DeviceMgtServerException(
+                    ErrorMessage.ERROR_WHILE_RETRIEVING_DEVICE.getMessage(),
+                    ErrorMessage.ERROR_WHILE_RETRIEVING_DEVICE.getDescription(),
+                    ErrorMessage.ERROR_WHILE_RETRIEVING_DEVICE.getCode(), e);
+        }
+    }
+
+    @Override
     public RegisteredDevice updateDeviceName(String deviceId, String deviceName, int tenantId)
             throws DeviceMgtException {
 

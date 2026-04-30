@@ -73,6 +73,12 @@ public class DeviceMgtSQLConstants {
                 "UPDATE IDN_REGISTERED_DEVICE SET DEVICE_NAME = :DEVICE_NAME; " +
                         "WHERE ID = :ID; AND TENANT_ID = :TENANT_ID;";
 
+        public static final String GET_ALL_DEVICES =
+                "SELECT ID, USER_ID, DEVICE_NAME, DEVICE_MODEL, PUBLIC_KEY, STATUS, REGISTERED_AT, " +
+                        "METADATA, TENANT_ID " +
+                        "FROM IDN_REGISTERED_DEVICE " +
+                        "WHERE TENANT_ID = :TENANT_ID;";
+
         public static final String DELETE_DEVICE =
                 "DELETE FROM IDN_REGISTERED_DEVICE " +
                         "WHERE ID = :ID; AND TENANT_ID = :TENANT_ID;";

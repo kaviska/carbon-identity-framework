@@ -168,6 +168,7 @@ public class DeviceRegistrationExecutor implements Executor {
             additionalInfo.put(PROP_REGISTRATION_ID, initiation.getRegistrationId());
             additionalInfo.put(PROP_CHALLENGE, initiation.getChallenge());
 
+
             Map<String, Object> contextProperties = new HashMap<>();
             contextProperties.put(CTX_REGISTRATION_ID, initiation.getRegistrationId());
 

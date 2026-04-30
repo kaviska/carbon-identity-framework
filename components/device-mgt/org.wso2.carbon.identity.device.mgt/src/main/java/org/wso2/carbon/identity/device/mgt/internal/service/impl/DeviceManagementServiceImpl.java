@@ -158,7 +158,7 @@ public class DeviceManagementServiceImpl implements DeviceManagementService {
                     " in tenant: " + tenantDomain);
         }
         return new RegisteredDevice.Builder()
-                .id(UUID.randomUUID().toString())
+                .id(registrationId)
                 .userId(context.getUsername())
                 .deviceName(deviceName)
                 .deviceModel(deviceModel)
@@ -196,6 +196,12 @@ public class DeviceManagementServiceImpl implements DeviceManagementService {
         validateRequiredField(userId, "userId");
         return deviceManagementDAO.getDevicesByUserId(
                 userId, IdentityTenantUtil.getTenantId(tenantDomain));
+    }
+
+    @Override
+    public List<RegisteredDevice> getAllDevices(String tenantDomain) throws DeviceMgtException {
+
+        return deviceManagementDAO.getAllDevices(IdentityTenantUtil.getTenantId(tenantDomain));
     }
 
     @Override

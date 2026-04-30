@@ -62,6 +62,16 @@ public interface DeviceManagementDAO {
             throws DeviceMgtException;
 
     /**
+     * Finds all devices registered in the tenant.
+     *
+     * @param tenantId Tenant identifier.
+     * @return All devices in the tenant.
+     * @throws DeviceMgtException If retrieval fails.
+     */
+    List<RegisteredDevice> getAllDevices(int tenantId)
+            throws DeviceMgtException;
+
+    /**
      * Updates the name of a device.
      *
      * @param deviceId Device identifier.

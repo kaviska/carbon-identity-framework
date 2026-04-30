@@ -30,6 +30,7 @@ import org.wso2.carbon.identity.device.policy.management.internal.dao.PolicyMana
 import org.wso2.carbon.identity.device.policy.management.internal.dao.impl.PolicyManagementDAOFacade;
 import org.wso2.carbon.identity.device.policy.management.internal.dao.impl.PolicyManagementDAOImpl;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -122,6 +123,12 @@ public class PolicyManagementServiceImpl implements PolicyManagementService {
         return policyManagementDAO.getPolicyByName(
                 policyName,
                 IdentityTenantUtil.getTenantId(tenantDomain));
+    }
+
+    @Override
+    public List<Policy> getPolicies(String tenantDomain) throws PolicyManagementException {
+
+        return policyManagementDAO.getPolicies(IdentityTenantUtil.getTenantId(tenantDomain));
     }
 
     private void validateIfPolicyExists(String policyId, String tenantDomain)

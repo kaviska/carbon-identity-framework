@@ -35,6 +35,7 @@ public class DevicePolicyMgtComponentServiceHolder {
     private PolicyManagementService policyManagementService;
     private JsFunctionRegistry jsFunctionRegistry;
 
+
     private DevicePolicyMgtComponentServiceHolder() {
 
     }

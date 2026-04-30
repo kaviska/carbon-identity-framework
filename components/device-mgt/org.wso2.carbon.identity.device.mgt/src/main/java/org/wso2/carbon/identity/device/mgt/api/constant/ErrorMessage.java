@@ -36,6 +36,8 @@ public enum ErrorMessage {
 
     ERROR_USER_NOT_IDENTIFIED("DM-60006", "User not identified.",
             "Cannot initiate device registration: no authenticated user found in the flow context."),
+    ERROR_DEVICE_POLICY_NOT_COMPLIANT("DM-60007", "Device not compliant.",
+            "Device does not comply with policy '%s'. Failed fields: %s."),
 
     ERROR_WHILE_REGISTERING_DEVICE("DM-65001", "Error while registering device.",
             "Error while persisting device registration in the system."),
@@ -46,7 +48,9 @@ public enum ErrorMessage {
     ERROR_WHILE_DELETING_DEVICE("DM-65004", "Error while deleting device.",
             "Error while deleting device from the system."),
     ERROR_WHILE_VERIFYING_SIGNATURE("DM-65005", "Error while verifying device signature.",
-            "An unexpected error occurred during signature verification for registration ID: %s.");
+            "An unexpected error occurred during signature verification for registration ID: %s."),
+    ERROR_WHILE_EVALUATING_POLICY("DM-65006", "Error while evaluating device policy.",
+            "An error occurred while evaluating policy '%s'.");
 
 
     private final String code;

@@ -21,6 +21,8 @@ package org.wso2.carbon.identity.device.policy.management.internal.dao;
 import org.wso2.carbon.identity.device.policy.management.api.exception.PolicyManagementException;
 import org.wso2.carbon.identity.device.policy.management.api.model.Policy;
 
+import java.util.List;
+
 /**
  * Interface for Policy Management DAO.
  */
@@ -35,4 +37,6 @@ public interface PolicyManagementDAO {
     Policy getPolicyById(String policyId, int tenantId) throws PolicyManagementException;
 
     Policy getPolicyByName(String policyName, int tenantId) throws PolicyManagementException;
+
+    List<Policy> getPolicies(int tenantId) throws PolicyManagementException;
 }

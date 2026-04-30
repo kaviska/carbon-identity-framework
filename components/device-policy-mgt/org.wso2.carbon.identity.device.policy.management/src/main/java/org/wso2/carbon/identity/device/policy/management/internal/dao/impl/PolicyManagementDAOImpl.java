@@ -31,6 +31,9 @@ import org.wso2.carbon.identity.device.policy.management.api.model.Policy;
 import org.wso2.carbon.identity.device.policy.management.internal.constant.PolicyMgtSQLConstants;
 import org.wso2.carbon.identity.device.policy.management.internal.dao.PolicyManagementDAO;
 
+import java.util.Collections;
+import java.util.List;
+
 /**
  * Policy Management DAO Implementation.
  * This class is used to perform CRUD operations on Policy in the database.
@@ -210,6 +213,32 @@ public class PolicyManagementDAOImpl implements PolicyManagementDAO {
                                         PolicyMgtSQLConstants.Column.TENANT_ID,
                                         tenantId);
                             }));
+        } catch (TransactionException e) {
+            throw new PolicyManagementServerException(
+                    ErrorMessage.ERROR_WHILE_RETRIEVING_POLICY.getMessage(),
+                    ErrorMessage.ERROR_WHILE_RETRIEVING_POLICY.getDescription(),
+                    ErrorMessage.ERROR_WHILE_RETRIEVING_POLICY.getCode(), e);
+        }
+    }
+
+    @Override
+    public List<Policy> getPolicies(int tenantId) throws PolicyManagementException {
+
+        NamedJdbcTemplate jdbcTemplate =
+                new NamedJdbcTemplate(IdentityDatabaseUtil.getDataSource());
+        try {
+            List<Policy> policies = jdbcTemplate.<List<Policy>, RuntimeException>withTransaction(
+                    template -> template.executeQuery(
+                            PolicyMgtSQLConstants.Query.GET_ALL_POLICIES,
+                            (resultSet, rowNumber) -> new Policy(
+                                    resultSet.getString(PolicyMgtSQLConstants.Column.POLICY_ID),
+                                    resultSet.getString(PolicyMgtSQLConstants.Column.POLICY_NAME),
+                                    resultSet.getString(PolicyMgtSQLConstants.Column.RULE_ID),
+                                    IdentityTenantUtil.getTenantDomain(tenantId),
+                                    null),
+                            preparedStatement -> preparedStatement.setInt(
+                                    PolicyMgtSQLConstants.Column.TENANT_ID, tenantId)));
+            return policies != null ? policies : Collections.emptyList();
         } catch (TransactionException e) {
             throw new PolicyManagementServerException(
                     ErrorMessage.ERROR_WHILE_RETRIEVING_POLICY.getMessage(),

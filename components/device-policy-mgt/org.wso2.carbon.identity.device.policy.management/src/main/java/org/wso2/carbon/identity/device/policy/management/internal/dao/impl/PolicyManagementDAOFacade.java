@@ -38,6 +38,8 @@ import org.wso2.carbon.identity.rule.management.api.model.Rule;
 import org.wso2.carbon.identity.rule.management.api.service.RuleManagementService;
 import org.wso2.carbon.identity.rule.management.api.util.RuleBuilder;
 
+import java.util.List;
+
 /**
  * Facade for Policy Management DAO.
  * Coordinates policy persistence and rule management as a single operation.
@@ -154,6 +156,12 @@ public class PolicyManagementDAOFacade implements PolicyManagementDAO {
     public Policy getPolicyByName(String policyName, int tenantId) throws PolicyManagementException {
 
         return policyManagementDAO.getPolicyByName(policyName, tenantId);
+    }
+
+    @Override
+    public List<Policy> getPolicies(int tenantId) throws PolicyManagementException {
+
+        return policyManagementDAO.getPolicies(tenantId);
     }
 
     private void validateRule(Rule rule, String tenantDomain) throws PolicyManagementException {

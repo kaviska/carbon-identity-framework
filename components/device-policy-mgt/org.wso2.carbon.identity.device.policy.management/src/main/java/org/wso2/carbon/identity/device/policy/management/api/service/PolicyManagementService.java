@@ -21,6 +21,8 @@ package org.wso2.carbon.identity.device.policy.management.api.service;
 import org.wso2.carbon.identity.device.policy.management.api.exception.PolicyManagementException;
 import org.wso2.carbon.identity.device.policy.management.api.model.Policy;
 
+import java.util.List;
+
 /**
  * Interface for Policy Management Service.
  */
@@ -35,4 +37,6 @@ public interface PolicyManagementService {
     Policy getPolicyById(String policyId, String tenantDomain) throws PolicyManagementException;
 
     Policy getPolicyByName(String policyName, String tenantDomain) throws PolicyManagementException;
+
+    List<Policy> getPolicies(String tenantDomain) throws PolicyManagementException;
 }

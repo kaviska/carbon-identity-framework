@@ -27,17 +27,24 @@ import org.wso2.carbon.identity.device.mgt.api.exception.DeviceMgtException;
 import org.wso2.carbon.identity.device.mgt.api.model.DeviceRegistrationInitiation;
 import org.wso2.carbon.identity.device.mgt.api.model.RegisteredDevice;
 import org.wso2.carbon.identity.device.mgt.api.service.DeviceManagementService;
+import org.wso2.carbon.identity.device.policy.management.api.exception.PolicyManagementException;
+import org.wso2.carbon.identity.device.policy.management.api.rule.DevicePolicyEvaluator;
 import org.wso2.carbon.identity.device.registration.executor.internal.DeviceRegistrationExecutorDataHolder;
 import org.wso2.carbon.identity.flow.execution.engine.exception.FlowEngineException;
 import org.wso2.carbon.identity.flow.execution.engine.graph.Executor;
 import org.wso2.carbon.identity.flow.execution.engine.model.ExecutorResponse;
 import org.wso2.carbon.identity.flow.execution.engine.model.FlowExecutionContext;
+import org.wso2.carbon.identity.flow.mgt.model.NodeConfig;
+import org.wso2.carbon.identity.rule.evaluation.api.exception.RuleEvaluationException;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static org.apache.commons.lang.StringUtils.isBlank;
 import static org.apache.commons.lang.StringUtils.isNotBlank;
@@ -52,13 +59,15 @@ import static org.wso2.carbon.identity.flow.execution.engine.Constants.ExecutorS
  * Implements a two-phase challenge-response protocol:
  *   Phase 1 — first call, no registrationId in context:
  *     Generates challenge via DeviceManagementService.initiateDeviceRegistration(), stores
- *     registrationId in FlowExecutionContext.properties, returns STATUS_USER_INPUT_REQUIRED
- *     so the SDK can render a "Registering device..." screen and sign the challenge.
+ *     registrationId in FlowExecutionContext.properties, returns STATUS_CLIENT_INPUT_REQUIRED
+ *     so the SDK can sign the challenge natively.
  *
  *   Phase 2 — second call, registrationId present in context:
- *     Reads publicKey + signature + device metadata from userInputData, calls
- *     DeviceManagementService.completeDeviceRegistration() which verifies the ECDSA signature
- *     and persists the device, then returns STATUS_COMPLETE.
+ *     Verifies the ECDSA signature. If an optional policyName is configured in executor
+ *     metadata, evaluates device compliance before persisting. In REGISTRATION flows the
+ *     verified device is stored in context for RegistrationFlowCompletionListener to persist
+ *     after UserProvisioningExecutor assigns the real userId. In other flows it is persisted
+ *     immediately.
  */
 public class DeviceRegistrationExecutor implements Executor {
 
@@ -66,23 +75,22 @@ public class DeviceRegistrationExecutor implements Executor {
 
     public static final String EXECUTOR_NAME = "DeviceRegistrationExecutor";
 
-    // FlowExecutionContext property keys.
     private static final String CTX_REGISTRATION_ID = "device.registration.id";
 
     // Holds the verified-but-not-yet-persisted RegisteredDevice in REGISTRATION flows.
     // RegistrationFlowCompletionListener reads this after UserProvisioningExecutor has run.
     public static final String CTX_DEVICE_REGISTRATION = "device.registration.data";
 
-    // Keys sent in ExecutorResponse.additionalInfo to the SDK during Phase 1.
     private static final String PROP_REGISTRATION_ID = "registrationId";
     private static final String PROP_CHALLENGE = "challenge";
 
-    // User input field names the SDK must submit in Phase 2.
     private static final String FIELD_PUBLIC_KEY   = "publicKey";
     private static final String FIELD_SIGNATURE    = "signature";
     private static final String FIELD_DEVICE_NAME  = "deviceName";
     private static final String FIELD_DEVICE_MODEL = "deviceModel";
     private static final String FIELD_METADATA     = "metadata";
+
+    private static final String META_POLICY_NAME = "policyName";
 
     @Override
     public String getName() {
@@ -109,6 +117,24 @@ public class DeviceRegistrationExecutor implements Executor {
     @Override
     public List<String> getInitiationData() {
         return Collections.emptyList();
+    }
+
+    /**
+     * Reads the optional policyName from executor metadata configured by the admin.
+     * Returns null if not configured, which skips policy evaluation entirely.
+     */
+    private String resolvePolicyName(FlowExecutionContext context) {
+
+        NodeConfig node = context.getCurrentNode();
+        if (node == null || node.getExecutorConfig() == null) {
+            return null;
+        }
+        Map<String, String> meta = node.getExecutorConfig().getMetadata();
+        if (meta == null) {
+            return null;
+        }
+        String policyName = meta.get(META_POLICY_NAME);
+        return isBlank(policyName) ? null : policyName;
     }
 
     private ExecutorResponse initiateRegistration(FlowExecutionContext context) {
@@ -145,12 +171,20 @@ public class DeviceRegistrationExecutor implements Executor {
             Map<String, Object> contextProperties = new HashMap<>();
             contextProperties.put(CTX_REGISTRATION_ID, initiation.getRegistrationId());
 
+            // If a compliance policy is configured, inform the SDK which device
+            // attribute fields to include in the Phase 2 submission.
+            List<String> optionalFields = new ArrayList<>(
+                    Arrays.asList(FIELD_DEVICE_MODEL, FIELD_METADATA));
+            String policyName = resolvePolicyName(context);
+            if (policyName != null) {
+                optionalFields.addAll(new DevicePolicyEvaluator().getFieldNames());
+            }
+
             ExecutorResponse response = new ExecutorResponse();
             response.setResult(STATUS_CLIENT_INPUT_REQUIRED);
             response.setRequiredData(Arrays.asList(
                     FIELD_PUBLIC_KEY, FIELD_SIGNATURE, FIELD_DEVICE_NAME));
-            response.setOptionalData(Arrays.asList(
-                    FIELD_DEVICE_MODEL, FIELD_METADATA));
+            response.setOptionalData(optionalFields);
             response.setAdditionalInfo(additionalInfo);
             response.setContextProperty(contextProperties);
             return response;
@@ -175,29 +209,8 @@ public class DeviceRegistrationExecutor implements Executor {
         try {
             Map<String, String> input = context.getUserInputData();
 
-            if ("REGISTRATION".equals(context.getFlowType())) {
-                // userId is not yet assigned — UserProvisioningExecutor runs at END after this.
-                // Verify the signature now but defer the DB write to RegistrationFlowCompletionListener,
-                // which fires after COMPLETE and has the real userId from FlowUser.
-                RegisteredDevice pending = service.verifyDeviceRegistration(
-                        registrationId,
-                        input.get(FIELD_PUBLIC_KEY),
-                        input.get(FIELD_SIGNATURE),
-                        input.get(FIELD_DEVICE_NAME),
-                        input.get(FIELD_DEVICE_MODEL),
-                        input.get(FIELD_METADATA),
-                        context.getTenantDomain());
-
-                ExecutorResponse response = new ExecutorResponse();
-                response.setResult(STATUS_COMPLETE);
-                Map<String, Object> ctxProps = new HashMap<>();
-                ctxProps.put(CTX_DEVICE_REGISTRATION, pending);
-                response.setContextProperty(ctxProps);
-                return response;
-            }
-
-            // Non-registration flow: userId already exists, write immediately.
-            service.completeDeviceRegistration(
+            // Step 1: Verify signature and clear registration cache entry.
+            RegisteredDevice verified = service.verifyDeviceRegistration(
                     registrationId,
                     input.get(FIELD_PUBLIC_KEY),
                     input.get(FIELD_SIGNATURE),
@@ -205,6 +218,30 @@ public class DeviceRegistrationExecutor implements Executor {
                     input.get(FIELD_DEVICE_MODEL),
                     input.get(FIELD_METADATA),
                     context.getTenantDomain());
+
+            // Step 2: Policy compliance check (skipped when policyName not configured).
+            String policyName = resolvePolicyName(context);
+            if (policyName != null) {
+                ExecutorResponse policyResult = evaluatePolicy(policyName, context);
+                if (policyResult != null) {
+                    return policyResult;
+                }
+            }
+
+            if ("REGISTRATION".equals(context.getFlowType())) {
+                // userId is not yet assigned — UserProvisioningExecutor runs at END after this.
+                // Defer the DB write to RegistrationFlowCompletionListener, which fires after
+                // COMPLETE and has the real userId from FlowUser.
+                ExecutorResponse response = new ExecutorResponse();
+                response.setResult(STATUS_COMPLETE);
+                Map<String, Object> ctxProps = new HashMap<>();
+                ctxProps.put(CTX_DEVICE_REGISTRATION, verified);
+                response.setContextProperty(ctxProps);
+                return response;
+            }
+
+            // Non-registration flow: userId already exists, persist immediately.
+            service.persistDevice(verified, context.getTenantDomain());
 
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Device registration completed for registrationId: " + registrationId);
@@ -226,6 +263,86 @@ public class DeviceRegistrationExecutor implements Executor {
             response.setErrorCode(e.getErrorCode());
             response.setErrorMessage(e.getMessage());
             response.setErrorDescription(e.getDescription());
+            return response;
+        }
+    }
+
+    /**
+     * Evaluates device policy compliance using attributes submitted by the SDK in Phase 2.
+     * Accepts a comma-separated list of policy names and applies OR logic — the device is
+     * considered compliant if it satisfies at least one policy. This mirrors the adaptive
+     * auth script pattern where platform-specific policies are evaluated together.
+     *
+     * <p>Examples:
+     * <ul>
+     *   <li>{@code "iOSPolicy-01"} — single policy, must pass.</li>
+     *   <li>{@code "iOSPolicy-01,AndroidPolicy-01"} — passes if either platform policy passes.</li>
+     * </ul>
+     *
+     * @return null if the device is compliant with at least one policy, or an error
+     *         ExecutorResponse listing per-policy failures if all policies fail.
+     */
+    private ExecutorResponse evaluatePolicy(String policyNames, FlowExecutionContext context) {
+
+        DevicePolicyEvaluator evaluator = new DevicePolicyEvaluator();
+        Map<String, Object> deviceData = new HashMap<>();
+        Map<String, String> input = context.getUserInputData();
+        for (String fieldName : evaluator.getFieldNames()) {
+            String value = input != null ? input.get(fieldName) : null;
+            deviceData.put(fieldName, value != null ? value : "not_available");
+        }
+
+        String[] policies = policyNames.split(",");
+        // LinkedHashMap preserves insertion order for deterministic error messages.
+        Map<String, String> failedResults = new LinkedHashMap<>();
+
+        try {
+            for (String policy : policies) {
+                String trimmed = policy.trim();
+                if (isBlank(trimmed)) {
+                    continue;
+                }
+                String failedFields = evaluator.evaluate(trimmed, deviceData,
+                        context.getTenantDomain());
+                if (failedFields == null) {
+                    // At least one policy passed — device is compliant.
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug("Device passed policy: " + trimmed);
+                    }
+                    return null;
+                }
+                failedResults.put(trimmed, failedFields);
+            }
+
+            // All evaluated policies failed.
+            if (failedResults.isEmpty()) {
+                // policyNames was blank or all entries were whitespace — treat as no policy.
+                return null;
+            }
+
+            String description = failedResults.entrySet().stream()
+                    .map(e -> e.getKey() + ": [" + e.getValue() + "]")
+                    .collect(Collectors.joining(", "));
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Device failed all policies. " + description);
+            }
+            ExecutorResponse response = new ExecutorResponse();
+            response.setResult(STATUS_USER_ERROR);
+            response.setErrorCode(ErrorMessage.ERROR_DEVICE_POLICY_NOT_COMPLIANT.getCode());
+            response.setErrorMessage(ErrorMessage.ERROR_DEVICE_POLICY_NOT_COMPLIANT.getMessage());
+            response.setErrorDescription(String.format(
+                    ErrorMessage.ERROR_DEVICE_POLICY_NOT_COMPLIANT.getDescription(),
+                    policyNames, description));
+            return response;
+
+        } catch (PolicyManagementException | RuleEvaluationException e) {
+            LOG.error("Policy evaluation failed for policies: " + policyNames, e);
+            ExecutorResponse response = new ExecutorResponse();
+            response.setResult(STATUS_ERROR);
+            response.setErrorCode(ErrorMessage.ERROR_WHILE_EVALUATING_POLICY.getCode());
+            response.setErrorMessage(ErrorMessage.ERROR_WHILE_EVALUATING_POLICY.getMessage());
+            response.setErrorDescription(String.format(
+                    ErrorMessage.ERROR_WHILE_EVALUATING_POLICY.getDescription(), policyNames));
             return response;
         }
     }

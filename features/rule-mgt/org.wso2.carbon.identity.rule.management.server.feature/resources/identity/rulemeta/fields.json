@@ -119,11 +119,13 @@
     },
     "operators": [
       "equals",
-      "notEquals"
+      "notEquals",
+      "greaterThan",
+      "lessThan"
     ],
     "value": {
       "inputType": "input",
-      "valueType": "string"
+      "valueType": "number"
     }
   },
   "isRooted": {
@@ -472,6 +474,34 @@
         {
           "name": "false",
           "displayName": "Disabled"
+        }
+      ]
+    }
+  },
+  "integrityLevel": {
+    "field": {
+      "name": "integrityLevel",
+      "displayName": "integrity level"
+    },
+    "operators": [
+      "equals",
+      "notEquals"
+    ],
+    "value": {
+      "inputType": "options",
+      "valueType": "string",
+      "values": [
+        {
+          "name": "basic",
+          "displayName": "Basic"
+        },
+        {
+          "name": "standard",
+          "displayName": "Standard"
+        },
+        {
+          "name": "strong",
+          "displayName": "Strong"
         }
       ]
     }

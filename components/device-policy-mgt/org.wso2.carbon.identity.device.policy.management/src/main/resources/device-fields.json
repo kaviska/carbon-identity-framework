@@ -29,27 +29,38 @@
     },
     {
       "name": "biometric",
-      "header": "X-Device-Biometric"
+      "header": "X-Device-Biometric",
+      "applicablePlatforms": ["android"]
     },
     {
       "name": "screenLockComplexity",
-      "header": "X-Device-Screen-Lock-Complexity"
+      "header": "X-Device-Screen-Lock-Complexity",
+        "applicablePlatforms": ["android"]
     },
     {
       "name": "diskEncryption",
-      "header": "X-Device-Disk-Encryption"
+      "header": "X-Device-Disk-Encryption",
+      "applicablePlatforms": ["android","macos","windows"]
     },
     {
       "name": "networkProxies",
-      "header": "X-Device-Network-Proxies"
+      "header": "X-Device-Network-Proxies",
+      "applicablePlatforms": ["android"]
     },
     {
       "name": "wifiNetworkSecurity",
-      "header": "X-Device-Wifi-Network-Security"
+      "header": "X-Device-Wifi-Network-Security",
+        "applicablePlatforms": ["android"]
+    },
+    {
+      "name": "integrityLevel",
+      "header": "X-Device-Integrity-Level",
+      "applicablePlatforms": ["android"]
     },
     {
       "name": "passcode",
-      "header": "X-Device-Passcode"
+      "header": "X-Device-Passcode",
+      "applicablePlatforms": ["ios"]
     },
     {
       "name": "touchIdOrFaceId",

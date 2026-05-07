@@ -198,7 +198,7 @@ public class FlowExecutionEngine {
 
         // TODO: This validation is added temporarily and will be moved to the executor.
         // Tracking issue: https://github.com/wso2/product-is/issues/27206
-        NodeResponse validationResponse = InputValidator.getInstance().executeIn      putValidation(context);
+        NodeResponse validationResponse = InputValidator.getInstance().executeInputValidation(context);
         if (validationResponse != null) {
             return validationResponse;
         }

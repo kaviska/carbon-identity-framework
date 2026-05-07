@@ -31,7 +31,17 @@ public class DevicePolicyEvaluationDataProvider implements RuleEvaluationDataPro
 
         for (Field field : ruleEvaluationContext.getFields()) {
             String value = (String) deviceData.get(field.getName());
-            if (value != null) {
+            if (value == null) {
+                continue;
+            }
+            if (ValueType.NUMBER.equals(field.getValueType())) {
+                try {
+                    fieldValues.add(new FieldValue(field.getName(), Double.parseDouble(value)));
+                } catch (NumberFormatException e) {
+                    throw new RuleEvaluationDataProviderException(
+                            "Invalid numeric value for field '" + field.getName() + "': " + value);
+                }
+            } else {
                 fieldValues.add(new FieldValue(field.getName(), value, ValueType.STRING));
             }
         }

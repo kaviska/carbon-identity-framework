@@ -2,88 +2,125 @@
   "fields": [
     {
       "name": "platform",
+      "displayName": "Platform",
       "header": "X-Device-Platform"
     },
     {
-      "name": "osVersion",
-      "header": "X-Device-OS-Version"
+      "name": "androidOsVersion",
+      "displayName": "Android OS Version",
+      "header": "X-Device-OS-Version",
+      "applicablePlatforms": ["android"]
+    },
+    {
+      "name": "iosOsVersion",
+      "displayName": "iOS Version",
+      "header": "X-Device-OS-Version",
+      "applicablePlatforms": ["ios"]
+    },
+    {
+      "name": "macosOsVersion",
+      "displayName": "macOS Version",
+      "header": "X-Device-OS-Version",
+      "applicablePlatforms": ["macos"]
+    },
+    {
+      "name": "windowsOsVersion",
+      "displayName": "Windows Version",
+      "header": "X-Device-OS-Version",
+      "applicablePlatforms": ["windows"]
     },
     {
       "name": "isRooted",
+      "displayName": "Is Rooted",
       "header": "X-Device-Is-Rooted",
       "applicablePlatforms": ["android"]
     },
     {
       "name": "usbDebugging",
+      "displayName": "USB Debugging",
       "header": "X-Device-USB-Debugging",
       "applicablePlatforms": ["android"]
     },
     {
       "name": "hardwareKeystore",
+      "displayName": "Hardware Keystore",
       "header": "X-Device-Hardware-Keystore",
       "applicablePlatforms": ["android"]
     },
     {
       "name": "lockScreen",
+      "displayName": "Lock Screen",
       "header": "X-Device-Lock-Screen"
     },
     {
       "name": "biometric",
+      "displayName": "Biometric",
       "header": "X-Device-Biometric",
       "applicablePlatforms": ["android"]
     },
     {
       "name": "screenLockComplexity",
+      "displayName": "Screen Lock Complexity",
       "header": "X-Device-Screen-Lock-Complexity",
-        "applicablePlatforms": ["android"]
+      "applicablePlatforms": ["android"]
     },
     {
       "name": "diskEncryption",
+      "displayName": "Disk Encryption",
       "header": "X-Device-Disk-Encryption",
       "applicablePlatforms": ["android","macos","windows"]
     },
     {
       "name": "networkProxies",
+      "displayName": "Network Proxies",
       "header": "X-Device-Network-Proxies",
       "applicablePlatforms": ["android"]
     },
     {
       "name": "wifiNetworkSecurity",
+      "displayName": "Wi-Fi Network Security",
       "header": "X-Device-Wifi-Network-Security",
-        "applicablePlatforms": ["android"]
+      "applicablePlatforms": ["android"]
     },
     {
       "name": "integrityLevel",
+      "displayName": "Integrity Level",
       "header": "X-Device-Integrity-Level",
       "applicablePlatforms": ["android"]
     },
     {
       "name": "passcode",
+      "displayName": "Passcode",
       "header": "X-Device-Passcode",
       "applicablePlatforms": ["ios"]
     },
     {
       "name": "touchIdOrFaceId",
+      "displayName": "Touch ID or Face ID",
       "header": "X-Device-Touch-Id-Or-Face-Id",
       "applicablePlatforms": ["ios"]
     },
     {
       "name": "jailbreak",
+      "displayName": "Jailbreak",
       "header": "X-Device-Jailbreak",
       "applicablePlatforms": ["ios"]
     },
     {
       "name": "secureEnclave",
+      "displayName": "Secure Enclave",
       "header": "X-Device-Secure-Enclave",
       "applicablePlatforms": ["macos"]
     },
     {
       "name": "windowsHello",
+      "displayName": "Windows Hello",
       "header": "X-Device-Windows-Hello",
       "applicablePlatforms": ["windows"]
     },
     {
       "name": "trustedPlatformModule",
+      "displayName": "Trusted Platform Module",
       "header": "X-Device-Trusted-Platform-Module",
       "applicablePlatforms": ["windows"]
     }

@@ -86,7 +86,6 @@ public class DeviceRegistrationExecutor implements Executor {
 
     private static final String FIELD_PUBLIC_KEY   = "publicKey";
     private static final String FIELD_SIGNATURE    = "signature";
-    private static final String FIELD_DEVICE_NAME  = "deviceName";
     private static final String FIELD_DEVICE_MODEL = "deviceModel";
     private static final String FIELD_METADATA     = "metadata";
 
@@ -183,8 +182,7 @@ public class DeviceRegistrationExecutor implements Executor {
 
             ExecutorResponse response = new ExecutorResponse();
             response.setResult(STATUS_CLIENT_INPUT_REQUIRED);
-            response.setRequiredData(Arrays.asList(
-                    FIELD_PUBLIC_KEY, FIELD_SIGNATURE, FIELD_DEVICE_NAME));
+            response.setRequiredData(Arrays.asList(FIELD_PUBLIC_KEY, FIELD_SIGNATURE));
             response.setOptionalData(optionalFields);
             response.setAdditionalInfo(additionalInfo);
             response.setContextProperty(contextProperties);
@@ -209,14 +207,16 @@ public class DeviceRegistrationExecutor implements Executor {
                 DeviceRegistrationExecutorDataHolder.getInstance().getDeviceManagementService();
         try {
             Map<String, String> input = context.getUserInputData();
+            String deviceModel = input.get(FIELD_DEVICE_MODEL);
+            String deviceName = buildDeviceName(context, deviceModel);
 
             // Step 1: Verify signature and clear registration cache entry.
             RegisteredDevice verified = service.verifyDeviceRegistration(
                     registrationId,
                     input.get(FIELD_PUBLIC_KEY),
                     input.get(FIELD_SIGNATURE),
-                    input.get(FIELD_DEVICE_NAME),
-                    input.get(FIELD_DEVICE_MODEL),
+                    deviceName,
+                    deviceModel,
                     input.get(FIELD_METADATA),
                     context.getTenantDomain());
 
@@ -266,6 +266,18 @@ public class DeviceRegistrationExecutor implements Executor {
             response.setErrorDescription(e.getDescription());
             return response;
         }
+    }
+
+    /**
+     * Builds a device name automatically from the authenticated username and optional device model.
+     * Format: "{username}'s {deviceModel}" or "{username}'s Device" when model is absent.
+     */
+    private String buildDeviceName(FlowExecutionContext context, String deviceModel) {
+
+        String userId = context.getFlowUser().getUserId();
+        String username = isNotBlank(userId) ? userId : context.getFlowUser().getUsername();
+        String base = isNotBlank(username) ? username : "Unknown";
+        return isNotBlank(deviceModel) ? base + "'s " + deviceModel : base + "'s Device";
     }
 
     /**

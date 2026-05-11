@@ -26,9 +26,13 @@ import org.wso2.carbon.identity.device.policy.management.api.exception.PolicyMan
 import org.wso2.carbon.identity.device.policy.management.api.exception.PolicyManagementException;
 import org.wso2.carbon.identity.device.policy.management.api.model.Policy;
 import org.wso2.carbon.identity.device.policy.management.api.service.PolicyManagementService;
+import org.wso2.carbon.identity.device.policy.management.api.exception.PolicyManagementServerException;
+import org.wso2.carbon.identity.device.policy.management.internal.component.DevicePolicyMgtComponentServiceHolder;
 import org.wso2.carbon.identity.device.policy.management.internal.dao.PolicyManagementDAO;
 import org.wso2.carbon.identity.device.policy.management.internal.dao.impl.PolicyManagementDAOFacade;
 import org.wso2.carbon.identity.device.policy.management.internal.dao.impl.PolicyManagementDAOImpl;
+import org.wso2.carbon.identity.rule.management.api.exception.RuleManagementException;
+import org.wso2.carbon.identity.rule.management.api.model.Rule;
 
 import java.util.List;
 import java.util.UUID;
@@ -111,9 +115,23 @@ public class PolicyManagementServiceImpl implements PolicyManagementService {
     public Policy getPolicyById(String policyId, String tenantDomain)
             throws PolicyManagementException {
 
-        return policyManagementDAO.getPolicyById(
-                policyId,
-                IdentityTenantUtil.getTenantId(tenantDomain));
+        Policy policy = policyManagementDAO.getPolicyById(
+                policyId, IdentityTenantUtil.getTenantId(tenantDomain));
+        if (policy == null || policy.getRuleId() == null) {
+            return policy;
+        }
+        try {
+            Rule rule = DevicePolicyMgtComponentServiceHolder.getInstance()
+                    .getRuleManagementService()
+                    .getRuleByRuleId(policy.getRuleId(), tenantDomain);
+            return new Policy(policy.getId(), policy.getName(), policy.getRuleId(),
+                    policy.getTenantDomain(), rule);
+        } catch (RuleManagementException e) {
+            throw new PolicyManagementServerException(
+                    ErrorMessage.ERROR_WHILE_RETRIEVING_POLICY.getMessage(),
+                    ErrorMessage.ERROR_WHILE_RETRIEVING_POLICY.getDescription(),
+                    ErrorMessage.ERROR_WHILE_RETRIEVING_POLICY.getCode(), e);
+        }
     }
 
     @Override

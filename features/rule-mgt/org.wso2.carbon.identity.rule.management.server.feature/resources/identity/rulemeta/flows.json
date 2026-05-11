@@ -118,11 +118,16 @@
       "fieldName": "platform"
     },
     {
-      "fieldName": "osVersion",
-      "appliesTo": [
-        "android",
-        "ios"
-      ]
+      "fieldName": "androidOsVersion"
+    },
+    {
+      "fieldName": "iosOsVersion"
+    },
+    {
+      "fieldName": "macosOsVersion"
+    },
+    {
+      "fieldName": "windowsOsVersion"
     },
     {
       "fieldName": "isRooted"

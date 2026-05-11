@@ -77,7 +77,7 @@ public class DeviceMgtSQLConstants {
                 "SELECT ID, USER_ID, DEVICE_NAME, DEVICE_MODEL, PUBLIC_KEY, STATUS, REGISTERED_AT, " +
                         "METADATA, TENANT_ID " +
                         "FROM IDN_REGISTERED_DEVICE " +
-                        "WHERE TENANT_ID = :TENANT_ID;";
+                        "WHERE TENANT_ID = :TENANT_ID; ORDER BY REGISTERED_AT DESC";
 
         public static final String DELETE_DEVICE =
                 "DELETE FROM IDN_REGISTERED_DEVICE " +

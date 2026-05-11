@@ -62,7 +62,7 @@ public class PolicyMgtSQLConstants {
 
         public static final String GET_ALL_POLICIES =
                 "SELECT POLICY_ID, POLICY_NAME, RULE_ID FROM IDN_DEVICE_POLICY " +
-                        "WHERE TENANT_ID = :TENANT_ID;";
+                        "WHERE TENANT_ID = :TENANT_ID; ORDER BY ID DESC";
 
         private Query() {
 

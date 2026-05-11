@@ -112,10 +112,10 @@
       ]
     }
   },
-  "osVersion": {
+  "androidOsVersion": {
     "field": {
-      "name": "osVersion",
-      "displayName": "OS version"
+      "name": "androidOsVersion",
+      "displayName": "Android OS Version"
     },
     "operators": [
       "equals",
@@ -124,8 +124,82 @@
       "lessThan"
     ],
     "value": {
-      "inputType": "input",
-      "valueType": "number"
+      "inputType": "options",
+      "valueType": "number",
+      "values": [
+        { "name": "9",  "displayName": "Android 9" },
+        { "name": "10", "displayName": "Android 10" },
+        { "name": "11", "displayName": "Android 11" },
+        { "name": "12", "displayName": "Android 12" },
+        { "name": "13", "displayName": "Android 13" },
+        { "name": "14", "displayName": "Android 14" },
+        { "name": "15", "displayName": "Android 15" }
+      ]
+    }
+  },
+  "iosOsVersion": {
+    "field": {
+      "name": "iosOsVersion",
+      "displayName": "iOS Version"
+    },
+    "operators": [
+      "equals",
+      "notEquals",
+      "greaterThan",
+      "lessThan"
+    ],
+    "value": {
+      "inputType": "options",
+      "valueType": "number",
+      "values": [
+        { "name": "14", "displayName": "iOS 14" },
+        { "name": "15", "displayName": "iOS 15" },
+        { "name": "16", "displayName": "iOS 16" },
+        { "name": "17", "displayName": "iOS 17" },
+        { "name": "18", "displayName": "iOS 18" }
+      ]
+    }
+  },
+  "macosOsVersion": {
+    "field": {
+      "name": "macosOsVersion",
+      "displayName": "macOS Version"
+    },
+    "operators": [
+      "equals",
+      "notEquals",
+      "greaterThan",
+      "lessThan"
+    ],
+    "value": {
+      "inputType": "options",
+      "valueType": "number",
+      "values": [
+        { "name": "12", "displayName": "macOS 12 (Monterey)" },
+        { "name": "13", "displayName": "macOS 13 (Ventura)" },
+        { "name": "14", "displayName": "macOS 14 (Sonoma)" },
+        { "name": "15", "displayName": "macOS 15 (Sequoia)" }
+      ]
+    }
+  },
+  "windowsOsVersion": {
+    "field": {
+      "name": "windowsOsVersion",
+      "displayName": "Windows Version"
+    },
+    "operators": [
+      "equals",
+      "notEquals",
+      "greaterThan",
+      "lessThan"
+    ],
+    "value": {
+      "inputType": "options",
+      "valueType": "number",
+      "values": [
+        { "name": "10", "displayName": "Windows 10" },
+        { "name": "11", "displayName": "Windows 11" }
+      ]
     }
   },
   "isRooted": {

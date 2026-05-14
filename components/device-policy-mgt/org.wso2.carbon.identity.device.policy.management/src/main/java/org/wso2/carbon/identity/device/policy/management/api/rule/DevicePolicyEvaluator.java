@@ -23,13 +23,23 @@ import org.wso2.carbon.identity.device.policy.management.api.model.Policy;
 import org.wso2.carbon.identity.device.policy.management.internal.component.DevicePolicyMgtComponentServiceHolder;
 import org.wso2.carbon.identity.device.policy.management.internal.config.DeviceFieldConfig;
 import org.wso2.carbon.identity.device.policy.management.internal.config.DeviceFieldConfigLoader;
+import org.wso2.carbon.identity.device.policy.management.internal.config.OsVersionRegistry;
 import org.wso2.carbon.identity.rule.evaluation.api.exception.RuleEvaluationException;
 import org.wso2.carbon.identity.rule.evaluation.api.model.FlowContext;
 import org.wso2.carbon.identity.rule.evaluation.api.model.FlowType;
 import org.wso2.carbon.identity.rule.evaluation.api.model.RuleEvaluationResult;
+import org.wso2.carbon.identity.rule.management.api.exception.RuleManagementException;
+import org.wso2.carbon.identity.rule.management.api.model.ANDCombinedRule;
+import org.wso2.carbon.identity.rule.management.api.model.Expression;
+import org.wso2.carbon.identity.rule.management.api.model.ORCombinedRule;
+import org.wso2.carbon.identity.rule.management.api.model.Rule;
+import org.wso2.carbon.identity.rule.management.api.model.Value;
 
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -43,8 +53,13 @@ import java.util.stream.Collectors;
  */
 public class DevicePolicyEvaluator {
 
+    private static final Set<String> OS_VERSION_FIELDS = new HashSet<>(Arrays.asList(
+            "androidOsVersion", "iosOsVersion", "macosOsVersion", "windowsOsVersion"));
+
     /**
      * Evaluates device policy compliance for the given policy and device data.
+     * Symbolic OS version references (e.g. LATEST_ANDROID) in LIST expressions are resolved
+     * at evaluation time from os-versions.json before the rule engine sees them.
      *
      * @param policyName   Name of the policy to evaluate against.
      * @param deviceData   Map of device field names to their values. Unknown keys are ignored.
@@ -61,15 +76,78 @@ public class DevicePolicyEvaluator {
                 .getPolicyManagementService()
                 .getPolicyByName(policyName, tenantDomain);
 
+        Rule rule;
+        try {
+            rule = DevicePolicyMgtComponentServiceHolder.getInstance()
+                    .getRuleManagementService()
+                    .getRuleByRuleId(policy.getRuleId(), tenantDomain);
+        } catch (RuleManagementException e) {
+            throw new RuleEvaluationException("Error loading rule for policy: " + policyName, e);
+        }
+
+        Rule resolvedRule = resolveSymbolicOsVersions(rule);
         FlowContext flowContext = new FlowContext(FlowType.DEVICE_POLICY, deviceData);
         RuleEvaluationResult result = DevicePolicyMgtComponentServiceHolder.getInstance()
                 .getRuleEvaluationService()
-                .evaluate(policy.getRuleId(), flowContext, tenantDomain);
+                .evaluate(resolvedRule, flowContext, tenantDomain);
 
         if (result.isRuleSatisfied()) {
             return null;
         }
         return String.join(", ", result.getFailedFields());
+    }
+
+    /**
+     * Walks the rule and resolves symbolic OS version names (e.g. LATEST_ANDROID) in LIST expressions
+     * to actual version numbers from os-versions.json.
+     */
+    private Rule resolveSymbolicOsVersions(Rule rule) {
+
+        ORCombinedRule orRule = (ORCombinedRule) rule;
+        ORCombinedRule.Builder orBuilder = new ORCombinedRule.Builder()
+                .setId(rule.getId())
+                .setActive(rule.isActive());
+
+        for (ANDCombinedRule andRule : orRule.getRules()) {
+            ANDCombinedRule.Builder andBuilder = new ANDCombinedRule.Builder();
+            for (Expression expression : andRule.getExpressions()) {
+                andBuilder.addExpression(resolveExpression(expression));
+            }
+            orBuilder.addRule(andBuilder.build());
+        }
+        return orBuilder.build();
+    }
+
+    private Expression resolveExpression(Expression expression) {
+
+        if (!OS_VERSION_FIELDS.contains(expression.getField())) {
+            return expression;
+        }
+
+        Value.Type type = expression.getValue().getType();
+        String fieldValue = expression.getValue().getFieldValue();
+
+        if (type == Value.Type.LIST) {
+            // in operator: resolve each comma-separated symbolic token.
+            String resolved = OsVersionRegistry.getInstance().resolveList(fieldValue);
+            return new Expression.Builder()
+                    .field(expression.getField())
+                    .operator(expression.getOperator())
+                    .value(new Value(Value.Type.LIST, resolved))
+                    .build();
+        }
+
+        if (type == Value.Type.RAW) {
+            // equals / greaterThanOrEquals with a single symbolic token (e.g. LATEST_ANDROID).
+            String resolved = OsVersionRegistry.getInstance().resolveToken(fieldValue);
+            return new Expression.Builder()
+                    .field(expression.getField())
+                    .operator(expression.getOperator())
+                    .value(new Value(Value.Type.NUMBER, resolved))
+                    .build();
+        }
+
+        return expression;
     }
 
     /**

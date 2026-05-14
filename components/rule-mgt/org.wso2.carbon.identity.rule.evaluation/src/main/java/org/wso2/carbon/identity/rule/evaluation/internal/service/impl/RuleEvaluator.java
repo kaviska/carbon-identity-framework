@@ -29,6 +29,7 @@ import org.wso2.carbon.identity.rule.management.api.model.ORCombinedRule;
 import org.wso2.carbon.identity.rule.management.api.model.Rule;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -54,6 +55,7 @@ public class RuleEvaluator {
     private static final String EQUALS = "equals";
     private static final String NOT_EQUALS = "notEquals";
     private static final String CONTAINS = "contains";
+    private static final String IN = "in";
 
     public RuleEvaluator(OperatorRegistry operatorRegistry) {
 
@@ -123,6 +125,10 @@ public class RuleEvaluator {
             return operator.apply(fieldValue.getValue(),
                     Boolean.parseBoolean(expression.getValue().getFieldValue()));
         } else if (fieldValue.getValueType().equals(NUMBER)) {
+            if (IN.equals(expression.getOperator())) {
+                return evaluateInForNumber((Double) fieldValue.getValue(),
+                        expression.getValue().getFieldValue());
+            }
             return operator.apply(fieldValue.getValue(), Double.parseDouble(expression.getValue().getFieldValue()));
         } else if (fieldValue.getValueType().equals(REFERENCE)) {
             return operator.apply(fieldValue.getValue(), expression.getValue().getFieldValue());
@@ -131,6 +137,14 @@ public class RuleEvaluator {
         }
 
         throw new IllegalStateException("Unsupported value type: " + fieldValue.getValueType());
+    }
+
+    private boolean evaluateInForNumber(Double deviceValue, String commaSeparated) {
+
+        return Arrays.stream(commaSeparated.split(","))
+                .map(String::trim)
+                .map(Double::parseDouble)
+                .anyMatch(v -> v.equals(deviceValue));
     }
 
     private boolean applyOperatorForList(Operator operator, Object fieldValue, Object expressionValue) {

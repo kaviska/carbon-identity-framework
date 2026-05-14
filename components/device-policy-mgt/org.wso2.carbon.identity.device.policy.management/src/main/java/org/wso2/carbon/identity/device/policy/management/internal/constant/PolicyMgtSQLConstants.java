@@ -27,6 +27,9 @@ public class PolicyMgtSQLConstants {
 
     }
 
+    /**
+     * SQL column name constants.
+     */
     public static class Column {
 
         public static final String POLICY_ID = "POLICY_ID";
@@ -39,6 +42,9 @@ public class PolicyMgtSQLConstants {
         }
     }
 
+    /**
+     * SQL query constants.
+     */
     public static class Query {
 
         public static final String ADD_POLICY =

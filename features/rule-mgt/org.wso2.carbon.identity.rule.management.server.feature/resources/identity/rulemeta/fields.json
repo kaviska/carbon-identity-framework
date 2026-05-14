@@ -119,21 +119,24 @@
     },
     "operators": [
       "equals",
-      "notEquals",
-      "greaterThan",
-      "lessThan"
+      "greaterThanOrEquals",
+      "in"
     ],
     "value": {
       "inputType": "options",
       "valueType": "number",
       "values": [
+        { "name": "LATEST_ANDROID",        "displayName": "Latest Android" },
+        { "name": "SECOND_LATEST_ANDROID", "displayName": "Second Latest Android" },
         { "name": "9",  "displayName": "Android 9" },
         { "name": "10", "displayName": "Android 10" },
         { "name": "11", "displayName": "Android 11" },
         { "name": "12", "displayName": "Android 12" },
         { "name": "13", "displayName": "Android 13" },
         { "name": "14", "displayName": "Android 14" },
-        { "name": "15", "displayName": "Android 15" }
+        { "name": "15", "displayName": "Android 15" },
+        { "name": "16", "displayName": "Android 16" },
+        { "name": "17", "displayName": "Android 17" }
       ]
     }
   },
@@ -144,19 +147,28 @@
     },
     "operators": [
       "equals",
-      "notEquals",
-      "greaterThan",
-      "lessThan"
+      "greaterThanOrEquals",
+      "in"
     ],
     "value": {
       "inputType": "options",
       "valueType": "number",
       "values": [
+        { "name": "LATEST_IOS",        "displayName": "Latest iOS" },
+        { "name": "SECOND_LATEST_IOS", "displayName": "Second Latest iOS" },
         { "name": "14", "displayName": "iOS 14" },
         { "name": "15", "displayName": "iOS 15" },
         { "name": "16", "displayName": "iOS 16" },
         { "name": "17", "displayName": "iOS 17" },
-        { "name": "18", "displayName": "iOS 18" }
+        { "name": "18", "displayName": "iOS 18" },
+        { "name": "19", "displayName": "iOS 19" },
+        { "name": "20", "displayName": "iOS 20" },
+        { "name": "21", "displayName": "iOS 21" },
+        { "name": "22", "displayName": "iOS 22" },
+        { "name": "23", "displayName": "iOS 23" },
+        { "name": "24", "displayName": "iOS 24" },
+        { "name": "25", "displayName": "iOS 25" },
+        { "name": "26", "displayName": "iOS 26" }
       ]
     }
   },
@@ -167,14 +179,15 @@
     },
     "operators": [
       "equals",
-      "notEquals",
-      "greaterThan",
-      "lessThan"
+      "greaterThanOrEquals",
+      "in"
     ],
     "value": {
       "inputType": "options",
       "valueType": "number",
       "values": [
+        { "name": "LATEST_MACOS",        "displayName": "Latest macOS" },
+        { "name": "SECOND_LATEST_MACOS", "displayName": "Second Latest macOS" },
         { "name": "12", "displayName": "macOS 12 (Monterey)" },
         { "name": "13", "displayName": "macOS 13 (Ventura)" },
         { "name": "14", "displayName": "macOS 14 (Sonoma)" },
@@ -189,14 +202,15 @@
     },
     "operators": [
       "equals",
-      "notEquals",
-      "greaterThan",
-      "lessThan"
+      "greaterThanOrEquals",
+      "in"
     ],
     "value": {
       "inputType": "options",
       "valueType": "number",
       "values": [
+        { "name": "LATEST_WINDOWS",        "displayName": "Latest Windows" },
+        { "name": "SECOND_LATEST_WINDOWS", "displayName": "Second Latest Windows" },
         { "name": "10", "displayName": "Windows 10" },
         { "name": "11", "displayName": "Windows 11" }
       ]
@@ -300,8 +314,7 @@
       "displayName": "screen lock complexity"
     },
     "operators": [
-      "equals",
-      "notEquals"
+      "equals"
     ],
     "value": {
       "inputType": "options",

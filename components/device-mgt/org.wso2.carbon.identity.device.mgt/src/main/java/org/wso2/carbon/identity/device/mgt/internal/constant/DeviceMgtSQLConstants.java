@@ -67,7 +67,8 @@ public class DeviceMgtSQLConstants {
                 "SELECT ID, USER_ID, DEVICE_NAME, DEVICE_MODEL, PUBLIC_KEY, STATUS, REGISTERED_AT, " +
                         "METADATA, TENANT_ID " +
                         "FROM IDN_REGISTERED_DEVICE " +
-                        "WHERE USER_ID = :USER_ID; AND STATUS = 'ACTIVE' AND TENANT_ID = :TENANT_ID;";
+                        "WHERE USER_ID = :USER_ID; AND STATUS = 'ACTIVE' AND TENANT_ID = :TENANT_ID; " +
+                        "ORDER BY REGISTERED_AT DESC";
 
         public static final String UPDATE_DEVICE_NAME =
                 "UPDATE IDN_REGISTERED_DEVICE SET DEVICE_NAME = :DEVICE_NAME; " +

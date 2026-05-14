@@ -29,14 +29,14 @@ import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.identity.application.authentication.framework.JsFunctionRegistry;
-import org.wso2.carbon.identity.rule.evaluation.api.provider.RuleEvaluationDataProvider;
-import org.wso2.carbon.identity.rule.evaluation.api.service.RuleEvaluationService;
-import org.wso2.carbon.identity.rule.management.api.service.RuleManagementService;
+import org.wso2.carbon.identity.device.mgt.api.service.DeviceManagementService;
 import org.wso2.carbon.identity.device.policy.management.api.service.PolicyManagementService;
 import org.wso2.carbon.identity.device.policy.management.internal.rule.DevicePolicyEvaluationDataProvider;
 import org.wso2.carbon.identity.device.policy.management.internal.rule.DevicePolicyJsFunction;
 import org.wso2.carbon.identity.device.policy.management.internal.service.impl.PolicyManagementServiceImpl;
-import org.wso2.carbon.identity.device.mgt.api.service.DeviceManagementService;
+import org.wso2.carbon.identity.rule.evaluation.api.provider.RuleEvaluationDataProvider;
+import org.wso2.carbon.identity.rule.evaluation.api.service.RuleEvaluationService;
+import org.wso2.carbon.identity.rule.management.api.service.RuleManagementService;
 
 
 /**

@@ -29,6 +29,9 @@ import org.wso2.carbon.identity.device.policy.management.api.rule.DevicePolicyEv
 import org.wso2.carbon.identity.device.policy.management.internal.jwt.DeviceTokenExtractor;
 import org.wso2.carbon.identity.rule.evaluation.api.exception.RuleEvaluationException;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.function.BiFunction;
 
@@ -39,23 +42,48 @@ import javax.servlet.http.HttpServletRequest;
  * Implements BiFunction to be directly callable from JavaScript via GraalVM polyglot engine.
  * Parameters: JsBaseAuthenticationContext (authentication context), String (policy name).
  * Returns: null if compliant, or a comma-separated string of failed field names if not compliant.
+ *
+ * Device token resolution order:
+ * 1. context.getQueryParams() — works for all redirect-based flows (OAuth2, SAML, WS-Fed)
+ *    when device_token is sent as a query param in the initial authorize request.
+ * 2. X-Device-Token header — works for API-based (headless) authn flows.
  */
 public class DevicePolicyJsFunction implements BiFunction<JsBaseAuthenticationContext, String, String> {
 
     private static final Log LOG = LogFactory.getLog(DevicePolicyJsFunction.class);
+    private static final String DEVICE_TOKEN_PARAM = "device_token";
+    private static final String DEVICE_TOKEN_HEADER = "X-Device-Token";
 
     @Override
     @HostAccess.Export
     public String apply(JsBaseAuthenticationContext context, String policyName) {
 
         try {
-            TransientObjectWrapper<HttpServletRequest> requestWrapper =
-                    (TransientObjectWrapper<HttpServletRequest>) context.getWrapped()
-                            .getProperty(FrameworkConstants.RequestAttribute.HTTP_REQUEST);
-            HttpServletRequest request = requestWrapper.getWrapped();
             String tenantDomain = context.getWrapped().getTenantDomain();
 
-            Map<String, Object> deviceData = new DeviceTokenExtractor().extract(request, tenantDomain);
+            // Step 1 — try context queryParams (redirect flows: OAuth2, SAML, WS-Fed)
+            // device_token sent as query param in authorize request is permanently stored here.
+            String deviceToken = extractFromQueryParams(context.getWrapped().getQueryParams());
+
+            // Step 2 — fallback to X-Device-Token header (API authn / headless flow)
+            if (deviceToken == null || deviceToken.isEmpty()) {
+                TransientObjectWrapper<HttpServletRequest> requestWrapper =
+                        (TransientObjectWrapper<HttpServletRequest>) context.getWrapped()
+                                .getProperty(FrameworkConstants.RequestAttribute.HTTP_REQUEST);
+                if (requestWrapper != null && requestWrapper.getWrapped() != null) {
+                    deviceToken = requestWrapper.getWrapped().getHeader(DEVICE_TOKEN_HEADER);
+                }
+            }
+
+            if (deviceToken == null || deviceToken.isEmpty()) {
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("No device token found for policy: " + policyName
+                            + ". Checked context queryParams and X-Device-Token header.");
+                }
+                return policyName + ":no_device_token";
+            }
+
+            Map<String, Object> deviceData = new DeviceTokenExtractor().extractFromToken(deviceToken, tenantDomain);
             return new DevicePolicyEvaluator().evaluate(policyName, deviceData, tenantDomain);
 
         } catch (PolicyManagementException e) {
@@ -65,5 +93,30 @@ public class DevicePolicyJsFunction implements BiFunction<JsBaseAuthenticationCo
             LOG.error("Rule evaluation failed for device policy: " + policyName, e);
             return policyName + ":evaluation_error";
         }
+    }
+
+    /**
+     * Extracts the device_token value from a URL query string.
+     * e.g. "client_id=my-app&device_token=eyJ...&scope=openid" → "eyJ..."
+     */
+    private String extractFromQueryParams(String queryString) {
+
+        if (queryString == null || queryString.isEmpty()) {
+            return null;
+        }
+        for (String pair : queryString.split("&")) {
+            String[] kv = pair.split("=", 2);
+            if (kv.length == 2) {
+                try {
+                    String key = URLDecoder.decode(kv[0].trim(), StandardCharsets.UTF_8.name());
+                    if (DEVICE_TOKEN_PARAM.equals(key)) {
+                        return URLDecoder.decode(kv[1].trim(), StandardCharsets.UTF_8.name());
+                    }
+                } catch (UnsupportedEncodingException e) {
+                    LOG.warn("Failed to decode query param while extracting device token: " + kv[0]);
+                }
+            }
+        }
+        return null;
     }
 }

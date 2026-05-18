@@ -71,6 +71,20 @@ public class DeviceTokenExtractor {
                     "X-Device-Token header is not present in the request.",
                     "DPM-60010");
         }
+        return extractFromToken(token, tenantDomain);
+    }
+
+    /**
+     * Extracts verified device attributes from a raw JWT string.
+     * Use this when the token has already been extracted from a query param or header.
+     *
+     * @param token        Raw JWT string to parse and verify.
+     * @param tenantDomain Tenant domain used for device lookup.
+     * @return Map of device field names to their values from verified JWT claims.
+     * @throws PolicyManagementException If the token is invalid or signature verification fails.
+     */
+    public Map<String, Object> extractFromToken(String token, String tenantDomain)
+            throws PolicyManagementException {
 
         try {
             SignedJWT signedJWT = (SignedJWT) JWTParser.parse(token);

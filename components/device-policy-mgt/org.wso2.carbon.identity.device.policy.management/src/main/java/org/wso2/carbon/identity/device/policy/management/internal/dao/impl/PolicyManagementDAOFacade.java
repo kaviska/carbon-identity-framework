@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -26,6 +26,7 @@ import org.wso2.carbon.identity.device.policy.management.api.exception.PolicyMan
 import org.wso2.carbon.identity.device.policy.management.api.exception.PolicyManagementException;
 import org.wso2.carbon.identity.device.policy.management.api.exception.PolicyManagementServerException;
 import org.wso2.carbon.identity.device.policy.management.api.model.Policy;
+import org.wso2.carbon.identity.device.policy.management.api.model.PolicyRule;
 import org.wso2.carbon.identity.device.policy.management.internal.component.DevicePolicyMgtComponentServiceHolder;
 import org.wso2.carbon.identity.device.policy.management.internal.dao.PolicyManagementDAO;
 import org.wso2.carbon.identity.rule.management.api.exception.RuleManagementClientException;
@@ -38,11 +39,14 @@ import org.wso2.carbon.identity.rule.management.api.model.Rule;
 import org.wso2.carbon.identity.rule.management.api.service.RuleManagementService;
 import org.wso2.carbon.identity.rule.management.api.util.RuleBuilder;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Facade for Policy Management DAO.
- * Coordinates policy persistence and rule management as a single operation.
+ * Coordinates between rule-mgt service and the policy DB layer as a single logical operation.
+ * Implements best-effort saga compensation: if the DB write fails after rule-mgt succeeded,
+ * we attempt to roll back rule-mgt changes.
  */
 public class PolicyManagementDAOFacade implements PolicyManagementDAO {
 
@@ -61,26 +65,37 @@ public class PolicyManagementDAOFacade implements PolicyManagementDAO {
         String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
         RuleManagementService ruleManagementService = DevicePolicyMgtComponentServiceHolder
                 .getInstance().getRuleManagementService();
+
+        List<String> createdRuleIds = new ArrayList<>();
+        List<PolicyRule> rulesWithIds = new ArrayList<>();
+
         try {
-            validateRule(policy.getRule(), tenantDomain);
-            Rule rule = ruleManagementService.addRule(policy.getRule(), tenantDomain);
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Rule added successfully with ID: " + rule.getId() +
-                        " for policy: " + policy.getName());
+            for (PolicyRule pr : policy.getRules()) {
+                validateRule(pr.getRule(), tenantDomain);
+                Rule createdRule = ruleManagementService.addRule(pr.getRule(), tenantDomain);
+                createdRuleIds.add(createdRule.getId());
+                rulesWithIds.add(new PolicyRule(pr.getId(), createdRule.getId(), pr.getPlatform(), null));
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("Rule added for policy platform '" + pr.getPlatform()
+                            + "' with ruleId: " + createdRule.getId());
+                }
             }
-            Policy policyWithRuleId = new Policy(
-                    policy.getId(),
-                    policy.getName(),
-                    rule.getId(),
-                    tenantDomain,
-                    null);
-            return policyManagementDAO.addPolicy(policyWithRuleId, tenantId);
         } catch (RuleManagementException e) {
+            compensateCreatedRules(createdRuleIds, tenantDomain, ruleManagementService);
             throw new PolicyManagementServerException(
                     ErrorMessage.ERROR_WHILE_ADDING_RULE_FOR_POLICY.getMessage(),
-                    String.format(ErrorMessage.ERROR_WHILE_ADDING_RULE_FOR_POLICY.getDescription(),
-                            policy.getName()),
+                    String.format(ErrorMessage.ERROR_WHILE_ADDING_RULE_FOR_POLICY.getDescription(), policy.getName()),
                     ErrorMessage.ERROR_WHILE_ADDING_RULE_FOR_POLICY.getCode(), e);
+        }
+
+        Policy policyWithRuleIds = new Policy(policy.getId(), policy.getName(), tenantDomain,
+                rulesWithIds, policy.getActions());
+
+        try {
+            return policyManagementDAO.addPolicy(policyWithRuleIds, tenantId);
+        } catch (PolicyManagementException e) {
+            compensateCreatedRules(createdRuleIds, tenantDomain, ruleManagementService);
+            throw e;
         }
     }
 
@@ -91,34 +106,38 @@ public class PolicyManagementDAOFacade implements PolicyManagementDAO {
         RuleManagementService ruleManagementService = DevicePolicyMgtComponentServiceHolder
                 .getInstance().getRuleManagementService();
 
-        // Fetch the existing policy to get the persisted ruleId so updateRule can find it.
         Policy existingPolicy = policyManagementDAO.getPolicyById(policy.getId(), tenantId);
 
-        // Rebuild the rule with the existing rule UUID — the rule engine requires this to locate the record.
-        ORCombinedRule ruleWithExistingId = new ORCombinedRule.Builder(
-                (ORCombinedRule) policy.getRule())
-                .setId(existingPolicy.getRuleId())
-                .build();
+        deleteRulesFromRuleManagementService(existingPolicy.getRules(), tenantDomain, ruleManagementService,
+                policy.getId());
+
+        List<String> createdRuleIds = new ArrayList<>();
+        List<PolicyRule> rulesWithIds = new ArrayList<>();
 
         try {
-            validateRule(policy.getRule(), tenantDomain);
-            ruleManagementService.updateRule(ruleWithExistingId, tenantDomain);
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Rule updated successfully for policy: " + policy.getId());
+            for (PolicyRule pr : policy.getRules()) {
+                validateRule(pr.getRule(), tenantDomain);
+                Rule createdRule = ruleManagementService.addRule(pr.getRule(), tenantDomain);
+                createdRuleIds.add(createdRule.getId());
+                rulesWithIds.add(new PolicyRule(pr.getId(), createdRule.getId(), pr.getPlatform(), null));
             }
-            Policy policyWithRuleId = new Policy(
-                    policy.getId(),
-                    policy.getName(),
-                    existingPolicy.getRuleId(),
-                    tenantDomain,
-                    null);
-            return policyManagementDAO.updatePolicy(policyWithRuleId, tenantId);
         } catch (RuleManagementException e) {
+            compensateCreatedRules(createdRuleIds, tenantDomain, ruleManagementService);
             throw new PolicyManagementServerException(
                     ErrorMessage.ERROR_WHILE_UPDATING_RULE_FOR_POLICY.getMessage(),
                     String.format(ErrorMessage.ERROR_WHILE_UPDATING_RULE_FOR_POLICY.getDescription(),
                             policy.getId()),
                     ErrorMessage.ERROR_WHILE_UPDATING_RULE_FOR_POLICY.getCode(), e);
+        }
+
+        Policy policyWithRuleIds = new Policy(policy.getId(), policy.getName(), tenantDomain,
+                rulesWithIds, policy.getActions());
+
+        try {
+            return policyManagementDAO.updatePolicy(policyWithRuleIds, tenantId);
+        } catch (PolicyManagementException e) {
+            compensateCreatedRules(createdRuleIds, tenantDomain, ruleManagementService);
+            throw e;
         }
     }
 
@@ -128,21 +147,14 @@ public class PolicyManagementDAOFacade implements PolicyManagementDAO {
         String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
         RuleManagementService ruleManagementService = DevicePolicyMgtComponentServiceHolder
                 .getInstance().getRuleManagementService();
-        Policy policy = policyManagementDAO.getPolicyById(policyId, tenantId);
-        try {
-            // Delete rule first: if policy delete later fails the user can retry;
-            // the opposite order leaves an orphaned rule invisible to the user.
-            ruleManagementService.deleteRule(policy.getRuleId(), tenantDomain);
-            policyManagementDAO.deletePolicy(policyId, tenantId);
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Rule deleted successfully for policy: " + policyId);
-            }
-        } catch (RuleManagementException e) {
-            throw new PolicyManagementServerException(
-                    ErrorMessage.ERROR_WHILE_DELETING_RULE_FOR_POLICY.getMessage(),
-                    String.format(ErrorMessage.ERROR_WHILE_DELETING_RULE_FOR_POLICY.getDescription(),
-                            policyId),
-                    ErrorMessage.ERROR_WHILE_DELETING_RULE_FOR_POLICY.getCode(), e);
+
+        Policy existingPolicy = policyManagementDAO.getPolicyById(policyId, tenantId);
+
+        policyManagementDAO.deletePolicy(policyId, tenantId);
+
+        if (existingPolicy != null) {
+            deleteRulesFromRuleManagementService(existingPolicy.getRules(), tenantDomain, ruleManagementService,
+                    policyId);
         }
     }
 
@@ -190,6 +202,35 @@ public class PolicyManagementDAOFacade implements PolicyManagementDAO {
                     ErrorMessage.ERROR_WHILE_ADDING_RULE_FOR_POLICY.getMessage(),
                     ErrorMessage.ERROR_WHILE_ADDING_RULE_FOR_POLICY.getDescription(),
                     ErrorMessage.ERROR_WHILE_ADDING_RULE_FOR_POLICY.getCode(), e);
+        }
+    }
+
+    private void deleteRulesFromRuleManagementService(List<PolicyRule> rules, String tenantDomain,
+                                                      RuleManagementService ruleManagementService,
+                                                      String policyId) throws PolicyManagementException {
+
+        for (PolicyRule pr : rules) {
+            try {
+                ruleManagementService.deleteRule(pr.getRuleId(), tenantDomain);
+            } catch (RuleManagementException e) {
+                throw new PolicyManagementServerException(
+                        ErrorMessage.ERROR_WHILE_DELETING_RULE_FOR_POLICY.getMessage(),
+                        String.format(ErrorMessage.ERROR_WHILE_DELETING_RULE_FOR_POLICY.getDescription(), policyId),
+                        ErrorMessage.ERROR_WHILE_DELETING_RULE_FOR_POLICY.getCode(), e);
+            }
+        }
+    }
+
+    private void compensateCreatedRules(List<String> ruleIds, String tenantDomain,
+                                        RuleManagementService ruleManagementService) {
+
+        for (String ruleId : ruleIds) {
+            try {
+                ruleManagementService.deleteRule(ruleId, tenantDomain);
+            } catch (RuleManagementException ex) {
+                LOG.error("Saga compensation failed: could not delete rule " + ruleId
+                        + " from rule-mgt after policy persistence failure.", ex);
+            }
         }
     }
 }

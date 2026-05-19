@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.device.policy.management.internal.config;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import java.util.Collections;
 import java.util.List;
 
@@ -26,6 +28,7 @@ import java.util.List;
  * Captures the field name, the HTTP header it maps to, and the platforms it applies to.
  * Fields with no applicablePlatforms are universal (shown for all platforms).
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class DeviceFieldConfig {
 
     private String name;

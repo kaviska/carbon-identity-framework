@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -28,8 +28,12 @@ import org.wso2.carbon.identity.common.testng.WithH2Database;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.device.policy.management.api.exception.PolicyManagementException;
 import org.wso2.carbon.identity.device.policy.management.api.model.Policy;
+import org.wso2.carbon.identity.device.policy.management.api.model.PolicyAction;
+import org.wso2.carbon.identity.device.policy.management.api.model.PolicyRule;
 import org.wso2.carbon.identity.device.policy.management.internal.dao.impl.PolicyManagementDAOImpl;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.Mockito.mockStatic;
@@ -45,6 +49,7 @@ public class PolicyManagementDAOImplTest {
     private static final String TENANT_DOMAIN = "carbon.super";
     private static final String TEST_POLICY_NAME = "TestPolicy";
     private static final String TEST_RULE_ID = UUID.randomUUID().toString();
+    private static final String TEST_ACTION_ID = UUID.randomUUID().toString();
 
     private PolicyManagementDAOImpl policyManagementDAO;
     private MockedStatic<IdentityTenantUtil> identityTenantUtil;
@@ -70,18 +75,26 @@ public class PolicyManagementDAOImplTest {
     @Test(priority = 1)
     public void testAddPolicy() throws PolicyManagementException {
 
+        List<PolicyRule> rules = Collections.singletonList(
+                new PolicyRule(null, TEST_RULE_ID, "android", null));
+        List<PolicyAction> actions = Collections.singletonList(
+                new PolicyAction(null, TEST_ACTION_ID, "MDM_CHECK", 1));
+
         Policy policy = new Policy(
                 UUID.randomUUID().toString(),
                 TEST_POLICY_NAME,
-                TEST_RULE_ID,
                 TENANT_DOMAIN,
-                null);
+                rules,
+                actions);
 
         Policy result = policyManagementDAO.addPolicy(policy, TENANT_ID);
 
         Assert.assertNotNull(result);
         Assert.assertEquals(result.getName(), TEST_POLICY_NAME);
-        Assert.assertEquals(result.getRuleId(), TEST_RULE_ID);
+        Assert.assertEquals(result.getRules().size(), 1);
+        Assert.assertEquals(result.getRules().get(0).getPlatform(), "android");
+        Assert.assertEquals(result.getActions().size(), 1);
+        Assert.assertEquals(result.getActions().get(0).getActionType(), "MDM_CHECK");
 
         createdPolicyId = result.getId();
     }
@@ -94,7 +107,10 @@ public class PolicyManagementDAOImplTest {
         Assert.assertNotNull(result);
         Assert.assertEquals(result.getId(), createdPolicyId);
         Assert.assertEquals(result.getName(), TEST_POLICY_NAME);
-        Assert.assertEquals(result.getRuleId(), TEST_RULE_ID);
+        Assert.assertEquals(result.getRules().size(), 1);
+        Assert.assertEquals(result.getRules().get(0).getRuleId(), TEST_RULE_ID);
+        Assert.assertEquals(result.getActions().size(), 1);
+        Assert.assertEquals(result.getActions().get(0).getActionId(), TEST_ACTION_ID);
     }
 
     @Test(priority = 3, dependsOnMethods = {"testAddPolicy"})
@@ -103,18 +119,23 @@ public class PolicyManagementDAOImplTest {
         String updatedName = "UpdatedPolicy";
         String updatedRuleId = UUID.randomUUID().toString();
 
+        List<PolicyRule> updatedRules = Collections.singletonList(
+                new PolicyRule(null, updatedRuleId, "ios", null));
+
         Policy updatedPolicy = new Policy(
                 createdPolicyId,
                 updatedName,
-                updatedRuleId,
                 TENANT_DOMAIN,
-                null);
+                updatedRules,
+                Collections.emptyList());
 
         Policy result = policyManagementDAO.updatePolicy(updatedPolicy, TENANT_ID);
 
         Assert.assertNotNull(result);
         Assert.assertEquals(result.getName(), updatedName);
-        Assert.assertEquals(result.getRuleId(), updatedRuleId);
+        Assert.assertEquals(result.getRules().size(), 1);
+        Assert.assertEquals(result.getRules().get(0).getPlatform(), "ios");
+        Assert.assertEquals(result.getActions().size(), 0);
     }
 
     @Test(priority = 4, dependsOnMethods = {"testAddPolicy"})

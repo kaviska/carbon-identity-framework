@@ -51,10 +51,11 @@ public class DevicePolicyEvaluationDataProvider implements RuleEvaluationDataPro
         List<FieldValue> fieldValues = new ArrayList<>();
 
         for (Field field : ruleEvaluationContext.getFields()) {
-            String value = (String) deviceData.get(field.getName());
-            if (value == null) {
+            Object rawValue = deviceData.get(field.getName());
+            if (rawValue == null) {
                 continue;
             }
+            String value = String.valueOf(rawValue);
             if (ValueType.NUMBER.equals(field.getValueType())) {
                 try {
                     fieldValues.add(new FieldValue(field.getName(), Double.parseDouble(value)));

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -18,26 +18,29 @@
 
 package org.wso2.carbon.identity.device.policy.management.api.model;
 
-import org.wso2.carbon.identity.rule.management.api.model.Rule;
+import java.util.Collections;
+import java.util.List;
 
 /**
- * Model class representing a Device Policy.
+ * Model class representing a Policy with platform-specific rules (M:N) and ordered actions (M:N).
+ * Rules are evaluated first per device platform; actions run in exec_order after a rule passes.
  */
 public class Policy {
 
     private final String id;
     private final String name;
-    private final String ruleId;
     private final String tenantDomain;
-    private final Rule rule;
+    private final List<PolicyRule> rules;
+    private final List<PolicyAction> actions;
 
-    public Policy(String id, String name, String ruleId, String tenantDomain, Rule rule) {
+    public Policy(String id, String name, String tenantDomain,
+                  List<PolicyRule> rules, List<PolicyAction> actions) {
 
         this.id = id;
         this.name = name;
-        this.ruleId = ruleId;
         this.tenantDomain = tenantDomain;
-        this.rule = rule;
+        this.rules = rules != null ? Collections.unmodifiableList(rules) : Collections.emptyList();
+        this.actions = actions != null ? Collections.unmodifiableList(actions) : Collections.emptyList();
     }
 
     public String getId() {
@@ -50,18 +53,18 @@ public class Policy {
         return name;
     }
 
-    public String getRuleId() {
-
-        return ruleId;
-    }
-
     public String getTenantDomain() {
 
         return tenantDomain;
     }
 
-    public Rule getRule() {
+    public List<PolicyRule> getRules() {
 
-        return rule;
+        return rules;
+    }
+
+    public List<PolicyAction> getActions() {
+
+        return actions;
     }
 }

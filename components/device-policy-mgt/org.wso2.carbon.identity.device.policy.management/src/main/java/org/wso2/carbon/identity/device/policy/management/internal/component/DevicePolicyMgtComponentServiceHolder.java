@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -18,26 +18,28 @@
 
 package org.wso2.carbon.identity.device.policy.management.internal.component;
 
+import org.wso2.carbon.identity.action.execution.api.service.ActionExecutorService;
 import org.wso2.carbon.identity.application.authentication.framework.JsFunctionRegistry;
 import org.wso2.carbon.identity.device.mgt.api.service.DeviceManagementService;
 import org.wso2.carbon.identity.device.policy.management.api.service.PolicyManagementService;
 import org.wso2.carbon.identity.rule.evaluation.api.service.RuleEvaluationService;
 import org.wso2.carbon.identity.rule.management.api.service.RuleManagementService;
 
-
 /**
- * Service holder for Device Policy Management component.
+ * Service holder for the Policy Management component.
+ * Provides access to all OSGi services consumed by this bundle.
  */
 public class DevicePolicyMgtComponentServiceHolder {
 
     private static final DevicePolicyMgtComponentServiceHolder INSTANCE =
             new DevicePolicyMgtComponentServiceHolder();
+
     private RuleManagementService ruleManagementService;
     private RuleEvaluationService ruleEvaluationService;
     private PolicyManagementService policyManagementService;
     private JsFunctionRegistry jsFunctionRegistry;
     private DeviceManagementService deviceManagementService;
-
+    private ActionExecutorService actionExecutorService;
 
     private DevicePolicyMgtComponentServiceHolder() {
 
@@ -59,10 +61,12 @@ public class DevicePolicyMgtComponentServiceHolder {
     }
 
     public RuleEvaluationService getRuleEvaluationService() {
+
         return ruleEvaluationService;
     }
 
     public void setRuleEvaluationService(RuleEvaluationService ruleEvaluationService) {
+
         this.ruleEvaluationService = ruleEvaluationService;
     }
 
@@ -87,10 +91,22 @@ public class DevicePolicyMgtComponentServiceHolder {
     }
 
     public DeviceManagementService getDeviceManagementService() {
+
         return deviceManagementService;
     }
 
     public void setDeviceManagementService(DeviceManagementService deviceManagementService) {
+
         this.deviceManagementService = deviceManagementService;
+    }
+
+    public ActionExecutorService getActionExecutorService() {
+
+        return actionExecutorService;
+    }
+
+    public void setActionExecutorService(ActionExecutorService actionExecutorService) {
+
+        this.actionExecutorService = actionExecutorService;
     }
 }

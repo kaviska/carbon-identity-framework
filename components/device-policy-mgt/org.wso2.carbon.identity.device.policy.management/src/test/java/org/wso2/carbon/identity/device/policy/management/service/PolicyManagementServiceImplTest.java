@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -36,6 +36,7 @@ import org.wso2.carbon.identity.device.policy.management.internal.dao.PolicyMana
 import org.wso2.carbon.identity.device.policy.management.internal.service.impl.PolicyManagementServiceImpl;
 
 import java.lang.reflect.Field;
+import java.util.Collections;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -55,7 +56,6 @@ public class PolicyManagementServiceImplTest {
     private static final int TENANT_ID = -1234;
     private static final String TEST_POLICY_NAME = "TestPolicy";
     private static final String TEST_POLICY_ID = UUID.randomUUID().toString();
-    private static final String TEST_RULE_ID = UUID.randomUUID().toString();
 
     @Mock
     private PolicyManagementDAO policyManagementDAO;
@@ -69,17 +69,13 @@ public class PolicyManagementServiceImplTest {
         MockitoAnnotations.openMocks(this);
         policyManagementService = PolicyManagementServiceImpl.getInstance();
 
-        // Inject mock DAO via reflection
-        Field daoField = PolicyManagementServiceImpl.class
-                .getDeclaredField("policyManagementDAO");
+        Field daoField = PolicyManagementServiceImpl.class.getDeclaredField("policyManagementDAO");
         daoField.setAccessible(true);
         daoField.set(policyManagementService, policyManagementDAO);
 
         identityTenantUtil = mockStatic(IdentityTenantUtil.class);
-        identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(TENANT_DOMAIN))
-                .thenReturn(TENANT_ID);
-        identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomain(TENANT_ID))
-                .thenReturn(TENANT_DOMAIN);
+        identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(TENANT_DOMAIN)).thenReturn(TENANT_ID);
+        identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomain(TENANT_ID)).thenReturn(TENANT_DOMAIN);
     }
 
     @AfterClass
@@ -97,14 +93,13 @@ public class PolicyManagementServiceImplTest {
     @Test
     public void testAddPolicy() throws PolicyManagementException {
 
-        Policy inputPolicy = new Policy(null, TEST_POLICY_NAME, null, TENANT_DOMAIN, null);
-        Policy savedPolicy = new Policy(TEST_POLICY_ID, TEST_POLICY_NAME,
-                TEST_RULE_ID, TENANT_DOMAIN, null);
+        Policy inputPolicy = new Policy(null, TEST_POLICY_NAME, TENANT_DOMAIN,
+                Collections.emptyList(), Collections.emptyList());
+        Policy savedPolicy = new Policy(TEST_POLICY_ID, TEST_POLICY_NAME, TENANT_DOMAIN,
+                Collections.emptyList(), Collections.emptyList());
 
-        when(policyManagementDAO.addPolicy(any(Policy.class), eq(TENANT_ID)))
-                .thenReturn(savedPolicy);
-        when(policyManagementDAO.getPolicyById(any(String.class), eq(TENANT_ID)))
-                .thenReturn(savedPolicy);
+        when(policyManagementDAO.addPolicy(any(Policy.class), eq(TENANT_ID))).thenReturn(savedPolicy);
+        when(policyManagementDAO.getPolicyById(any(String.class), eq(TENANT_ID))).thenReturn(savedPolicy);
 
         Policy result = policyManagementService.addPolicy(inputPolicy, TENANT_DOMAIN);
 
@@ -116,25 +111,26 @@ public class PolicyManagementServiceImplTest {
     @Test(expectedExceptions = PolicyManagementClientException.class)
     public void testAddPolicy_EmptyName() throws PolicyManagementException {
 
-        Policy inputPolicy = new Policy(null, "", null, TENANT_DOMAIN, null);
+        Policy inputPolicy = new Policy(null, "", TENANT_DOMAIN,
+                Collections.emptyList(), Collections.emptyList());
         policyManagementService.addPolicy(inputPolicy, TENANT_DOMAIN);
     }
 
     @Test(expectedExceptions = PolicyManagementClientException.class)
     public void testAddPolicy_NullName() throws PolicyManagementException {
 
-        Policy inputPolicy = new Policy(null, null, null, TENANT_DOMAIN, null);
+        Policy inputPolicy = new Policy(null, null, TENANT_DOMAIN,
+                Collections.emptyList(), Collections.emptyList());
         policyManagementService.addPolicy(inputPolicy, TENANT_DOMAIN);
     }
 
     @Test
     public void testGetPolicyById() throws PolicyManagementException {
 
-        Policy expectedPolicy = new Policy(TEST_POLICY_ID, TEST_POLICY_NAME,
-                TEST_RULE_ID, TENANT_DOMAIN, null);
+        Policy expectedPolicy = new Policy(TEST_POLICY_ID, TEST_POLICY_NAME, TENANT_DOMAIN,
+                Collections.emptyList(), Collections.emptyList());
 
-        when(policyManagementDAO.getPolicyById(TEST_POLICY_ID, TENANT_ID))
-                .thenReturn(expectedPolicy);
+        when(policyManagementDAO.getPolicyById(TEST_POLICY_ID, TENANT_ID)).thenReturn(expectedPolicy);
 
         Policy result = policyManagementService.getPolicyById(TEST_POLICY_ID, TENANT_DOMAIN);
 
@@ -147,16 +143,15 @@ public class PolicyManagementServiceImplTest {
     @Test
     public void testUpdatePolicy() throws PolicyManagementException {
 
-        Policy existingPolicy = new Policy(TEST_POLICY_ID, TEST_POLICY_NAME,
-                TEST_RULE_ID, TENANT_DOMAIN, null);
-        Policy updatedPolicy = new Policy(TEST_POLICY_ID, "UpdatedPolicy",
-                TEST_RULE_ID, TENANT_DOMAIN, null);
+        Policy existingPolicy = new Policy(TEST_POLICY_ID, TEST_POLICY_NAME, TENANT_DOMAIN,
+                Collections.emptyList(), Collections.emptyList());
+        Policy updatedPolicy = new Policy(TEST_POLICY_ID, "UpdatedPolicy", TENANT_DOMAIN,
+                Collections.emptyList(), Collections.emptyList());
 
         when(policyManagementDAO.getPolicyById(TEST_POLICY_ID, TENANT_ID))
                 .thenReturn(existingPolicy)
                 .thenReturn(updatedPolicy);
-        when(policyManagementDAO.updatePolicy(any(Policy.class), eq(TENANT_ID)))
-                .thenReturn(updatedPolicy);
+        when(policyManagementDAO.updatePolicy(any(Policy.class), eq(TENANT_ID))).thenReturn(updatedPolicy);
 
         Policy result = policyManagementService.updatePolicy(updatedPolicy, TENANT_DOMAIN);
 
@@ -168,11 +163,10 @@ public class PolicyManagementServiceImplTest {
     @Test(expectedExceptions = PolicyManagementClientException.class)
     public void testUpdatePolicy_PolicyNotFound() throws PolicyManagementException {
 
-        Policy policy = new Policy(TEST_POLICY_ID, TEST_POLICY_NAME,
-                TEST_RULE_ID, TENANT_DOMAIN, null);
+        Policy policy = new Policy(TEST_POLICY_ID, TEST_POLICY_NAME, TENANT_DOMAIN,
+                Collections.emptyList(), Collections.emptyList());
 
-        when(policyManagementDAO.getPolicyById(TEST_POLICY_ID, TENANT_ID))
-                .thenReturn(null);
+        when(policyManagementDAO.getPolicyById(TEST_POLICY_ID, TENANT_ID)).thenReturn(null);
 
         policyManagementService.updatePolicy(policy, TENANT_DOMAIN);
     }
@@ -180,11 +174,10 @@ public class PolicyManagementServiceImplTest {
     @Test
     public void testDeletePolicy() throws PolicyManagementException {
 
-        Policy existingPolicy = new Policy(TEST_POLICY_ID, TEST_POLICY_NAME,
-                TEST_RULE_ID, TENANT_DOMAIN, null);
+        Policy existingPolicy = new Policy(TEST_POLICY_ID, TEST_POLICY_NAME, TENANT_DOMAIN,
+                Collections.emptyList(), Collections.emptyList());
 
-        when(policyManagementDAO.getPolicyById(TEST_POLICY_ID, TENANT_ID))
-                .thenReturn(existingPolicy);
+        when(policyManagementDAO.getPolicyById(TEST_POLICY_ID, TENANT_ID)).thenReturn(existingPolicy);
 
         policyManagementService.deletePolicy(TEST_POLICY_ID, TENANT_DOMAIN);
 
@@ -194,12 +187,10 @@ public class PolicyManagementServiceImplTest {
     @Test
     public void testDeletePolicy_PolicyNotExists() throws PolicyManagementException {
 
-        when(policyManagementDAO.getPolicyById(TEST_POLICY_ID, TENANT_ID))
-                .thenReturn(null);
+        when(policyManagementDAO.getPolicyById(TEST_POLICY_ID, TENANT_ID)).thenReturn(null);
 
         policyManagementService.deletePolicy(TEST_POLICY_ID, TENANT_DOMAIN);
 
-        verify(policyManagementDAO, org.mockito.Mockito.never())
-                .deletePolicy(any(), eq(TENANT_ID));
+        verify(policyManagementDAO, org.mockito.Mockito.never()).deletePolicy(any(), eq(TENANT_ID));
     }
 }

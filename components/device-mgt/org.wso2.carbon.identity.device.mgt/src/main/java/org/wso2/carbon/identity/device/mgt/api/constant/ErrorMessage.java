@@ -38,6 +38,9 @@ public enum ErrorMessage {
             "Cannot initiate device registration: no authenticated user found in the flow context."),
     ERROR_DEVICE_POLICY_NOT_COMPLIANT("DM-60007", "Device not compliant.",
             "Device does not comply with policy '%s'. Failed fields: %s."),
+    ERROR_DEVICE_DATA_REQUIRED("DM-60008", "Device data required.",
+            "A compliance policy is configured for this executor but no device data was submitted. " +
+                    "Send device attributes as a JSON object under the 'deviceData' key."),
 
     ERROR_WHILE_REGISTERING_DEVICE("DM-65001", "Error while registering device.",
             "Error while persisting device registration in the system."),

@@ -19,7 +19,7 @@
 package org.wso2.carbon.identity.device.policy.management.api.constant;
 
 /**
- * Error messages for Device Policy Management.
+ * Error messages for Policy Management.
  */
 public enum ErrorMessage {
 
@@ -45,7 +45,13 @@ public enum ErrorMessage {
     ERROR_WHILE_UPDATING_RULE_FOR_POLICY("DPM-65006", "Error while updating Rule for Policy.",
             "Error while updating Rule for Policy: %s in the system."),
     ERROR_WHILE_DELETING_RULE_FOR_POLICY("DPM-65007", "Error while deleting Rule for Policy.",
-            "Error while deleting Rule for Policy: %s from the system.");
+            "Error while deleting Rule for Policy: %s from the system."),
+    ERROR_WHILE_ADDING_ACTION_FOR_POLICY("DPM-65008", "Error while adding Action for Policy.",
+            "Error while registering Action for Policy: %s in the system."),
+    ERROR_WHILE_DELETING_ACTION_FOR_POLICY("DPM-65009", "Error while deleting Action for Policy.",
+            "Error while removing Action for Policy: %s from the system."),
+    ERROR_WHILE_EXECUTING_ACTION_FOR_POLICY("DPM-65010", "Error while executing Action for Policy.",
+            "Action execution failed for Policy: %s, Action: %s.");
 
     private final String code;
     private final String message;

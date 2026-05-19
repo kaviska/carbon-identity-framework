@@ -88,6 +88,7 @@ public class DeviceRegistrationExecutor implements Executor {
     private static final String FIELD_SIGNATURE    = "signature";
     private static final String FIELD_DEVICE_MODEL = "deviceModel";
     private static final String FIELD_METADATA     = "metadata";
+    private static final String FIELD_DEVICE_DATA  = "deviceData";
 
     private static final String META_POLICY_NAME = "policyName";
 
@@ -171,18 +172,21 @@ public class DeviceRegistrationExecutor implements Executor {
             Map<String, Object> contextProperties = new HashMap<>();
             contextProperties.put(CTX_REGISTRATION_ID, initiation.getRegistrationId());
 
-            // If a compliance policy is configured, inform the SDK which device
-            // attribute fields to include in the Phase 2 submission.
+            // If a compliance policy is configured, tell the SDK to send device attributes
+            // as a single nested object under the "deviceData" key. The SDK bundles whatever
+            // device attributes it has into that object; the server parses it in Phase 2.
+            List<String> requiredFields = new ArrayList<>(
+                    Arrays.asList(FIELD_PUBLIC_KEY, FIELD_SIGNATURE));
             List<String> optionalFields = new ArrayList<>(
                     Arrays.asList(FIELD_DEVICE_MODEL, FIELD_METADATA));
             String policyName = resolvePolicyName(context);
             if (policyName != null) {
-                optionalFields.addAll(new DevicePolicyEvaluator().getFieldNames());
+                requiredFields.add(FIELD_DEVICE_DATA);
             }
 
             ExecutorResponse response = new ExecutorResponse();
             response.setResult(STATUS_CLIENT_INPUT_REQUIRED);
-            response.setRequiredData(Arrays.asList(FIELD_PUBLIC_KEY, FIELD_SIGNATURE));
+            response.setRequiredData(requiredFields);
             response.setOptionalData(optionalFields);
             response.setAdditionalInfo(additionalInfo);
             response.setContextProperty(contextProperties);
@@ -223,6 +227,14 @@ public class DeviceRegistrationExecutor implements Executor {
             // Step 2: Policy compliance check (skipped when policyName not configured).
             String policyName = resolvePolicyName(context);
             if (policyName != null) {
+                if (isBlank(input.get(FIELD_DEVICE_DATA))) {
+                    ExecutorResponse response = new ExecutorResponse();
+                    response.setResult(STATUS_USER_ERROR);
+                    response.setErrorCode(ErrorMessage.ERROR_DEVICE_DATA_REQUIRED.getCode());
+                    response.setErrorMessage(ErrorMessage.ERROR_DEVICE_DATA_REQUIRED.getMessage());
+                    response.setErrorDescription(ErrorMessage.ERROR_DEVICE_DATA_REQUIRED.getDescription());
+                    return response;
+                }
                 ExecutorResponse policyResult = evaluatePolicy(policyName, context);
                 if (policyResult != null) {
                     return policyResult;
@@ -281,6 +293,33 @@ public class DeviceRegistrationExecutor implements Executor {
     }
 
     /**
+     * Extracts device attributes from the SDK's Phase 2 input.
+     * The SDK sends all device attributes as a JSON object under the {@code "deviceData"} key.
+     */
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> parseDeviceData(Map<String, String> input) {
+
+        Map<String, Object> deviceData = new HashMap<>();
+        if (input == null) {
+            return deviceData;
+        }
+        String json = input.get(FIELD_DEVICE_DATA);
+        if (isBlank(json)) {
+            return deviceData;
+        }
+        try {
+            com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>> typeRef =
+                    new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() { };
+            Map<String, Object> parsed = new com.fasterxml.jackson.databind.ObjectMapper()
+                    .readValue(json, typeRef);
+            deviceData.putAll(parsed);
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            LOG.error("Failed to parse deviceData JSON submitted by SDK.", e);
+        }
+        return deviceData;
+    }
+
+    /**
      * Evaluates device policy compliance using attributes submitted by the SDK in Phase 2.
      * Accepts a comma-separated list of policy names and applies OR logic — the device is
      * considered compliant if it satisfies at least one policy. This mirrors the adaptive
@@ -298,11 +337,10 @@ public class DeviceRegistrationExecutor implements Executor {
     private ExecutorResponse evaluatePolicy(String policyNames, FlowExecutionContext context) {
 
         DevicePolicyEvaluator evaluator = new DevicePolicyEvaluator();
-        Map<String, Object> deviceData = new HashMap<>();
-        Map<String, String> input = context.getUserInputData();
+        Map<String, Object> deviceData = parseDeviceData(context.getUserInputData());
+        // Fill any missing fields so the rule engine always sees a complete map.
         for (String fieldName : evaluator.getFieldNames()) {
-            String value = input != null ? input.get(fieldName) : null;
-            deviceData.put(fieldName, value != null ? value : "not_available");
+            deviceData.putIfAbsent(fieldName, "not_available");
         }
 
         String[] policies = policyNames.split(",");

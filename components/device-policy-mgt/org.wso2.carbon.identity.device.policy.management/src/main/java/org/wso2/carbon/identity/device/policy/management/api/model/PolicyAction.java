@@ -19,8 +19,7 @@
 package org.wso2.carbon.identity.device.policy.management.api.model;
 
 /**
- * Represents the association between a Policy and an Action, with execution order.
- * Actions are executed in ascending execOrder during policy evaluation.
+ * Association between a Policy and an Action with execution order.
  */
 public class PolicyAction {
 

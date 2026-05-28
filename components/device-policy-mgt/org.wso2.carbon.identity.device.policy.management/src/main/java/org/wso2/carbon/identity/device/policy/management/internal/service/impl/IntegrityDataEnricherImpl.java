@@ -81,13 +81,7 @@ public class IntegrityDataEnricherImpl implements IntegrityDataEnricher {
         }
     }
 
-    /**
-     * Maps the cumulative Google verdict list to a single androidIntegrity string.
-     * Priority: MEETS_STRONG_INTEGRITY > MEETS_DEVICE_INTEGRITY > MEETS_BASIC_INTEGRITY > MEETS_VIRTUAL_INTEGRITY.
-     *
-     * @param verdicts List returned by Google Play Integrity API deviceRecognitionVerdict field.
-     * @return Single androidIntegrity string for policy rule evaluation.
-     */
+    // Priority: MEETS_STRONG_INTEGRITY > MEETS_DEVICE_INTEGRITY > MEETS_BASIC_INTEGRITY > MEETS_VIRTUAL_INTEGRITY.
     private String resolveAndroidIntegrityLevel(List<String> verdicts) {
 
         if (verdicts == null || verdicts.isEmpty()) {

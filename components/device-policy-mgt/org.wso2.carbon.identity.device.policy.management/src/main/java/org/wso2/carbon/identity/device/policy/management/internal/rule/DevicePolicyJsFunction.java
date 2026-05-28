@@ -29,7 +29,6 @@ import org.wso2.carbon.identity.device.policy.management.internal.component.Devi
 import org.wso2.carbon.identity.device.policy.management.internal.jwt.DeviceTokenExtractor;
 import org.wso2.carbon.identity.rule.evaluation.api.exception.RuleEvaluationException;
 
-import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
@@ -38,15 +37,8 @@ import java.util.function.BiFunction;
 import javax.servlet.http.HttpServletRequest;
 
 /**
- * JS function implementation for device policy compliance check.
- * Implements BiFunction to be directly callable from JavaScript via GraalVM polyglot engine.
- * Parameters: JsBaseAuthenticationContext (authentication context), String (policy name).
- * Returns: null if compliant, or a comma-separated string of failed field names if not compliant.
- *
- * Device token resolution order:
- * 1. context.getQueryParams() — works for all redirect-based flows (OAuth2, SAML, WS-Fed)
- *    when device_token is sent as a query param in the initial authorize request.
- * 2. X-Device-Token header — works for API-based (headless) authn flows.
+ * JS function for device policy compliance check, registered as {@code isDevicePolicyCompliant}.
+ * Device token is resolved from query params first (redirect flows), then X-Device-Token header (headless flows).
  */
 public class DevicePolicyJsFunction implements BiFunction<JsBaseAuthenticationContext, String, String> {
 
@@ -100,10 +92,6 @@ public class DevicePolicyJsFunction implements BiFunction<JsBaseAuthenticationCo
         }
     }
 
-    /**
-     * Extracts the device_token value from a URL query string.
-     * e.g. "client_id=my-app&device_token=eyJ...&scope=openid" → "eyJ..."
-     */
     private String extractFromQueryParams(String queryString) {
 
         if (queryString == null || queryString.isEmpty()) {
@@ -112,13 +100,9 @@ public class DevicePolicyJsFunction implements BiFunction<JsBaseAuthenticationCo
         for (String pair : queryString.split("&")) {
             String[] kv = pair.split("=", 2);
             if (kv.length == 2) {
-                try {
-                    String key = URLDecoder.decode(kv[0].trim(), StandardCharsets.UTF_8.name());
-                    if (DEVICE_TOKEN_PARAM.equals(key)) {
-                        return URLDecoder.decode(kv[1].trim(), StandardCharsets.UTF_8.name());
-                    }
-                } catch (UnsupportedEncodingException e) {
-                    LOG.warn("Failed to decode query param while extracting device token: " + kv[0]);
+                String key = URLDecoder.decode(kv[0].trim(), StandardCharsets.UTF_8);
+                if (DEVICE_TOKEN_PARAM.equals(key)) {
+                    return URLDecoder.decode(kv[1].trim(), StandardCharsets.UTF_8);
                 }
             }
         }

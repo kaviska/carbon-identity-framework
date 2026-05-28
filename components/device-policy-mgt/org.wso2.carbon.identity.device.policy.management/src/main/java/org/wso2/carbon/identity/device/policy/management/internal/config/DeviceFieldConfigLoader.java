@@ -63,9 +63,6 @@ public class DeviceFieldConfigLoader {
         return instance;
     }
 
-    /**
-     * Returns all device field configurations.
-     */
     public List<DeviceFieldConfig> getFields() {
 
         return Collections.unmodifiableList(fields);

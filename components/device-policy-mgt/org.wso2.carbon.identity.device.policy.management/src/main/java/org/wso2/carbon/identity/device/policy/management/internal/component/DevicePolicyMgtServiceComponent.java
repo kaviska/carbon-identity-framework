@@ -73,7 +73,6 @@ public class DevicePolicyMgtServiceComponent {
             bundleCtx.registerService(RuleEvaluationDataProvider.class.getName(),
                     new DevicePolicyEvaluationDataProvider(), null);
 
-            // Register action-mgt integration services for DEVICE_POLICY action type.
             bundleCtx.registerService(ActionExecutionRequestBuilder.class.getName(),
                     new DevicePolicyActionRequestBuilder(), null);
             bundleCtx.registerService(ActionExecutionResponseProcessor.class.getName(),
@@ -81,8 +80,7 @@ public class DevicePolicyMgtServiceComponent {
             bundleCtx.registerService(ActionVersioningHandler.class.getName(),
                     new DevicePolicyActionVersioningHandler(), null);
 
-            // Register DevicePolicyEvaluator and IntegrityDataEnricher so other bundles consume
-            // them via OSGi service references instead of constructing them directly.
+            // Registered as OSGi services so other bundles can consume them without direct instantiation.
             DevicePolicyEvaluator devicePolicyEvaluator = new DevicePolicyEvaluatorImpl();
             IntegrityDataEnricher integrityDataEnricher = new IntegrityDataEnricherImpl();
             bundleCtx.registerService(DevicePolicyEvaluator.class.getName(), devicePolicyEvaluator, null);
@@ -92,7 +90,6 @@ public class DevicePolicyMgtServiceComponent {
             DevicePolicyMgtComponentServiceHolder.getInstance().setDevicePolicyEvaluator(devicePolicyEvaluator);
             DevicePolicyMgtComponentServiceHolder.getInstance().setIntegrityDataEnricher(integrityDataEnricher);
 
-            // Register the device policy compliance function with the JS function registry.
             DevicePolicyMgtComponentServiceHolder.getInstance().getJsFunctionRegistry()
                     .register(JsFunctionRegistry.Subsystem.SEQUENCE_HANDLER,
                             "isDevicePolicyCompliant",

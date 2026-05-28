@@ -20,15 +20,18 @@ package org.wso2.carbon.identity.device.policy.management.internal.jwt;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.crypto.ECDSAVerifier;
+import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.JWTParser;
 import com.nimbusds.jwt.SignedJWT;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.device.mgt.api.exception.DeviceMgtException;
 import org.wso2.carbon.identity.device.mgt.api.model.RegisteredDevice;
+import org.wso2.carbon.identity.device.policy.management.api.constant.ErrorMessage;
 import org.wso2.carbon.identity.device.policy.management.api.exception.PolicyManagementException;
 import org.wso2.carbon.identity.device.policy.management.api.exception.PolicyManagementServerException;
 import org.wso2.carbon.identity.device.policy.management.internal.component.DevicePolicyMgtComponentServiceHolder;
+import org.wso2.carbon.identity.device.policy.management.internal.util.PolicyManagementExceptionHandler;
 
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
@@ -66,10 +69,8 @@ public class DeviceTokenExtractor {
 
         String token = request.getHeader(DEVICE_TOKEN_HEADER);
         if (token == null || token.trim().isEmpty()) {
-            throw new PolicyManagementServerException(
-                    "Device token missing.",
-                    "X-Device-Token header is not present in the request.",
-                    "DPM-60010");
+            throw PolicyManagementExceptionHandler.handleClientException(
+                    ErrorMessage.ERROR_DEVICE_TOKEN_MISSING);
         }
         return extractFromToken(token, tenantDomain);
     }
@@ -87,14 +88,17 @@ public class DeviceTokenExtractor {
             throws PolicyManagementException {
 
         try {
-            SignedJWT signedJWT = (SignedJWT) JWTParser.parse(token);
+            JWT parsedJWT = JWTParser.parse(token);
+            if (!(parsedJWT instanceof SignedJWT)) {
+                throw PolicyManagementExceptionHandler.handleClientException(
+                        ErrorMessage.ERROR_DEVICE_TOKEN_PARSE_FAILED);
+            }
+            SignedJWT signedJWT = (SignedJWT) parsedJWT;
 
             String deviceId = (String) signedJWT.getHeader().getCustomParam(DEVICE_ID_PARAM);
             if (deviceId == null || deviceId.trim().isEmpty()) {
-                throw new PolicyManagementServerException(
-                        "Device token invalid.",
-                        "deviceId is missing from the JWT header.",
-                        "DPM-60011");
+                throw PolicyManagementExceptionHandler.handleClientException(
+                        ErrorMessage.ERROR_DEVICE_TOKEN_MISSING_DEVICE_ID);
             }
             // Strip any stray leading/trailing quotes or backslashes introduced by JWT serialisation bugs.
             deviceId = deviceId.replaceAll("[\"\\\\]+$", "").replaceAll("^[\"\\\\]+", "").trim();
@@ -104,19 +108,15 @@ public class DeviceTokenExtractor {
                     .getDeviceById(deviceId, tenantDomain);
 
             if (device == null) {
-                throw new PolicyManagementServerException(
-                        "Device not registered.",
-                        "No registered device found for deviceId: " + deviceId,
-                        "DPM-60012");
+                throw PolicyManagementExceptionHandler.handleClientException(
+                        ErrorMessage.ERROR_DEVICE_NOT_REGISTERED, deviceId);
             }
 
             ECPublicKey publicKey = decodePublicKey(device.getPublicKey());
 
             if (!signedJWT.verify(new ECDSAVerifier(publicKey))) {
-                throw new PolicyManagementServerException(
-                        "Device token signature invalid.",
-                        "JWT signature verification failed for deviceId: " + deviceId,
-                        "DPM-60013");
+                throw PolicyManagementExceptionHandler.handleClientException(
+                        ErrorMessage.ERROR_DEVICE_TOKEN_SIGNATURE_INVALID, deviceId);
             }
 
             Map<String, Object> deviceData = new HashMap<>();
@@ -132,20 +132,14 @@ public class DeviceTokenExtractor {
             return deviceData;
 
         } catch (ParseException e) {
-            throw new PolicyManagementServerException(
-                    "Device token invalid.",
-                    "Failed to parse X-Device-Token JWT: " + e.getMessage(),
-                    "DPM-60014", e);
+            throw PolicyManagementExceptionHandler.handleClientException(
+                    ErrorMessage.ERROR_DEVICE_TOKEN_PARSE_FAILED, e);
         } catch (JOSEException e) {
-            throw new PolicyManagementServerException(
-                    "Device token verification failed.",
-                    "ECDSA verification error: " + e.getMessage(),
-                    "DPM-60015", e);
+            throw PolicyManagementExceptionHandler.handleServerException(
+                    ErrorMessage.ERROR_DEVICE_ECDSA_VERIFICATION_FAILED, e);
         } catch (DeviceMgtException e) {
-            throw new PolicyManagementServerException(
-                    "Device lookup failed.",
-                    "Error retrieving device from registry: " + e.getMessage(),
-                    "DPM-60016", e);
+            throw PolicyManagementExceptionHandler.handleServerException(
+                    ErrorMessage.ERROR_DEVICE_LOOKUP_FAILED, e);
         }
     }
 
@@ -157,10 +151,8 @@ public class DeviceTokenExtractor {
             X509EncodedKeySpec keySpec = new X509EncodedKeySpec(keyBytes);
             return (ECPublicKey) KeyFactory.getInstance("EC").generatePublic(keySpec);
         } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
-            throw new PolicyManagementServerException(
-                    "Device public key invalid.",
-                    "Failed to decode EC public key from registered device: " + e.getMessage(),
-                    "DPM-60017", e);
+            throw PolicyManagementExceptionHandler.handleServerException(
+                    ErrorMessage.ERROR_DEVICE_PUBLIC_KEY_DECODE_FAILED, e);
         }
     }
 }

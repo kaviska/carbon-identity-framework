@@ -29,6 +29,7 @@ import org.wso2.carbon.identity.device.policy.management.api.model.PolicyRule;
 import org.wso2.carbon.identity.device.policy.management.api.service.PolicyManagementService;
 import org.wso2.carbon.identity.device.policy.management.internal.component.DevicePolicyMgtComponentServiceHolder;
 import org.wso2.carbon.identity.device.policy.management.internal.dao.PolicyManagementDAO;
+import org.wso2.carbon.identity.device.policy.management.internal.dao.impl.CacheBackedPolicyManagementDAO;
 import org.wso2.carbon.identity.device.policy.management.internal.dao.impl.PolicyManagementDAOFacade;
 import org.wso2.carbon.identity.device.policy.management.internal.dao.impl.PolicyManagementDAOImpl;
 import org.wso2.carbon.identity.device.policy.management.internal.util.PolicyManagementExceptionHandler;
@@ -54,7 +55,8 @@ public class PolicyManagementServiceImpl implements PolicyManagementService {
 
     private PolicyManagementServiceImpl() {
 
-        policyManagementDAO = new PolicyManagementDAOFacade(new PolicyManagementDAOImpl());
+        policyManagementDAO = new CacheBackedPolicyManagementDAO(
+                new PolicyManagementDAOFacade(new PolicyManagementDAOImpl()));
     }
 
     public static PolicyManagementServiceImpl getInstance() {
@@ -149,10 +151,7 @@ public class PolicyManagementServiceImpl implements PolicyManagementService {
         return policyManagementDAO.getPolicies(IdentityTenantUtil.getTenantId(tenantDomain));
     }
 
-    /**
-     * Hydrates the PolicyRule list within a Policy by fetching full Rule objects from rule-mgt.
-     * PolicyAction list is returned as-is (no hydration needed — actionIds are sufficient for execution).
-     */
+    // Actions are not hydrated — actionIds are sufficient for the executor.
     private Policy hydrateRules(Policy policy, String tenantDomain) throws PolicyManagementException {
 
         List<PolicyRule> hydratedRules = new ArrayList<>();

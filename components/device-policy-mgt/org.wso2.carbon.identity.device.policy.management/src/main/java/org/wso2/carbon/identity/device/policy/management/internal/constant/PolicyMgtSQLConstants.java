@@ -28,9 +28,7 @@ public final class PolicyMgtSQLConstants {
 
     }
 
-    /**
-     * SQL column name constants.
-     */
+    /** Column name constants. */
     public static final class Column {
 
         public static final String ID = "ID";
@@ -48,9 +46,7 @@ public final class PolicyMgtSQLConstants {
         }
     }
 
-    /**
-     * SQL query constants for IDN_POLICY, IDN_POLICY_RULE, and IDN_POLICY_ACTION.
-     */
+    /** SQL query constants. */
     public static final class Query {
 
         // IDN_POLICY table.

@@ -33,12 +33,10 @@ public interface IntegrityDataEnricher {
 
     /**
      * Enriches deviceData with platform-verified integrity values.
-     * Android devices receive {@code androidIntegrity} with a Google-verified level string.
-     * iOS devices receive {@code iosIntegrity} as a boolean string (true/false).
      *
-     * @param deviceData   Mutable map of device attributes extracted from the device token or SDK input.
-     * @param appId        Application resource ID used to load attestation credentials from IS config.
-     * @param tenantDomain Tenant domain for the application.
+     * @param deviceData   Mutable map of device attributes.
+     * @param appId        Application resource ID for loading attestation credentials.
+     * @param tenantDomain Tenant domain.
      */
     void enrich(Map<String, Object> deviceData, String appId, String tenantDomain);
 }

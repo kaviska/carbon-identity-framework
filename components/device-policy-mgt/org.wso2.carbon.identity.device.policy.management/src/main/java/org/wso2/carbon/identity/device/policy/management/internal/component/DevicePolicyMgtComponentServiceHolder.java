@@ -127,11 +127,6 @@ public class DevicePolicyMgtComponentServiceHolder {
         return clientAttestationService;
     }
 
-    /**
-     * Sets the ClientAttestationService OSGi service reference.
-     *
-     * @param clientAttestationService The service to set.
-     */
     public void setClientAttestationService(ClientAttestationService clientAttestationService) {
 
         this.clientAttestationService = clientAttestationService;

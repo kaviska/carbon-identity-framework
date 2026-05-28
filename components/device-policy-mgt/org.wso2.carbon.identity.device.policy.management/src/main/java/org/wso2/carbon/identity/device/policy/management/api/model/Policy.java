@@ -22,8 +22,7 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Model class representing a Policy with platform-specific rules (M:N) and ordered actions (M:N).
- * Rules are evaluated first per device platform; actions run in exec_order after a rule passes.
+ * Device compliance policy.
  */
 public class Policy {
 

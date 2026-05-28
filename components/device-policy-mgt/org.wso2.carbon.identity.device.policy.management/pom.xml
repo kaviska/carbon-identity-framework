@@ -228,6 +228,10 @@
                             org.wso2.carbon.identity.client.attestation.mgt.model;
                             version="${carbon.identity.package.import.version.range}",
                             org.wso2.carbon.identity.client.attestation.mgt.exceptions;
+                            version="${carbon.identity.package.import.version.range}",
+                            org.wso2.carbon.utils;
+                            version="${carbon.kernel.package.import.version.range}",
+                            org.wso2.carbon.identity.core.cache;
                             version="${carbon.identity.package.import.version.range}"
                         </Import-Package>
                     </instructions>

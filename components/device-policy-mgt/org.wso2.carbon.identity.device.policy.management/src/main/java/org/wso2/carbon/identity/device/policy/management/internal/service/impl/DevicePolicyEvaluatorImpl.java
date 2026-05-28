@@ -90,11 +90,6 @@ public class DevicePolicyEvaluatorImpl implements DevicePolicyEvaluator {
         return executeActions(policy, deviceData, tenantDomain);
     }
 
-    /**
-     * Finds the rule matching the device platform and evaluates it.
-     *
-     * @return {@code null} if compliant (or no rule for platform), or a comma-separated list of failed fields.
-     */
     private String evaluateRule(Policy policy, Map<String, Object> deviceData, String tenantDomain)
             throws PolicyManagementException, RuleEvaluationException {
 
@@ -124,11 +119,6 @@ public class DevicePolicyEvaluatorImpl implements DevicePolicyEvaluator {
         return null;
     }
 
-    /**
-     * Executes all policy actions in ascending exec_order via the action executor service.
-     *
-     * @return {@code null} if all actions succeed, or a failure reason string if any action fails.
-     */
     private String executeActions(Policy policy, Map<String, Object> deviceData, String tenantDomain)
             throws PolicyManagementException {
 
@@ -165,10 +155,6 @@ public class DevicePolicyEvaluatorImpl implements DevicePolicyEvaluator {
         return null;
     }
 
-    /**
-     * Walks the rule and resolves symbolic OS version names (e.g. LATEST_ANDROID) in LIST expressions
-     * to actual version numbers from os-versions.json.
-     */
     private Rule resolveSymbolicOsVersions(Rule rule) {
 
         ORCombinedRule orRule = (ORCombinedRule) rule;

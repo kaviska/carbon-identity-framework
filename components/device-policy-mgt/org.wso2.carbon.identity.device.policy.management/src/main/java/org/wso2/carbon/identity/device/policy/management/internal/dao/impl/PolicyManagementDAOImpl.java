@@ -21,6 +21,8 @@ package org.wso2.carbon.identity.device.policy.management.internal.dao.impl;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.database.utils.jdbc.NamedJdbcTemplate;
+import org.wso2.carbon.database.utils.jdbc.NamedTemplate;
+import org.wso2.carbon.database.utils.jdbc.exceptions.DataAccessException;
 import org.wso2.carbon.database.utils.jdbc.exceptions.TransactionException;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
@@ -39,9 +41,6 @@ import java.util.UUID;
 
 /**
  * Policy Management DAO Implementation.
- * Handles all SQL for IDN_POLICY, IDN_POLICY_RULE, and IDN_POLICY_ACTION.
- * Write operations (add/update/delete) use a single transaction across all three tables.
- * Rule objects are NOT hydrated here — only ruleIds are stored/returned.
  */
 public class PolicyManagementDAOImpl implements PolicyManagementDAO {
 
@@ -210,25 +209,24 @@ public class PolicyManagementDAOImpl implements PolicyManagementDAO {
         NamedJdbcTemplate jdbcTemplate =
                 new NamedJdbcTemplate(IdentityDatabaseUtil.getDataSource());
         try {
-            Policy base = jdbcTemplate.<Policy, RuntimeException>withTransaction(
-                    template -> template.fetchSingleRecord(
-                            PolicyMgtSQLConstants.Query.GET_POLICY_BY_ID,
-                            (resultSet, rowNumber) -> new Policy(
-                                    resultSet.getString(PolicyMgtSQLConstants.Column.ID),
-                                    resultSet.getString(PolicyMgtSQLConstants.Column.POLICY_NAME),
-                                    tenantDomain,
-                                    null,
-                                    null),
-                            preparedStatement -> {
-                                preparedStatement.setString(PolicyMgtSQLConstants.Column.POLICY_ID, policyId);
-                                preparedStatement.setInt(PolicyMgtSQLConstants.Column.TENANT_ID, tenantId);
-                            }));
-            if (base == null) {
-                return null;
-            }
-            List<PolicyRule> rules = fetchPolicyRules(policyId);
-            List<PolicyAction> actions = fetchPolicyActions(policyId);
-            return new Policy(base.getId(), base.getName(), tenantDomain, rules, actions);
+            return jdbcTemplate.<Policy, RuntimeException>withTransaction(template -> {
+                Policy base = template.fetchSingleRecord(
+                        PolicyMgtSQLConstants.Query.GET_POLICY_BY_ID,
+                        (resultSet, rowNumber) -> new Policy(
+                                resultSet.getString(PolicyMgtSQLConstants.Column.ID),
+                                resultSet.getString(PolicyMgtSQLConstants.Column.POLICY_NAME),
+                                tenantDomain, null, null),
+                        preparedStatement -> {
+                            preparedStatement.setString(PolicyMgtSQLConstants.Column.POLICY_ID, policyId);
+                            preparedStatement.setInt(PolicyMgtSQLConstants.Column.TENANT_ID, tenantId);
+                        });
+                if (base == null) {
+                    return null;
+                }
+                List<PolicyRule> rules = fetchPolicyRules(template, base.getId());
+                List<PolicyAction> actions = fetchPolicyActions(template, base.getId());
+                return new Policy(base.getId(), base.getName(), tenantDomain, rules, actions);
+            });
         } catch (TransactionException e) {
             throw PolicyManagementExceptionHandler.handleServerException(
                     ErrorMessage.ERROR_WHILE_RETRIEVING_POLICY, e);
@@ -242,25 +240,24 @@ public class PolicyManagementDAOImpl implements PolicyManagementDAO {
         NamedJdbcTemplate jdbcTemplate =
                 new NamedJdbcTemplate(IdentityDatabaseUtil.getDataSource());
         try {
-            Policy base = jdbcTemplate.<Policy, RuntimeException>withTransaction(
-                    template -> template.fetchSingleRecord(
-                            PolicyMgtSQLConstants.Query.GET_POLICY_BY_NAME,
-                            (resultSet, rowNumber) -> new Policy(
-                                    resultSet.getString(PolicyMgtSQLConstants.Column.ID),
-                                    resultSet.getString(PolicyMgtSQLConstants.Column.POLICY_NAME),
-                                    tenantDomain,
-                                    null,
-                                    null),
-                            preparedStatement -> {
-                                preparedStatement.setString(PolicyMgtSQLConstants.Column.POLICY_NAME, policyName);
-                                preparedStatement.setInt(PolicyMgtSQLConstants.Column.TENANT_ID, tenantId);
-                            }));
-            if (base == null) {
-                return null;
-            }
-            List<PolicyRule> rules = fetchPolicyRules(base.getId());
-            List<PolicyAction> actions = fetchPolicyActions(base.getId());
-            return new Policy(base.getId(), base.getName(), tenantDomain, rules, actions);
+            return jdbcTemplate.<Policy, RuntimeException>withTransaction(template -> {
+                Policy base = template.fetchSingleRecord(
+                        PolicyMgtSQLConstants.Query.GET_POLICY_BY_NAME,
+                        (resultSet, rowNumber) -> new Policy(
+                                resultSet.getString(PolicyMgtSQLConstants.Column.ID),
+                                resultSet.getString(PolicyMgtSQLConstants.Column.POLICY_NAME),
+                                tenantDomain, null, null),
+                        preparedStatement -> {
+                            preparedStatement.setString(PolicyMgtSQLConstants.Column.POLICY_NAME, policyName);
+                            preparedStatement.setInt(PolicyMgtSQLConstants.Column.TENANT_ID, tenantId);
+                        });
+                if (base == null) {
+                    return null;
+                }
+                List<PolicyRule> rules = fetchPolicyRules(template, base.getId());
+                List<PolicyAction> actions = fetchPolicyActions(template, base.getId());
+                return new Policy(base.getId(), base.getName(), tenantDomain, rules, actions);
+            });
         } catch (TransactionException e) {
             throw PolicyManagementExceptionHandler.handleServerException(
                     ErrorMessage.ERROR_WHILE_RETRIEVING_POLICY, e);
@@ -315,47 +312,33 @@ public class PolicyManagementDAOImpl implements PolicyManagementDAO {
         }
     }
 
-    private List<PolicyRule> fetchPolicyRules(String policyId) throws PolicyManagementException {
+    private List<PolicyRule> fetchPolicyRules(NamedTemplate<Policy> template, String policyId)
+            throws DataAccessException {
 
-        NamedJdbcTemplate jdbcTemplate =
-                new NamedJdbcTemplate(IdentityDatabaseUtil.getDataSource());
-        try {
-            List<PolicyRule> rules = jdbcTemplate.<List<PolicyRule>, RuntimeException>withTransaction(
-                    template -> template.executeQuery(
-                            PolicyMgtSQLConstants.Query.GET_POLICY_RULES,
-                            (resultSet, rowNumber) -> new PolicyRule(
-                                    resultSet.getString(PolicyMgtSQLConstants.Column.ID),
-                                    resultSet.getString(PolicyMgtSQLConstants.Column.RULE_ID),
-                                    resultSet.getString(PolicyMgtSQLConstants.Column.PLATFORM),
-                                    null),
-                            preparedStatement -> preparedStatement.setString(
-                                    PolicyMgtSQLConstants.Column.POLICY_ID, policyId)));
-            return rules != null ? rules : Collections.emptyList();
-        } catch (TransactionException e) {
-            throw PolicyManagementExceptionHandler.handleServerException(
-                    ErrorMessage.ERROR_WHILE_RETRIEVING_POLICY, e);
-        }
+        List<PolicyRule> rules = template.executeQuery(
+                PolicyMgtSQLConstants.Query.GET_POLICY_RULES,
+                (resultSet, rowNumber) -> new PolicyRule(
+                        resultSet.getString(PolicyMgtSQLConstants.Column.ID),
+                        resultSet.getString(PolicyMgtSQLConstants.Column.RULE_ID),
+                        resultSet.getString(PolicyMgtSQLConstants.Column.PLATFORM),
+                        null),
+                preparedStatement -> preparedStatement.setString(
+                        PolicyMgtSQLConstants.Column.POLICY_ID, policyId));
+        return rules != null ? rules : Collections.emptyList();
     }
 
-    private List<PolicyAction> fetchPolicyActions(String policyId) throws PolicyManagementException {
+    private List<PolicyAction> fetchPolicyActions(NamedTemplate<Policy> template, String policyId)
+            throws DataAccessException {
 
-        NamedJdbcTemplate jdbcTemplate =
-                new NamedJdbcTemplate(IdentityDatabaseUtil.getDataSource());
-        try {
-            List<PolicyAction> actions = jdbcTemplate.<List<PolicyAction>, RuntimeException>withTransaction(
-                    template -> template.executeQuery(
-                            PolicyMgtSQLConstants.Query.GET_POLICY_ACTIONS,
-                            (resultSet, rowNumber) -> new PolicyAction(
-                                    resultSet.getString(PolicyMgtSQLConstants.Column.ID),
-                                    resultSet.getString(PolicyMgtSQLConstants.Column.ACTION_ID),
-                                    resultSet.getString(PolicyMgtSQLConstants.Column.ACTION_TYPE),
-                                    resultSet.getInt(PolicyMgtSQLConstants.Column.EXEC_ORDER)),
-                            preparedStatement -> preparedStatement.setString(
-                                    PolicyMgtSQLConstants.Column.POLICY_ID, policyId)));
-            return actions != null ? actions : Collections.emptyList();
-        } catch (TransactionException e) {
-            throw PolicyManagementExceptionHandler.handleServerException(
-                    ErrorMessage.ERROR_WHILE_RETRIEVING_POLICY, e);
-        }
+        List<PolicyAction> actions = template.executeQuery(
+                PolicyMgtSQLConstants.Query.GET_POLICY_ACTIONS,
+                (resultSet, rowNumber) -> new PolicyAction(
+                        resultSet.getString(PolicyMgtSQLConstants.Column.ID),
+                        resultSet.getString(PolicyMgtSQLConstants.Column.ACTION_ID),
+                        resultSet.getString(PolicyMgtSQLConstants.Column.ACTION_TYPE),
+                        resultSet.getInt(PolicyMgtSQLConstants.Column.EXEC_ORDER)),
+                preparedStatement -> preparedStatement.setString(
+                        PolicyMgtSQLConstants.Column.POLICY_ID, policyId));
+        return actions != null ? actions : Collections.emptyList();
     }
 }

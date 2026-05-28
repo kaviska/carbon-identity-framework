@@ -21,7 +21,7 @@ package org.wso2.carbon.identity.device.policy.management.api.model;
 import org.wso2.carbon.identity.rule.management.api.model.Rule;
 
 /**
- * Represents the association between a Policy and a Rule for a specific device platform.
+ * Association between a Policy and a Rule for a specific device platform.
  * One platform may have at most one rule per policy.
  */
 public class PolicyRule {

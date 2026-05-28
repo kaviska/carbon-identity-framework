@@ -36,6 +36,16 @@ public enum ErrorMessage {
             "Policy '%s' has more than one rule for platform '%s'."),
     ERROR_INVALID_ACTION_REFERENCE("DPM-60006", "Invalid action reference.",
             "Action ID '%s' referenced by the policy does not exist."),
+    ERROR_DEVICE_TOKEN_MISSING("DPM-60007", "Device token missing.",
+            "X-Device-Token header is not present in the request."),
+    ERROR_DEVICE_TOKEN_PARSE_FAILED("DPM-60008", "Device token invalid.",
+            "Failed to parse X-Device-Token JWT."),
+    ERROR_DEVICE_TOKEN_MISSING_DEVICE_ID("DPM-60009", "Device token invalid.",
+            "deviceId is missing from the JWT header."),
+    ERROR_DEVICE_NOT_REGISTERED("DPM-60010", "Device not registered.",
+            "No registered device found for deviceId: %s."),
+    ERROR_DEVICE_TOKEN_SIGNATURE_INVALID("DPM-60011", "Device token signature invalid.",
+            "JWT signature verification failed for deviceId: %s."),
 
     // Server errors.
     ERROR_WHILE_ADDING_POLICY("DPM-65001", "Error while adding Policy.",
@@ -57,7 +67,13 @@ public enum ErrorMessage {
     ERROR_WHILE_DELETING_ACTION_FOR_POLICY("DPM-65009", "Error while deleting Action for Policy.",
             "Error while removing Action for Policy: %s from the system."),
     ERROR_WHILE_EXECUTING_ACTION_FOR_POLICY("DPM-65010", "Error while executing Action for Policy.",
-            "Action execution failed for Policy: %s, Action: %s.");
+            "Action execution failed for Policy: %s, Action: %s."),
+    ERROR_DEVICE_ECDSA_VERIFICATION_FAILED("DPM-65011", "Device token verification failed.",
+            "ECDSA verification error for the device token."),
+    ERROR_DEVICE_LOOKUP_FAILED("DPM-65012", "Device lookup failed.",
+            "Error retrieving device from registry."),
+    ERROR_DEVICE_PUBLIC_KEY_DECODE_FAILED("DPM-65013", "Device public key invalid.",
+            "Failed to decode EC public key for the registered device.");
 
     private final String code;
     private final String message;

@@ -203,14 +203,14 @@ public class PolicyManagementDAOFacade implements PolicyManagementDAO {
 
     private void deleteRulesFromRuleManagementService(List<PolicyRule> rules, String tenantDomain,
                                                       RuleManagementService ruleManagementService,
-                                                      String policyId) throws PolicyManagementException {
+                                                      String policyId) {
 
         for (PolicyRule pr : rules) {
             try {
                 ruleManagementService.deleteRule(pr.getRuleId(), tenantDomain);
             } catch (RuleManagementException e) {
-                throw PolicyManagementExceptionHandler.handleServerException(
-                        ErrorMessage.ERROR_WHILE_DELETING_RULE_FOR_POLICY, e, policyId);
+                LOG.error("Failed to delete rule " + pr.getRuleId()
+                        + " from rule-mgt for policy " + policyId + ". Rule may be orphaned.", e);
             }
         }
     }

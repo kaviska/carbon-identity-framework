@@ -20,20 +20,14 @@ package org.wso2.carbon.identity.device.policy.management.internal.service.impl;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.identity.action.execution.api.exception.ActionExecutionException;
-import org.wso2.carbon.identity.action.execution.api.model.ActionExecutionStatus;
-import org.wso2.carbon.identity.action.execution.api.model.ActionType;
-import org.wso2.carbon.identity.device.policy.management.api.constant.ErrorMessage;
 import org.wso2.carbon.identity.device.policy.management.api.exception.PolicyManagementException;
 import org.wso2.carbon.identity.device.policy.management.api.model.Policy;
-import org.wso2.carbon.identity.device.policy.management.api.model.PolicyAction;
 import org.wso2.carbon.identity.device.policy.management.api.model.PolicyRule;
 import org.wso2.carbon.identity.device.policy.management.api.service.DevicePolicyEvaluator;
 import org.wso2.carbon.identity.device.policy.management.internal.component.DevicePolicyMgtComponentServiceHolder;
 import org.wso2.carbon.identity.device.policy.management.internal.config.DeviceFieldConfig;
 import org.wso2.carbon.identity.device.policy.management.internal.config.DeviceFieldConfigLoader;
 import org.wso2.carbon.identity.device.policy.management.internal.config.OsVersionRegistry;
-import org.wso2.carbon.identity.device.policy.management.internal.util.PolicyManagementExceptionHandler;
 import org.wso2.carbon.identity.rule.evaluation.api.exception.RuleEvaluationException;
 import org.wso2.carbon.identity.rule.evaluation.api.model.FlowContext;
 import org.wso2.carbon.identity.rule.evaluation.api.model.FlowType;
@@ -45,7 +39,6 @@ import org.wso2.carbon.identity.rule.management.api.model.Rule;
 import org.wso2.carbon.identity.rule.management.api.model.Value;
 
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -59,8 +52,6 @@ public class DevicePolicyEvaluatorImpl implements DevicePolicyEvaluator {
 
     private static final Log LOG = LogFactory.getLog(DevicePolicyEvaluatorImpl.class);
     private static final String DEVICE_PLATFORM_FIELD = "platform";
-    private static final String DEVICE_DATA_KEY = "deviceData";
-    private static final String TENANT_DOMAIN_KEY = "tenantDomain";
 
     private static final Set<String> OS_VERSION_FIELDS = new HashSet<>(Arrays.asList(
             "androidOsVersion", "iosOsVersion", "macosOsVersion", "windowsOsVersion"));
@@ -80,14 +71,7 @@ public class DevicePolicyEvaluatorImpl implements DevicePolicyEvaluator {
             return policyName + ":policy_not_found";
         }
 
-        // Phase 1: Rule evaluation by device platform.
-        String failedFields = evaluateRule(policy, deviceData, tenantDomain);
-        if (failedFields != null) {
-            return failedFields;
-        }
-
-        // Phase 2: Action execution in exec_order.
-        return executeActions(policy, deviceData, tenantDomain);
+        return evaluateRule(policy, deviceData, tenantDomain);
     }
 
     private String evaluateRule(Policy policy, Map<String, Object> deviceData, String tenantDomain)
@@ -115,42 +99,6 @@ public class DevicePolicyEvaluatorImpl implements DevicePolicyEvaluator {
 
         if (!result.isRuleSatisfied()) {
             return String.join(", ", result.getFailedFields());
-        }
-        return null;
-    }
-
-    private String executeActions(Policy policy, Map<String, Object> deviceData, String tenantDomain)
-            throws PolicyManagementException {
-
-        List<PolicyAction> sortedActions = policy.getActions().stream()
-                .sorted(Comparator.comparingInt(PolicyAction::getExecOrder))
-                .collect(Collectors.toList());
-
-        for (PolicyAction policyAction : sortedActions) {
-            org.wso2.carbon.identity.action.execution.api.model.FlowContext actionFlowContext =
-                    org.wso2.carbon.identity.action.execution.api.model.FlowContext.create()
-                            .add(DEVICE_DATA_KEY, deviceData)
-                            .add(TENANT_DOMAIN_KEY, tenantDomain);
-
-            try {
-                ActionExecutionStatus status = DevicePolicyMgtComponentServiceHolder.getInstance()
-                        .getActionExecutorService()
-                        .execute(ActionType.DEVICE_POLICY, policyAction.getActionId(),
-                                actionFlowContext, tenantDomain);
-
-                if (status.getStatus() != ActionExecutionStatus.Status.SUCCESS) {
-                    if (LOG.isDebugEnabled()) {
-                        LOG.debug("Action not compliant for policy: " + policy.getName()
-                                + ", action: " + policyAction.getActionType()
-                                + ", status: " + status.getStatus());
-                    }
-                    return policy.getName() + ":action_not_compliant:" + policyAction.getActionType();
-                }
-            } catch (ActionExecutionException e) {
-                throw PolicyManagementExceptionHandler.handleServerException(
-                        ErrorMessage.ERROR_WHILE_EXECUTING_ACTION_FOR_POLICY, e,
-                        policy.getName(), policyAction.getActionType());
-            }
         }
         return null;
     }

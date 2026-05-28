@@ -94,9 +94,9 @@ public class PolicyManagementServiceImplTest {
     public void testAddPolicy() throws PolicyManagementException {
 
         Policy inputPolicy = new Policy(null, TEST_POLICY_NAME, TENANT_DOMAIN,
-                Collections.emptyList(), Collections.emptyList());
+                Collections.emptyList());
         Policy savedPolicy = new Policy(TEST_POLICY_ID, TEST_POLICY_NAME, TENANT_DOMAIN,
-                Collections.emptyList(), Collections.emptyList());
+                Collections.emptyList());
 
         when(policyManagementDAO.addPolicy(any(Policy.class), eq(TENANT_ID))).thenReturn(savedPolicy);
         when(policyManagementDAO.getPolicyById(any(String.class), eq(TENANT_ID))).thenReturn(savedPolicy);
@@ -112,7 +112,7 @@ public class PolicyManagementServiceImplTest {
     public void testAddPolicy_EmptyName() throws PolicyManagementException {
 
         Policy inputPolicy = new Policy(null, "", TENANT_DOMAIN,
-                Collections.emptyList(), Collections.emptyList());
+                Collections.emptyList());
         policyManagementService.addPolicy(inputPolicy, TENANT_DOMAIN);
     }
 
@@ -120,7 +120,7 @@ public class PolicyManagementServiceImplTest {
     public void testAddPolicy_NullName() throws PolicyManagementException {
 
         Policy inputPolicy = new Policy(null, null, TENANT_DOMAIN,
-                Collections.emptyList(), Collections.emptyList());
+                Collections.emptyList());
         policyManagementService.addPolicy(inputPolicy, TENANT_DOMAIN);
     }
 
@@ -128,7 +128,7 @@ public class PolicyManagementServiceImplTest {
     public void testGetPolicyById() throws PolicyManagementException {
 
         Policy expectedPolicy = new Policy(TEST_POLICY_ID, TEST_POLICY_NAME, TENANT_DOMAIN,
-                Collections.emptyList(), Collections.emptyList());
+                Collections.emptyList());
 
         when(policyManagementDAO.getPolicyById(TEST_POLICY_ID, TENANT_ID)).thenReturn(expectedPolicy);
 
@@ -144,9 +144,9 @@ public class PolicyManagementServiceImplTest {
     public void testUpdatePolicy() throws PolicyManagementException {
 
         Policy existingPolicy = new Policy(TEST_POLICY_ID, TEST_POLICY_NAME, TENANT_DOMAIN,
-                Collections.emptyList(), Collections.emptyList());
+                Collections.emptyList());
         Policy updatedPolicy = new Policy(TEST_POLICY_ID, "UpdatedPolicy", TENANT_DOMAIN,
-                Collections.emptyList(), Collections.emptyList());
+                Collections.emptyList());
 
         when(policyManagementDAO.getPolicyById(TEST_POLICY_ID, TENANT_ID))
                 .thenReturn(existingPolicy)
@@ -164,7 +164,7 @@ public class PolicyManagementServiceImplTest {
     public void testUpdatePolicy_PolicyNotFound() throws PolicyManagementException {
 
         Policy policy = new Policy(TEST_POLICY_ID, TEST_POLICY_NAME, TENANT_DOMAIN,
-                Collections.emptyList(), Collections.emptyList());
+                Collections.emptyList());
 
         when(policyManagementDAO.getPolicyById(TEST_POLICY_ID, TENANT_ID)).thenReturn(null);
 
@@ -175,7 +175,7 @@ public class PolicyManagementServiceImplTest {
     public void testDeletePolicy() throws PolicyManagementException {
 
         Policy existingPolicy = new Policy(TEST_POLICY_ID, TEST_POLICY_NAME, TENANT_DOMAIN,
-                Collections.emptyList(), Collections.emptyList());
+                Collections.emptyList());
 
         when(policyManagementDAO.getPolicyById(TEST_POLICY_ID, TENANT_ID)).thenReturn(existingPolicy);
 

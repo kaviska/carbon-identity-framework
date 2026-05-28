@@ -26,14 +26,8 @@ import java.util.Map;
 
 /**
  * Evaluates device policy compliance against a named policy using pre-extracted device attribute data.
- *
- * <p>Two-phase evaluation:
- * <ol>
- *   <li>Rule phase — finds the rule for the device's platform and evaluates it. If no rule is configured
- *       for the platform, this phase is skipped (policy does not restrict that platform).</li>
- *   <li>Action phase — executes all configured actions in ascending exec_order via the action executor
- *       service. A failed action means the device is not compliant.</li>
- * </ol>
+ * Finds the rule for the device's platform and evaluates it. If no rule is configured for the platform,
+ * the policy does not restrict that platform and the device is treated as compliant.
  */
 public interface DevicePolicyEvaluator {
 
@@ -44,7 +38,7 @@ public interface DevicePolicyEvaluator {
      * @param deviceData   Map of device field names to their values.
      * @param tenantDomain Tenant domain for policy lookup and rule evaluation.
      * @return {@code null} if the device is compliant, or a failure reason string if not.
-     * @throws PolicyManagementException If the policy cannot be retrieved or an action fails unexpectedly.
+     * @throws PolicyManagementException If the policy cannot be retrieved.
      * @throws RuleEvaluationException   If rule evaluation fails.
      */
     String evaluate(String policyName, Map<String, Object> deviceData, String tenantDomain)

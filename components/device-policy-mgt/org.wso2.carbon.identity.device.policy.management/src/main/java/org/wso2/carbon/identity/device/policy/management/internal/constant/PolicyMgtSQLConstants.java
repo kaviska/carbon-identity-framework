@@ -37,9 +37,6 @@ public final class PolicyMgtSQLConstants {
         public static final String TENANT_ID = "TENANT_ID";
         public static final String RULE_ID = "RULE_ID";
         public static final String PLATFORM = "PLATFORM";
-        public static final String ACTION_ID = "ACTION_ID";
-        public static final String ACTION_TYPE = "ACTION_TYPE";
-        public static final String EXEC_ORDER = "EXEC_ORDER";
 
         private Column() {
 
@@ -88,18 +85,6 @@ public final class PolicyMgtSQLConstants {
 
         public static final String DELETE_POLICY_RULES =
                 "DELETE FROM IDN_POLICY_RULE WHERE POLICY_ID = :POLICY_ID;";
-
-        // IDN_POLICY_ACTION junction table.
-        public static final String ADD_POLICY_ACTION =
-                "INSERT INTO IDN_POLICY_ACTION (ID, POLICY_ID, ACTION_ID, ACTION_TYPE, EXEC_ORDER) " +
-                        "VALUES (:ID;, :POLICY_ID;, :ACTION_ID;, :ACTION_TYPE;, :EXEC_ORDER;)";
-
-        public static final String GET_POLICY_ACTIONS =
-                "SELECT ID, ACTION_ID, ACTION_TYPE, EXEC_ORDER FROM IDN_POLICY_ACTION " +
-                        "WHERE POLICY_ID = :POLICY_ID; ORDER BY EXEC_ORDER ASC";
-
-        public static final String DELETE_POLICY_ACTIONS =
-                "DELETE FROM IDN_POLICY_ACTION WHERE POLICY_ID = :POLICY_ID;";
 
         private Query() {
 

@@ -28,19 +28,12 @@ import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
-import org.wso2.carbon.identity.action.execution.api.service.ActionExecutionRequestBuilder;
-import org.wso2.carbon.identity.action.execution.api.service.ActionExecutionResponseProcessor;
-import org.wso2.carbon.identity.action.execution.api.service.ActionExecutorService;
-import org.wso2.carbon.identity.action.execution.api.service.ActionVersioningHandler;
 import org.wso2.carbon.identity.application.authentication.framework.JsFunctionRegistry;
 import org.wso2.carbon.identity.client.attestation.mgt.services.ClientAttestationService;
 import org.wso2.carbon.identity.device.mgt.api.service.DeviceManagementService;
 import org.wso2.carbon.identity.device.policy.management.api.service.DevicePolicyEvaluator;
 import org.wso2.carbon.identity.device.policy.management.api.service.IntegrityDataEnricher;
 import org.wso2.carbon.identity.device.policy.management.api.service.PolicyManagementService;
-import org.wso2.carbon.identity.device.policy.management.internal.action.DevicePolicyActionRequestBuilder;
-import org.wso2.carbon.identity.device.policy.management.internal.action.DevicePolicyActionResponseProcessor;
-import org.wso2.carbon.identity.device.policy.management.internal.action.DevicePolicyActionVersioningHandler;
 import org.wso2.carbon.identity.device.policy.management.internal.rule.DevicePolicyEvaluationDataProvider;
 import org.wso2.carbon.identity.device.policy.management.internal.rule.DevicePolicyJsFunction;
 import org.wso2.carbon.identity.device.policy.management.internal.service.impl.DevicePolicyEvaluatorImpl;
@@ -72,13 +65,6 @@ public class DevicePolicyMgtServiceComponent {
             bundleCtx.registerService(PolicyManagementService.class.getName(), policyManagementService, null);
             bundleCtx.registerService(RuleEvaluationDataProvider.class.getName(),
                     new DevicePolicyEvaluationDataProvider(), null);
-
-            bundleCtx.registerService(ActionExecutionRequestBuilder.class.getName(),
-                    new DevicePolicyActionRequestBuilder(), null);
-            bundleCtx.registerService(ActionExecutionResponseProcessor.class.getName(),
-                    new DevicePolicyActionResponseProcessor(), null);
-            bundleCtx.registerService(ActionVersioningHandler.class.getName(),
-                    new DevicePolicyActionVersioningHandler(), null);
 
             // Registered as OSGi services so other bundles can consume them without direct instantiation.
             DevicePolicyEvaluator devicePolicyEvaluator = new DevicePolicyEvaluatorImpl();
@@ -181,25 +167,6 @@ public class DevicePolicyMgtServiceComponent {
 
         DevicePolicyMgtComponentServiceHolder.getInstance().setDeviceManagementService(null);
         LOG.debug("DeviceManagementService unset in Policy Management component.");
-    }
-
-    @Reference(
-            name = "action.executor.service",
-            service = ActionExecutorService.class,
-            cardinality = ReferenceCardinality.MANDATORY,
-            policy = ReferencePolicy.DYNAMIC,
-            unbind = "unsetActionExecutorService"
-    )
-    protected void setActionExecutorService(ActionExecutorService actionExecutorService) {
-
-        DevicePolicyMgtComponentServiceHolder.getInstance().setActionExecutorService(actionExecutorService);
-        LOG.debug("ActionExecutorService set in Policy Management component.");
-    }
-
-    protected void unsetActionExecutorService(ActionExecutorService actionExecutorService) {
-
-        DevicePolicyMgtComponentServiceHolder.getInstance().setActionExecutorService(null);
-        LOG.debug("ActionExecutorService unset in Policy Management component.");
     }
 
     @Reference(

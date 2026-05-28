@@ -29,7 +29,6 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.device.policy.management.api.constant.ErrorMessage;
 import org.wso2.carbon.identity.device.policy.management.api.exception.PolicyManagementException;
 import org.wso2.carbon.identity.device.policy.management.api.model.Policy;
-import org.wso2.carbon.identity.device.policy.management.api.model.PolicyAction;
 import org.wso2.carbon.identity.device.policy.management.api.model.PolicyRule;
 import org.wso2.carbon.identity.device.policy.management.internal.constant.PolicyMgtSQLConstants;
 import org.wso2.carbon.identity.device.policy.management.internal.dao.PolicyManagementDAO;
@@ -79,23 +78,6 @@ public class PolicyManagementDAOImpl implements PolicyManagementDAO {
                             false);
                 }
 
-                for (PolicyAction policyAction : policy.getActions()) {
-                    final String actionRowId = UUID.randomUUID().toString();
-                    template.executeInsert(
-                            PolicyMgtSQLConstants.Query.ADD_POLICY_ACTION,
-                            preparedStatement -> {
-                                preparedStatement.setString(PolicyMgtSQLConstants.Column.ID, actionRowId);
-                                preparedStatement.setString(PolicyMgtSQLConstants.Column.POLICY_ID, policy.getId());
-                                preparedStatement.setString(PolicyMgtSQLConstants.Column.ACTION_ID,
-                                        policyAction.getActionId());
-                                preparedStatement.setString(PolicyMgtSQLConstants.Column.ACTION_TYPE,
-                                        policyAction.getActionType());
-                                preparedStatement.setInt(PolicyMgtSQLConstants.Column.EXEC_ORDER,
-                                        policyAction.getExecOrder());
-                            },
-                            policyAction,
-                            false);
-                }
                 return null;
             });
         } catch (TransactionException e) {
@@ -144,28 +126,6 @@ public class PolicyManagementDAOImpl implements PolicyManagementDAO {
                             false);
                 }
 
-                template.executeUpdate(
-                        PolicyMgtSQLConstants.Query.DELETE_POLICY_ACTIONS,
-                        preparedStatement -> preparedStatement.setString(
-                                PolicyMgtSQLConstants.Column.POLICY_ID, policy.getId()));
-
-                for (PolicyAction policyAction : policy.getActions()) {
-                    final String actionRowId = UUID.randomUUID().toString();
-                    template.executeInsert(
-                            PolicyMgtSQLConstants.Query.ADD_POLICY_ACTION,
-                            preparedStatement -> {
-                                preparedStatement.setString(PolicyMgtSQLConstants.Column.ID, actionRowId);
-                                preparedStatement.setString(PolicyMgtSQLConstants.Column.POLICY_ID, policy.getId());
-                                preparedStatement.setString(PolicyMgtSQLConstants.Column.ACTION_ID,
-                                        policyAction.getActionId());
-                                preparedStatement.setString(PolicyMgtSQLConstants.Column.ACTION_TYPE,
-                                        policyAction.getActionType());
-                                preparedStatement.setInt(PolicyMgtSQLConstants.Column.EXEC_ORDER,
-                                        policyAction.getExecOrder());
-                            },
-                            policyAction,
-                            false);
-                }
                 return null;
             });
         } catch (TransactionException e) {
@@ -215,7 +175,7 @@ public class PolicyManagementDAOImpl implements PolicyManagementDAO {
                         (resultSet, rowNumber) -> new Policy(
                                 resultSet.getString(PolicyMgtSQLConstants.Column.ID),
                                 resultSet.getString(PolicyMgtSQLConstants.Column.POLICY_NAME),
-                                tenantDomain, null, null),
+                                tenantDomain, null),
                         preparedStatement -> {
                             preparedStatement.setString(PolicyMgtSQLConstants.Column.POLICY_ID, policyId);
                             preparedStatement.setInt(PolicyMgtSQLConstants.Column.TENANT_ID, tenantId);
@@ -224,8 +184,7 @@ public class PolicyManagementDAOImpl implements PolicyManagementDAO {
                     return null;
                 }
                 List<PolicyRule> rules = fetchPolicyRules(template, base.getId());
-                List<PolicyAction> actions = fetchPolicyActions(template, base.getId());
-                return new Policy(base.getId(), base.getName(), tenantDomain, rules, actions);
+                return new Policy(base.getId(), base.getName(), tenantDomain, rules);
             });
         } catch (TransactionException e) {
             throw PolicyManagementExceptionHandler.handleServerException(
@@ -246,7 +205,7 @@ public class PolicyManagementDAOImpl implements PolicyManagementDAO {
                         (resultSet, rowNumber) -> new Policy(
                                 resultSet.getString(PolicyMgtSQLConstants.Column.ID),
                                 resultSet.getString(PolicyMgtSQLConstants.Column.POLICY_NAME),
-                                tenantDomain, null, null),
+                                tenantDomain, null),
                         preparedStatement -> {
                             preparedStatement.setString(PolicyMgtSQLConstants.Column.POLICY_NAME, policyName);
                             preparedStatement.setInt(PolicyMgtSQLConstants.Column.TENANT_ID, tenantId);
@@ -255,8 +214,7 @@ public class PolicyManagementDAOImpl implements PolicyManagementDAO {
                     return null;
                 }
                 List<PolicyRule> rules = fetchPolicyRules(template, base.getId());
-                List<PolicyAction> actions = fetchPolicyActions(template, base.getId());
-                return new Policy(base.getId(), base.getName(), tenantDomain, rules, actions);
+                return new Policy(base.getId(), base.getName(), tenantDomain, rules);
             });
         } catch (TransactionException e) {
             throw PolicyManagementExceptionHandler.handleServerException(
@@ -301,7 +259,6 @@ public class PolicyManagementDAOImpl implements PolicyManagementDAO {
                                     resultSet.getString(PolicyMgtSQLConstants.Column.ID),
                                     resultSet.getString(PolicyMgtSQLConstants.Column.POLICY_NAME),
                                     tenantDomain,
-                                    Collections.emptyList(),
                                     Collections.emptyList()),
                             preparedStatement -> preparedStatement.setInt(
                                     PolicyMgtSQLConstants.Column.TENANT_ID, tenantId)));
@@ -327,18 +284,4 @@ public class PolicyManagementDAOImpl implements PolicyManagementDAO {
         return rules != null ? rules : Collections.emptyList();
     }
 
-    private List<PolicyAction> fetchPolicyActions(NamedTemplate<Policy> template, String policyId)
-            throws DataAccessException {
-
-        List<PolicyAction> actions = template.executeQuery(
-                PolicyMgtSQLConstants.Query.GET_POLICY_ACTIONS,
-                (resultSet, rowNumber) -> new PolicyAction(
-                        resultSet.getString(PolicyMgtSQLConstants.Column.ID),
-                        resultSet.getString(PolicyMgtSQLConstants.Column.ACTION_ID),
-                        resultSet.getString(PolicyMgtSQLConstants.Column.ACTION_TYPE),
-                        resultSet.getInt(PolicyMgtSQLConstants.Column.EXEC_ORDER)),
-                preparedStatement -> preparedStatement.setString(
-                        PolicyMgtSQLConstants.Column.POLICY_ID, policyId));
-        return actions != null ? actions : Collections.emptyList();
-    }
 }

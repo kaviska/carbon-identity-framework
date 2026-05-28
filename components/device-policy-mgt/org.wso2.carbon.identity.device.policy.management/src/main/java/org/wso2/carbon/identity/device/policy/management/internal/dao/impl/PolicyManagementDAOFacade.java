@@ -85,8 +85,7 @@ public class PolicyManagementDAOFacade implements PolicyManagementDAO {
                     ErrorMessage.ERROR_WHILE_ADDING_RULE_FOR_POLICY, e, policy.getName());
         }
 
-        Policy policyWithRuleIds = new Policy(policy.getId(), policy.getName(), tenantDomain,
-                rulesWithIds, policy.getActions());
+        Policy policyWithRuleIds = new Policy(policy.getId(), policy.getName(), tenantDomain, rulesWithIds);
 
         try {
             return policyManagementDAO.addPolicy(policyWithRuleIds, tenantId);
@@ -124,8 +123,7 @@ public class PolicyManagementDAOFacade implements PolicyManagementDAO {
                     ErrorMessage.ERROR_WHILE_UPDATING_RULE_FOR_POLICY, e, policy.getId());
         }
 
-        Policy policyWithRuleIds = new Policy(policy.getId(), policy.getName(), tenantDomain,
-                rulesWithIds, policy.getActions());
+        Policy policyWithRuleIds = new Policy(policy.getId(), policy.getName(), tenantDomain, rulesWithIds);
 
         try {
             return policyManagementDAO.updatePolicy(policyWithRuleIds, tenantId);

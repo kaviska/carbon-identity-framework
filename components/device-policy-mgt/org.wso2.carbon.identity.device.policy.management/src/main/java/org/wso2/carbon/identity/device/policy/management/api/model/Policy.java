@@ -30,16 +30,13 @@ public class Policy {
     private final String name;
     private final String tenantDomain;
     private final List<PolicyRule> rules;
-    private final List<PolicyAction> actions;
 
-    public Policy(String id, String name, String tenantDomain,
-                  List<PolicyRule> rules, List<PolicyAction> actions) {
+    public Policy(String id, String name, String tenantDomain, List<PolicyRule> rules) {
 
         this.id = id;
         this.name = name;
         this.tenantDomain = tenantDomain;
         this.rules = rules != null ? Collections.unmodifiableList(rules) : Collections.emptyList();
-        this.actions = actions != null ? Collections.unmodifiableList(actions) : Collections.emptyList();
     }
 
     public String getId() {
@@ -60,10 +57,5 @@ public class Policy {
     public List<PolicyRule> getRules() {
 
         return rules;
-    }
-
-    public List<PolicyAction> getActions() {
-
-        return actions;
     }
 }

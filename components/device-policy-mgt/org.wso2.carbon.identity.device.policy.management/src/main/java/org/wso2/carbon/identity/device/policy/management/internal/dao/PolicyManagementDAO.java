@@ -25,8 +25,8 @@ import java.util.List;
 
 /**
  * Interface for Policy Management DAO.
- * Handles CRUD for IDN_POLICY, IDN_POLICY_RULE, and IDN_POLICY_ACTION tables.
- * Returns Policy objects with PolicyRule/PolicyAction lists populated (ruleIds and actionIds only — no hydrated rules).
+ * Handles CRUD for IDN_POLICY and IDN_POLICY_RULE tables.
+ * Returns Policy objects with PolicyRule lists populated (ruleIds only — rules are hydrated by the service layer).
  */
 public interface PolicyManagementDAO {
 

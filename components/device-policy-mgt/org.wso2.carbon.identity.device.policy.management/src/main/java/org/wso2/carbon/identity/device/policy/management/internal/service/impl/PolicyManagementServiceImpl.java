@@ -79,8 +79,7 @@ public class PolicyManagementServiceImpl implements PolicyManagementService {
                 UUID.randomUUID().toString(),
                 policy.getName(),
                 tenantDomain,
-                policy.getRules(),
-                policy.getActions());
+                policy.getRules());
 
         return policyManagementDAO.addPolicy(policyWithId, tenantId);
     }
@@ -166,8 +165,7 @@ public class PolicyManagementServiceImpl implements PolicyManagementService {
                         ErrorMessage.ERROR_WHILE_RETRIEVING_POLICY, e);
             }
         }
-        return new Policy(policy.getId(), policy.getName(), policy.getTenantDomain(),
-                hydratedRules, policy.getActions());
+        return new Policy(policy.getId(), policy.getName(), policy.getTenantDomain(), hydratedRules);
     }
 
     private void validateIfPolicyExists(String policyId, String tenantDomain)

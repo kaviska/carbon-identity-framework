@@ -22,13 +22,12 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.device.policy.management.api.constant.ErrorMessage;
-import org.wso2.carbon.identity.device.policy.management.api.exception.PolicyManagementClientException;
 import org.wso2.carbon.identity.device.policy.management.api.exception.PolicyManagementException;
-import org.wso2.carbon.identity.device.policy.management.api.exception.PolicyManagementServerException;
 import org.wso2.carbon.identity.device.policy.management.api.model.Policy;
 import org.wso2.carbon.identity.device.policy.management.api.model.PolicyRule;
 import org.wso2.carbon.identity.device.policy.management.internal.component.DevicePolicyMgtComponentServiceHolder;
 import org.wso2.carbon.identity.device.policy.management.internal.dao.PolicyManagementDAO;
+import org.wso2.carbon.identity.device.policy.management.internal.util.PolicyManagementExceptionHandler;
 import org.wso2.carbon.identity.rule.management.api.exception.RuleManagementClientException;
 import org.wso2.carbon.identity.rule.management.api.exception.RuleManagementException;
 import org.wso2.carbon.identity.rule.management.api.model.ANDCombinedRule;
@@ -82,10 +81,8 @@ public class PolicyManagementDAOFacade implements PolicyManagementDAO {
             }
         } catch (RuleManagementException e) {
             compensateCreatedRules(createdRuleIds, tenantDomain, ruleManagementService);
-            throw new PolicyManagementServerException(
-                    ErrorMessage.ERROR_WHILE_ADDING_RULE_FOR_POLICY.getMessage(),
-                    String.format(ErrorMessage.ERROR_WHILE_ADDING_RULE_FOR_POLICY.getDescription(), policy.getName()),
-                    ErrorMessage.ERROR_WHILE_ADDING_RULE_FOR_POLICY.getCode(), e);
+            throw PolicyManagementExceptionHandler.handleServerException(
+                    ErrorMessage.ERROR_WHILE_ADDING_RULE_FOR_POLICY, e, policy.getName());
         }
 
         Policy policyWithRuleIds = new Policy(policy.getId(), policy.getName(), tenantDomain,
@@ -123,11 +120,8 @@ public class PolicyManagementDAOFacade implements PolicyManagementDAO {
             }
         } catch (RuleManagementException e) {
             compensateCreatedRules(createdRuleIds, tenantDomain, ruleManagementService);
-            throw new PolicyManagementServerException(
-                    ErrorMessage.ERROR_WHILE_UPDATING_RULE_FOR_POLICY.getMessage(),
-                    String.format(ErrorMessage.ERROR_WHILE_UPDATING_RULE_FOR_POLICY.getDescription(),
-                            policy.getId()),
-                    ErrorMessage.ERROR_WHILE_UPDATING_RULE_FOR_POLICY.getCode(), e);
+            throw PolicyManagementExceptionHandler.handleServerException(
+                    ErrorMessage.ERROR_WHILE_UPDATING_RULE_FOR_POLICY, e, policy.getId());
         }
 
         Policy policyWithRuleIds = new Policy(policy.getId(), policy.getName(), tenantDomain,
@@ -176,6 +170,12 @@ public class PolicyManagementDAOFacade implements PolicyManagementDAO {
         return policyManagementDAO.getPolicies(tenantId);
     }
 
+    @Override
+    public String getPolicyIdByName(String policyName, int tenantId) throws PolicyManagementException {
+
+        return policyManagementDAO.getPolicyIdByName(policyName, tenantId);
+    }
+
     private void validateRule(Rule rule, String tenantDomain) throws PolicyManagementException {
 
         try {
@@ -193,15 +193,11 @@ public class PolicyManagementDAOFacade implements PolicyManagementDAO {
             }
             ruleBuilder.build();
         } catch (RuleManagementClientException e) {
-            throw new PolicyManagementClientException(
-                    ErrorMessage.ERROR_INVALID_POLICY_RULE.getMessage(),
-                    String.format(ErrorMessage.ERROR_INVALID_POLICY_RULE.getDescription(), e.getMessage()),
-                    ErrorMessage.ERROR_INVALID_POLICY_RULE.getCode(), e);
+            throw PolicyManagementExceptionHandler.handleClientException(
+                    ErrorMessage.ERROR_INVALID_POLICY_RULE, e, e.getMessage());
         } catch (RuleManagementException e) {
-            throw new PolicyManagementServerException(
-                    ErrorMessage.ERROR_WHILE_ADDING_RULE_FOR_POLICY.getMessage(),
-                    ErrorMessage.ERROR_WHILE_ADDING_RULE_FOR_POLICY.getDescription(),
-                    ErrorMessage.ERROR_WHILE_ADDING_RULE_FOR_POLICY.getCode(), e);
+            throw PolicyManagementExceptionHandler.handleServerException(
+                    ErrorMessage.ERROR_WHILE_ADDING_RULE_FOR_POLICY, e);
         }
     }
 
@@ -213,10 +209,8 @@ public class PolicyManagementDAOFacade implements PolicyManagementDAO {
             try {
                 ruleManagementService.deleteRule(pr.getRuleId(), tenantDomain);
             } catch (RuleManagementException e) {
-                throw new PolicyManagementServerException(
-                        ErrorMessage.ERROR_WHILE_DELETING_RULE_FOR_POLICY.getMessage(),
-                        String.format(ErrorMessage.ERROR_WHILE_DELETING_RULE_FOR_POLICY.getDescription(), policyId),
-                        ErrorMessage.ERROR_WHILE_DELETING_RULE_FOR_POLICY.getCode(), e);
+                throw PolicyManagementExceptionHandler.handleServerException(
+                        ErrorMessage.ERROR_WHILE_DELETING_RULE_FOR_POLICY, e, policyId);
             }
         }
     }

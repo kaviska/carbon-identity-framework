@@ -135,7 +135,7 @@
                             version="${carbon.identity.package.import.version.range}",
                             org.wso2.carbon.identity.flow.mgt.model;
                             version="${carbon.identity.package.import.version.range}",
-                            org.wso2.carbon.identity.device.policy.management.api.rule;
+                            org.wso2.carbon.identity.device.policy.management.api.service;
                             version="${carbon.identity.package.import.version.range}",
                             org.wso2.carbon.identity.device.policy.management.api.exception;
                             version="${carbon.identity.package.import.version.range}",

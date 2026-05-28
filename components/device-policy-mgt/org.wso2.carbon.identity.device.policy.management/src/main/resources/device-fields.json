@@ -83,10 +83,16 @@
       "applicablePlatforms": ["android"]
     },
     {
-      "name": "integrityLevel",
-      "displayName": "Integrity Level",
-      "header": "X-Device-Integrity-Level",
+      "name": "androidIntegrity",
+      "displayName": "Android Integrity",
+      "header": "X-Device-Android-Integrity",
       "applicablePlatforms": ["android"]
+    },
+    {
+      "name": "iosIntegrity",
+      "displayName": "iOS Device Genuine",
+      "header": "X-Device-iOS-Integrity",
+      "applicablePlatforms": ["ios"]
     },
     {
       "name": "passcode",

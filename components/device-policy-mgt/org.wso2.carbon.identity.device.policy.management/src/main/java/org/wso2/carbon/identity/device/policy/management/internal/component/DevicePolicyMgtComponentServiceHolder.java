@@ -20,7 +20,10 @@ package org.wso2.carbon.identity.device.policy.management.internal.component;
 
 import org.wso2.carbon.identity.action.execution.api.service.ActionExecutorService;
 import org.wso2.carbon.identity.application.authentication.framework.JsFunctionRegistry;
+import org.wso2.carbon.identity.client.attestation.mgt.services.ClientAttestationService;
 import org.wso2.carbon.identity.device.mgt.api.service.DeviceManagementService;
+import org.wso2.carbon.identity.device.policy.management.api.service.DevicePolicyEvaluator;
+import org.wso2.carbon.identity.device.policy.management.api.service.IntegrityDataEnricher;
 import org.wso2.carbon.identity.device.policy.management.api.service.PolicyManagementService;
 import org.wso2.carbon.identity.rule.evaluation.api.service.RuleEvaluationService;
 import org.wso2.carbon.identity.rule.management.api.service.RuleManagementService;
@@ -40,6 +43,9 @@ public class DevicePolicyMgtComponentServiceHolder {
     private JsFunctionRegistry jsFunctionRegistry;
     private DeviceManagementService deviceManagementService;
     private ActionExecutorService actionExecutorService;
+    private ClientAttestationService clientAttestationService;
+    private DevicePolicyEvaluator devicePolicyEvaluator;
+    private IntegrityDataEnricher integrityDataEnricher;
 
     private DevicePolicyMgtComponentServiceHolder() {
 
@@ -108,5 +114,46 @@ public class DevicePolicyMgtComponentServiceHolder {
     public void setActionExecutorService(ActionExecutorService actionExecutorService) {
 
         this.actionExecutorService = actionExecutorService;
+    }
+
+    /**
+     * Returns the ClientAttestationService used to verify Google Play Integrity tokens.
+     * May be null when the client-attestation-mgt bundle is not present (non-Android deployments).
+     *
+     * @return ClientAttestationService instance, or null if not registered.
+     */
+    public ClientAttestationService getClientAttestationService() {
+
+        return clientAttestationService;
+    }
+
+    /**
+     * Sets the ClientAttestationService OSGi service reference.
+     *
+     * @param clientAttestationService The service to set.
+     */
+    public void setClientAttestationService(ClientAttestationService clientAttestationService) {
+
+        this.clientAttestationService = clientAttestationService;
+    }
+
+    public DevicePolicyEvaluator getDevicePolicyEvaluator() {
+
+        return devicePolicyEvaluator;
+    }
+
+    public void setDevicePolicyEvaluator(DevicePolicyEvaluator devicePolicyEvaluator) {
+
+        this.devicePolicyEvaluator = devicePolicyEvaluator;
+    }
+
+    public IntegrityDataEnricher getIntegrityDataEnricher() {
+
+        return integrityDataEnricher;
+    }
+
+    public void setIntegrityDataEnricher(IntegrityDataEnricher integrityDataEnricher) {
+
+        this.integrityDataEnricher = integrityDataEnricher;
     }
 }

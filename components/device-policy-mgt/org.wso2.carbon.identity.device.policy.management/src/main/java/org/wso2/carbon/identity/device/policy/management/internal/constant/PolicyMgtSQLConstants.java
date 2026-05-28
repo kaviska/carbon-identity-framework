@@ -22,7 +22,7 @@ package org.wso2.carbon.identity.device.policy.management.internal.constant;
  * SQL constants for Policy Management DAO.
  * Three tables: IDN_POLICY (main), IDN_POLICY_RULE (M:N with rule-mgt), IDN_POLICY_ACTION (M:N with action-mgt).
  */
-public class PolicyMgtSQLConstants {
+public final class PolicyMgtSQLConstants {
 
     private PolicyMgtSQLConstants() {
 
@@ -31,7 +31,7 @@ public class PolicyMgtSQLConstants {
     /**
      * SQL column name constants.
      */
-    public static class Column {
+    public static final class Column {
 
         public static final String ID = "ID";
         public static final String POLICY_ID = "POLICY_ID";
@@ -51,7 +51,7 @@ public class PolicyMgtSQLConstants {
     /**
      * SQL query constants for IDN_POLICY, IDN_POLICY_RULE, and IDN_POLICY_ACTION.
      */
-    public static class Query {
+    public static final class Query {
 
         // IDN_POLICY table.
         public static final String ADD_POLICY =
@@ -76,6 +76,10 @@ public class PolicyMgtSQLConstants {
         public static final String GET_ALL_POLICIES =
                 "SELECT ID, POLICY_NAME FROM IDN_POLICY " +
                         "WHERE TENANT_ID = :TENANT_ID; ORDER BY POLICY_NAME ASC";
+
+        public static final String CHECK_POLICY_NAME_EXISTS =
+                "SELECT ID FROM IDN_POLICY " +
+                        "WHERE POLICY_NAME = :POLICY_NAME; AND TENANT_ID = :TENANT_ID;";
 
         // IDN_POLICY_RULE junction table.
         public static final String ADD_POLICY_RULE =

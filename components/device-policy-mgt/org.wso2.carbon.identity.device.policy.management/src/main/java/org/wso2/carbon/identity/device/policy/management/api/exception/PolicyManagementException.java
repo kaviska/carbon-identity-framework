@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -23,18 +23,8 @@ package org.wso2.carbon.identity.device.policy.management.api.exception;
  */
 public class PolicyManagementException extends Exception {
 
-    private String errorCode;
-    private String description;
-
-    public PolicyManagementException(String message) {
-
-        super(message);
-    }
-
-    public PolicyManagementException(String message, Throwable cause) {
-
-        super(message, cause);
-    }
+    private final String errorCode;
+    private final String description;
 
     public PolicyManagementException(String message, String description, String errorCode) {
 

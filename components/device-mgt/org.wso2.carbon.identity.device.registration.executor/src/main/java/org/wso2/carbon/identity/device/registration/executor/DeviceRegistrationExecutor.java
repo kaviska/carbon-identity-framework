@@ -28,7 +28,7 @@ import org.wso2.carbon.identity.device.mgt.api.model.DeviceRegistrationInitiatio
 import org.wso2.carbon.identity.device.mgt.api.model.RegisteredDevice;
 import org.wso2.carbon.identity.device.mgt.api.service.DeviceManagementService;
 import org.wso2.carbon.identity.device.policy.management.api.exception.PolicyManagementException;
-import org.wso2.carbon.identity.device.policy.management.api.rule.DevicePolicyEvaluator;
+import org.wso2.carbon.identity.device.policy.management.api.service.DevicePolicyEvaluator;
 import org.wso2.carbon.identity.device.registration.executor.internal.DeviceRegistrationExecutorDataHolder;
 import org.wso2.carbon.identity.flow.execution.engine.exception.FlowEngineException;
 import org.wso2.carbon.identity.flow.execution.engine.graph.Executor;
@@ -92,6 +92,9 @@ public class DeviceRegistrationExecutor implements Executor {
 
     private static final String META_POLICY_NAME = "policyName";
 
+    // Written to context after persistDevice() so rollback() can delete the record if a later executor fails.
+    private static final String CTX_PERSISTED_DEVICE_ID = "device.persisted.id";
+
     @Override
     public String getName() {
         return EXECUTOR_NAME;
@@ -110,7 +113,23 @@ public class DeviceRegistrationExecutor implements Executor {
 
     @Override
     public ExecutorResponse rollback(FlowExecutionContext context) throws FlowEngineException {
-        // Cache entry expires automatically via TTL; nothing to undo.
+
+        String persistedDeviceId = (String) context.getProperty(CTX_PERSISTED_DEVICE_ID);
+        if (persistedDeviceId != null) {
+            DeviceManagementService service =
+                    DeviceRegistrationExecutorDataHolder.getInstance().getDeviceManagementService();
+            try {
+                service.deleteDevice(persistedDeviceId, context.getTenantDomain());
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("Rolled back persisted device: " + persistedDeviceId
+                            + " for tenant: " + context.getTenantDomain());
+                }
+            } catch (DeviceMgtException e) {
+                LOG.error("Failed to rollback persisted device: " + persistedDeviceId
+                        + " in tenant: " + context.getTenantDomain(), e);
+            }
+        }
+        // Challenge cache entry expires automatically via TTL; nothing else to undo.
         return new ExecutorResponse(STATUS_COMPLETE);
     }
 
@@ -259,7 +278,12 @@ public class DeviceRegistrationExecutor implements Executor {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Device registration completed for registrationId: " + registrationId);
             }
-            return new ExecutorResponse(STATUS_COMPLETE);
+            // Record the device ID so rollback() can delete it if a subsequent executor fails.
+            ExecutorResponse response = new ExecutorResponse(STATUS_COMPLETE);
+            Map<String, Object> ctxProps = new HashMap<>();
+            ctxProps.put(CTX_PERSISTED_DEVICE_ID, verified.getId());
+            response.setContextProperty(ctxProps);
+            return response;
 
         } catch (DeviceMgtClientException e) {
             ExecutorResponse response = new ExecutorResponse();
@@ -336,12 +360,16 @@ public class DeviceRegistrationExecutor implements Executor {
      */
     private ExecutorResponse evaluatePolicy(String policyNames, FlowExecutionContext context) {
 
-        DevicePolicyEvaluator evaluator = new DevicePolicyEvaluator();
+        DeviceRegistrationExecutorDataHolder holder = DeviceRegistrationExecutorDataHolder.getInstance();
+        DevicePolicyEvaluator evaluator = holder.getDevicePolicyEvaluator();
         Map<String, Object> deviceData = parseDeviceData(context.getUserInputData());
         // Fill any missing fields so the rule engine always sees a complete map.
         for (String fieldName : evaluator.getFieldNames()) {
             deviceData.putIfAbsent(fieldName, "not_available");
         }
+
+        holder.getIntegrityDataEnricher().enrich(deviceData, context.getApplicationId(),
+                context.getTenantDomain());
 
         String[] policies = policyNames.split(",");
         // LinkedHashMap preserves insertion order for deterministic error messages.

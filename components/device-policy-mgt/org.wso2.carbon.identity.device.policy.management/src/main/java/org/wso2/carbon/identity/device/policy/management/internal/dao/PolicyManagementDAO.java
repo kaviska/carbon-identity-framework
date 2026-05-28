@@ -41,4 +41,6 @@ public interface PolicyManagementDAO {
     Policy getPolicyByName(String policyName, int tenantId) throws PolicyManagementException;
 
     List<Policy> getPolicies(int tenantId) throws PolicyManagementException;
+
+    String getPolicyIdByName(String policyName, int tenantId) throws PolicyManagementException;
 }

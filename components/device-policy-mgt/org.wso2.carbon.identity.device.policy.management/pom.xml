@@ -38,6 +38,13 @@
 
     <dependencies>
 
+        <!-- Client Attestation - for Play Integrity device verdict enrichment -->
+        <dependency>
+            <groupId>org.wso2.carbon.identity.framework</groupId>
+            <artifactId>org.wso2.carbon.identity.client.attestation.mgt</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
         <!-- OSGi -->
         <dependency>
             <groupId>org.eclipse.platform</groupId>
@@ -215,6 +222,12 @@
                             org.wso2.carbon.identity.action.execution.api.model;
                             version="${carbon.identity.package.import.version.range}",
                             org.wso2.carbon.identity.action.execution.api.service;
+                            version="${carbon.identity.package.import.version.range}",
+                            org.wso2.carbon.identity.client.attestation.mgt.services;
+                            version="${carbon.identity.package.import.version.range}",
+                            org.wso2.carbon.identity.client.attestation.mgt.model;
+                            version="${carbon.identity.package.import.version.range}",
+                            org.wso2.carbon.identity.client.attestation.mgt.exceptions;
                             version="${carbon.identity.package.import.version.range}"
                         </Import-Package>
                     </instructions>

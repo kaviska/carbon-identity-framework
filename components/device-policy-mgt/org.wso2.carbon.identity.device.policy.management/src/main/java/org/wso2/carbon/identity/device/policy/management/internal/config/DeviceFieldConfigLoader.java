@@ -31,7 +31,7 @@ import java.util.List;
 /**
  * Singleton loader for device-fields.json.
  * Reads the config once from $CARBON_HOME/repository/resources/identity/device-policy/device-fields.json
- * and caches it. Used by both DevicePolicyEvaluator (header mapping) and the metadata API (platform filter).
+ * and caches it. Used by both DevicePolicyEvaluatorImpl (header mapping) and the metadata API (platform filter).
  */
 public class DeviceFieldConfigLoader {
 

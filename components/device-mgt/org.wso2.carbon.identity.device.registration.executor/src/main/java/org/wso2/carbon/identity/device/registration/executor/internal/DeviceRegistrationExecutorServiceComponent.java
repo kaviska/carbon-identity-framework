@@ -29,6 +29,8 @@ import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.identity.device.mgt.api.service.DeviceManagementService;
+import org.wso2.carbon.identity.device.policy.management.api.service.DevicePolicyEvaluator;
+import org.wso2.carbon.identity.device.policy.management.api.service.IntegrityDataEnricher;
 import org.wso2.carbon.identity.device.registration.executor.DeviceRegistrationExecutor;
 import org.wso2.carbon.identity.device.registration.executor.RegistrationFlowCompletionListener;
 import org.wso2.carbon.identity.flow.execution.engine.graph.Executor;
@@ -93,5 +95,45 @@ public class DeviceRegistrationExecutorServiceComponent {
 
         LOG.debug("Unsetting DeviceManagementService in the device registration executor.");
         DeviceRegistrationExecutorDataHolder.getInstance().setDeviceManagementService(null);
+    }
+
+    @Reference(
+            name = "DevicePolicyEvaluator",
+            service = DevicePolicyEvaluator.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetDevicePolicyEvaluator"
+    )
+    protected void setDevicePolicyEvaluator(DevicePolicyEvaluator devicePolicyEvaluator) {
+
+        LOG.debug("Setting DevicePolicyEvaluator in the device registration executor.");
+        DeviceRegistrationExecutorDataHolder.getInstance()
+                .setDevicePolicyEvaluator(devicePolicyEvaluator);
+    }
+
+    protected void unsetDevicePolicyEvaluator(DevicePolicyEvaluator devicePolicyEvaluator) {
+
+        LOG.debug("Unsetting DevicePolicyEvaluator in the device registration executor.");
+        DeviceRegistrationExecutorDataHolder.getInstance().setDevicePolicyEvaluator(null);
+    }
+
+    @Reference(
+            name = "IntegrityDataEnricher",
+            service = IntegrityDataEnricher.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetIntegrityDataEnricher"
+    )
+    protected void setIntegrityDataEnricher(IntegrityDataEnricher integrityDataEnricher) {
+
+        LOG.debug("Setting IntegrityDataEnricher in the device registration executor.");
+        DeviceRegistrationExecutorDataHolder.getInstance()
+                .setIntegrityDataEnricher(integrityDataEnricher);
+    }
+
+    protected void unsetIntegrityDataEnricher(IntegrityDataEnricher integrityDataEnricher) {
+
+        LOG.debug("Unsetting IntegrityDataEnricher in the device registration executor.");
+        DeviceRegistrationExecutorDataHolder.getInstance().setIntegrityDataEnricher(null);
     }
 }

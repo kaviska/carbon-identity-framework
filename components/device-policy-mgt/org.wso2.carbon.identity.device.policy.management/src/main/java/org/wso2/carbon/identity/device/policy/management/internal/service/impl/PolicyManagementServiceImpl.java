@@ -24,7 +24,6 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.device.policy.management.api.constant.ErrorMessage;
 import org.wso2.carbon.identity.device.policy.management.api.exception.PolicyManagementClientException;
 import org.wso2.carbon.identity.device.policy.management.api.exception.PolicyManagementException;
-import org.wso2.carbon.identity.device.policy.management.api.exception.PolicyManagementServerException;
 import org.wso2.carbon.identity.device.policy.management.api.model.Policy;
 import org.wso2.carbon.identity.device.policy.management.api.model.PolicyRule;
 import org.wso2.carbon.identity.device.policy.management.api.service.PolicyManagementService;
@@ -32,11 +31,15 @@ import org.wso2.carbon.identity.device.policy.management.internal.component.Devi
 import org.wso2.carbon.identity.device.policy.management.internal.dao.PolicyManagementDAO;
 import org.wso2.carbon.identity.device.policy.management.internal.dao.impl.PolicyManagementDAOFacade;
 import org.wso2.carbon.identity.device.policy.management.internal.dao.impl.PolicyManagementDAOImpl;
+import org.wso2.carbon.identity.device.policy.management.internal.util.PolicyManagementExceptionHandler;
 import org.wso2.carbon.identity.rule.management.api.exception.RuleManagementException;
 import org.wso2.carbon.identity.rule.management.api.model.Rule;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -62,8 +65,13 @@ public class PolicyManagementServiceImpl implements PolicyManagementService {
     @Override
     public Policy addPolicy(Policy policy, String tenantDomain) throws PolicyManagementException {
 
+        if (LOG.isDebugEnabled()) {
+            LOG.debug(String.format("Creating policy with name: %s for tenant: %s",
+                    policy.getName(), tenantDomain));
+        }
         validatePolicyFields(policy);
         int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
+        validateUniquePolicyName(policy.getName(), null, tenantId);
 
         Policy policyWithId = new Policy(
                 UUID.randomUUID().toString(),
@@ -72,41 +80,43 @@ public class PolicyManagementServiceImpl implements PolicyManagementService {
                 policy.getRules(),
                 policy.getActions());
 
-        Policy created = policyManagementDAO.addPolicy(policyWithId, tenantId);
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("Policy added with ID: " + created.getId() + " for tenant: " + tenantDomain);
-        }
-        return created;
+        return policyManagementDAO.addPolicy(policyWithId, tenantId);
     }
 
     @Override
     public Policy updatePolicy(Policy policy, String tenantDomain) throws PolicyManagementException {
 
+        if (LOG.isDebugEnabled()) {
+            LOG.debug(String.format("Updating policy with ID: %s for tenant: %s",
+                    policy.getId(), tenantDomain));
+        }
         validatePolicyFields(policy);
         validateIfPolicyExists(policy.getId(), tenantDomain);
 
         int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
-        Policy updated = policyManagementDAO.updatePolicy(policy, tenantId);
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("Policy updated with ID: " + policy.getId() + " for tenant: " + tenantDomain);
-        }
-        return updated;
+        validateUniquePolicyName(policy.getName(), policy.getId(), tenantId);
+        return policyManagementDAO.updatePolicy(policy, tenantId);
     }
 
     @Override
     public void deletePolicy(String policyId, String tenantDomain) throws PolicyManagementException {
 
+        if (LOG.isDebugEnabled()) {
+            LOG.debug(String.format("Deleting policy with ID: %s for tenant: %s",
+                    policyId, tenantDomain));
+        }
         if (isPolicyExists(policyId, tenantDomain)) {
             policyManagementDAO.deletePolicy(policyId, IdentityTenantUtil.getTenantId(tenantDomain));
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Policy deleted with ID: " + policyId + " for tenant: " + tenantDomain);
-            }
         }
     }
 
     @Override
     public Policy getPolicyById(String policyId, String tenantDomain) throws PolicyManagementException {
 
+        if (LOG.isDebugEnabled()) {
+            LOG.debug(String.format("Retrieving policy with ID: %s for tenant: %s",
+                    policyId, tenantDomain));
+        }
         int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
         Policy policy = policyManagementDAO.getPolicyById(policyId, tenantId);
         if (policy == null) {
@@ -118,6 +128,10 @@ public class PolicyManagementServiceImpl implements PolicyManagementService {
     @Override
     public Policy getPolicyByName(String policyName, String tenantDomain) throws PolicyManagementException {
 
+        if (LOG.isDebugEnabled()) {
+            LOG.debug(String.format("Retrieving policy with name: %s for tenant: %s",
+                    policyName, tenantDomain));
+        }
         int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
         Policy policy = policyManagementDAO.getPolicyByName(policyName, tenantId);
         if (policy == null) {
@@ -129,6 +143,9 @@ public class PolicyManagementServiceImpl implements PolicyManagementService {
     @Override
     public List<Policy> getPolicies(String tenantDomain) throws PolicyManagementException {
 
+        if (LOG.isDebugEnabled()) {
+            LOG.debug(String.format("Getting all policies for tenant: %s", tenantDomain));
+        }
         return policyManagementDAO.getPolicies(IdentityTenantUtil.getTenantId(tenantDomain));
     }
 
@@ -146,10 +163,8 @@ public class PolicyManagementServiceImpl implements PolicyManagementService {
                         .getRuleByRuleId(pr.getRuleId(), tenantDomain);
                 hydratedRules.add(new PolicyRule(pr.getId(), pr.getRuleId(), pr.getPlatform(), rule));
             } catch (RuleManagementException e) {
-                throw new PolicyManagementServerException(
-                        ErrorMessage.ERROR_WHILE_RETRIEVING_POLICY.getMessage(),
-                        ErrorMessage.ERROR_WHILE_RETRIEVING_POLICY.getDescription(),
-                        ErrorMessage.ERROR_WHILE_RETRIEVING_POLICY.getCode(), e);
+                throw PolicyManagementExceptionHandler.handleServerException(
+                        ErrorMessage.ERROR_WHILE_RETRIEVING_POLICY, e);
             }
         }
         return new Policy(policy.getId(), policy.getName(), policy.getTenantDomain(),
@@ -160,10 +175,8 @@ public class PolicyManagementServiceImpl implements PolicyManagementService {
             throws PolicyManagementException {
 
         if (!isPolicyExists(policyId, tenantDomain)) {
-            throw new PolicyManagementClientException(
-                    ErrorMessage.ERROR_POLICY_NOT_FOUND.getMessage(),
-                    String.format(ErrorMessage.ERROR_POLICY_NOT_FOUND.getDescription(), policyId),
-                    ErrorMessage.ERROR_POLICY_NOT_FOUND.getCode());
+            throw PolicyManagementExceptionHandler.handleClientException(
+                    ErrorMessage.ERROR_POLICY_NOT_FOUND, policyId);
         }
     }
 
@@ -177,11 +190,35 @@ public class PolicyManagementServiceImpl implements PolicyManagementService {
     private void validatePolicyFields(Policy policy) throws PolicyManagementClientException {
 
         if (policy.getName() == null || policy.getName().trim().isEmpty()) {
-            throw new PolicyManagementClientException(
-                    ErrorMessage.ERROR_INVALID_POLICY_REQUEST_FIELD.getMessage(),
-                    String.format(ErrorMessage.ERROR_INVALID_POLICY_REQUEST_FIELD.getDescription(),
-                            "Policy name"),
-                    ErrorMessage.ERROR_INVALID_POLICY_REQUEST_FIELD.getCode());
+            throw PolicyManagementExceptionHandler.handleClientException(
+                    ErrorMessage.ERROR_INVALID_POLICY_REQUEST_FIELD, "Policy name");
+        }
+        validateUniquePlatformsInRules(policy);
+    }
+
+    private void validateUniquePlatformsInRules(Policy policy) throws PolicyManagementClientException {
+
+        Set<String> seenPlatforms = new HashSet<>();
+        for (PolicyRule rule : policy.getRules()) {
+            if (rule.getPlatform() == null) {
+                continue;
+            }
+            String normalized = rule.getPlatform().toLowerCase(Locale.ROOT);
+            if (!seenPlatforms.add(normalized)) {
+                throw PolicyManagementExceptionHandler.handleClientException(
+                        ErrorMessage.ERROR_DUPLICATE_PLATFORM_IN_POLICY,
+                        policy.getName(), rule.getPlatform());
+            }
+        }
+    }
+
+    private void validateUniquePolicyName(String name, String excludePolicyId, int tenantId)
+            throws PolicyManagementException {
+
+        String existingId = policyManagementDAO.getPolicyIdByName(name, tenantId);
+        if (existingId != null && !existingId.equals(excludePolicyId)) {
+            throw PolicyManagementExceptionHandler.handleClientException(
+                    ErrorMessage.ERROR_POLICY_ALREADY_EXISTS, name);
         }
     }
 }

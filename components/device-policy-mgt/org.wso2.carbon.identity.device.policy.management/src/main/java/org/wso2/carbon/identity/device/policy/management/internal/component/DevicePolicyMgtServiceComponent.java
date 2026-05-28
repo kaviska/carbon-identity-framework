@@ -33,13 +33,18 @@ import org.wso2.carbon.identity.action.execution.api.service.ActionExecutionResp
 import org.wso2.carbon.identity.action.execution.api.service.ActionExecutorService;
 import org.wso2.carbon.identity.action.execution.api.service.ActionVersioningHandler;
 import org.wso2.carbon.identity.application.authentication.framework.JsFunctionRegistry;
+import org.wso2.carbon.identity.client.attestation.mgt.services.ClientAttestationService;
 import org.wso2.carbon.identity.device.mgt.api.service.DeviceManagementService;
+import org.wso2.carbon.identity.device.policy.management.api.service.DevicePolicyEvaluator;
+import org.wso2.carbon.identity.device.policy.management.api.service.IntegrityDataEnricher;
 import org.wso2.carbon.identity.device.policy.management.api.service.PolicyManagementService;
 import org.wso2.carbon.identity.device.policy.management.internal.action.DevicePolicyActionRequestBuilder;
 import org.wso2.carbon.identity.device.policy.management.internal.action.DevicePolicyActionResponseProcessor;
 import org.wso2.carbon.identity.device.policy.management.internal.action.DevicePolicyActionVersioningHandler;
 import org.wso2.carbon.identity.device.policy.management.internal.rule.DevicePolicyEvaluationDataProvider;
 import org.wso2.carbon.identity.device.policy.management.internal.rule.DevicePolicyJsFunction;
+import org.wso2.carbon.identity.device.policy.management.internal.service.impl.DevicePolicyEvaluatorImpl;
+import org.wso2.carbon.identity.device.policy.management.internal.service.impl.IntegrityDataEnricherImpl;
 import org.wso2.carbon.identity.device.policy.management.internal.service.impl.PolicyManagementServiceImpl;
 import org.wso2.carbon.identity.rule.evaluation.api.provider.RuleEvaluationDataProvider;
 import org.wso2.carbon.identity.rule.evaluation.api.service.RuleEvaluationService;
@@ -76,7 +81,16 @@ public class DevicePolicyMgtServiceComponent {
             bundleCtx.registerService(ActionVersioningHandler.class.getName(),
                     new DevicePolicyActionVersioningHandler(), null);
 
+            // Register DevicePolicyEvaluator and IntegrityDataEnricher so other bundles consume
+            // them via OSGi service references instead of constructing them directly.
+            DevicePolicyEvaluator devicePolicyEvaluator = new DevicePolicyEvaluatorImpl();
+            IntegrityDataEnricher integrityDataEnricher = new IntegrityDataEnricherImpl();
+            bundleCtx.registerService(DevicePolicyEvaluator.class.getName(), devicePolicyEvaluator, null);
+            bundleCtx.registerService(IntegrityDataEnricher.class.getName(), integrityDataEnricher, null);
+
             DevicePolicyMgtComponentServiceHolder.getInstance().setPolicyManagementService(policyManagementService);
+            DevicePolicyMgtComponentServiceHolder.getInstance().setDevicePolicyEvaluator(devicePolicyEvaluator);
+            DevicePolicyMgtComponentServiceHolder.getInstance().setIntegrityDataEnricher(integrityDataEnricher);
 
             // Register the device policy compliance function with the JS function registry.
             DevicePolicyMgtComponentServiceHolder.getInstance().getJsFunctionRegistry()
@@ -189,5 +203,25 @@ public class DevicePolicyMgtServiceComponent {
 
         DevicePolicyMgtComponentServiceHolder.getInstance().setActionExecutorService(null);
         LOG.debug("ActionExecutorService unset in Policy Management component.");
+    }
+
+    @Reference(
+            name = "client.attestation.service",
+            service = ClientAttestationService.class,
+            cardinality = ReferenceCardinality.OPTIONAL,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetClientAttestationService"
+    )
+    protected void setClientAttestationService(ClientAttestationService clientAttestationService) {
+
+        DevicePolicyMgtComponentServiceHolder.getInstance()
+                .setClientAttestationService(clientAttestationService);
+        LOG.debug("ClientAttestationService set in Policy Management component.");
+    }
+
+    protected void unsetClientAttestationService(ClientAttestationService clientAttestationService) {
+
+        DevicePolicyMgtComponentServiceHolder.getInstance().setClientAttestationService(null);
+        LOG.debug("ClientAttestationService unset in Policy Management component.");
     }
 }

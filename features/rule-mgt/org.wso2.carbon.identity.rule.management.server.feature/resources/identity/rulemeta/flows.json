@@ -157,6 +157,12 @@
       "fieldName": "wifiNetworkSecurity"
     },
     {
+      "fieldName": "androidIntegrity"
+    },
+    {
+      "fieldName": "iosIntegrity"
+    },
+    {
       "fieldName": "passcode"
     },
     {

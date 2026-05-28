@@ -30,6 +30,12 @@ public enum ErrorMessage {
             "%s is empty or invalid."),
     ERROR_INVALID_POLICY_RULE("DPM-60003", "Invalid policy rule.",
             "Policy rule validation failed: %s"),
+    ERROR_POLICY_ALREADY_EXISTS("DPM-60004", "Policy already exists.",
+            "A policy with name '%s' already exists for the tenant."),
+    ERROR_DUPLICATE_PLATFORM_IN_POLICY("DPM-60005", "Duplicate platform in policy.",
+            "Policy '%s' has more than one rule for platform '%s'."),
+    ERROR_INVALID_ACTION_REFERENCE("DPM-60006", "Invalid action reference.",
+            "Action ID '%s' referenced by the policy does not exist."),
 
     // Server errors.
     ERROR_WHILE_ADDING_POLICY("DPM-65001", "Error while adding Policy.",

@@ -565,10 +565,10 @@
       ]
     }
   },
-  "integrityLevel": {
+  "androidIntegrity": {
     "field": {
-      "name": "integrityLevel",
-      "displayName": "integrity level"
+      "name": "androidIntegrity",
+      "displayName": "Android integrity"
     },
     "operators": [
       "equals",
@@ -579,16 +579,47 @@
       "valueType": "string",
       "values": [
         {
-          "name": "basic",
-          "displayName": "Basic"
+          "name": "MEETS_STRONG_INTEGRITY",
+          "displayName": "Meets Strong Integrity"
         },
         {
-          "name": "standard",
-          "displayName": "Standard"
+          "name": "MEETS_DEVICE_INTEGRITY",
+          "displayName": "Meets Device Integrity"
         },
         {
-          "name": "strong",
-          "displayName": "Strong"
+          "name": "MEETS_BASIC_INTEGRITY",
+          "displayName": "Meets Basic Integrity"
+        },
+        {
+          "name": "MEETS_VIRTUAL_INTEGRITY",
+          "displayName": "Meets Virtual Integrity"
+        },
+        {
+          "name": "INTEGRITY_FAILED",
+          "displayName": "Integrity Failed"
+        }
+      ]
+    }
+  },
+  "iosIntegrity": {
+    "field": {
+      "name": "iosIntegrity",
+      "displayName": "iOS device genuine"
+    },
+    "operators": [
+      "equals"
+    ],
+    "value": {
+      "inputType": "options",
+      "valueType": "string",
+      "values": [
+        {
+          "name": "true",
+          "displayName": "Yes"
+        },
+        {
+          "name": "false",
+          "displayName": "No"
         }
       ]
     }

@@ -26,12 +26,12 @@ import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.device.policy.management.api.constant.ErrorMessage;
 import org.wso2.carbon.identity.device.policy.management.api.exception.PolicyManagementException;
-import org.wso2.carbon.identity.device.policy.management.api.exception.PolicyManagementServerException;
 import org.wso2.carbon.identity.device.policy.management.api.model.Policy;
 import org.wso2.carbon.identity.device.policy.management.api.model.PolicyAction;
 import org.wso2.carbon.identity.device.policy.management.api.model.PolicyRule;
 import org.wso2.carbon.identity.device.policy.management.internal.constant.PolicyMgtSQLConstants;
 import org.wso2.carbon.identity.device.policy.management.internal.dao.PolicyManagementDAO;
+import org.wso2.carbon.identity.device.policy.management.internal.util.PolicyManagementExceptionHandler;
 
 import java.util.Collections;
 import java.util.List;
@@ -100,10 +100,8 @@ public class PolicyManagementDAOImpl implements PolicyManagementDAO {
                 return null;
             });
         } catch (TransactionException e) {
-            throw new PolicyManagementServerException(
-                    ErrorMessage.ERROR_WHILE_ADDING_POLICY.getMessage(),
-                    ErrorMessage.ERROR_WHILE_ADDING_POLICY.getDescription(),
-                    ErrorMessage.ERROR_WHILE_ADDING_POLICY.getCode(), e);
+            throw PolicyManagementExceptionHandler.handleServerException(
+                    ErrorMessage.ERROR_WHILE_ADDING_POLICY, e);
         }
         if (LOG.isDebugEnabled()) {
             LOG.debug("Policy added with ID: " + policy.getId());
@@ -172,10 +170,8 @@ public class PolicyManagementDAOImpl implements PolicyManagementDAO {
                 return null;
             });
         } catch (TransactionException e) {
-            throw new PolicyManagementServerException(
-                    ErrorMessage.ERROR_WHILE_UPDATING_POLICY.getMessage(),
-                    ErrorMessage.ERROR_WHILE_UPDATING_POLICY.getDescription(),
-                    ErrorMessage.ERROR_WHILE_UPDATING_POLICY.getCode(), e);
+            throw PolicyManagementExceptionHandler.handleServerException(
+                    ErrorMessage.ERROR_WHILE_UPDATING_POLICY, e);
         }
         if (LOG.isDebugEnabled()) {
             LOG.debug("Policy updated with ID: " + policy.getId());
@@ -199,10 +195,8 @@ public class PolicyManagementDAOImpl implements PolicyManagementDAO {
                 return null;
             });
         } catch (TransactionException e) {
-            throw new PolicyManagementServerException(
-                    ErrorMessage.ERROR_WHILE_DELETING_POLICY.getMessage(),
-                    ErrorMessage.ERROR_WHILE_DELETING_POLICY.getDescription(),
-                    ErrorMessage.ERROR_WHILE_DELETING_POLICY.getCode(), e);
+            throw PolicyManagementExceptionHandler.handleServerException(
+                    ErrorMessage.ERROR_WHILE_DELETING_POLICY, e);
         }
         if (LOG.isDebugEnabled()) {
             LOG.debug("Policy deleted with ID: " + policyId);
@@ -236,10 +230,8 @@ public class PolicyManagementDAOImpl implements PolicyManagementDAO {
             List<PolicyAction> actions = fetchPolicyActions(policyId);
             return new Policy(base.getId(), base.getName(), tenantDomain, rules, actions);
         } catch (TransactionException e) {
-            throw new PolicyManagementServerException(
-                    ErrorMessage.ERROR_WHILE_RETRIEVING_POLICY.getMessage(),
-                    ErrorMessage.ERROR_WHILE_RETRIEVING_POLICY.getDescription(),
-                    ErrorMessage.ERROR_WHILE_RETRIEVING_POLICY.getCode(), e);
+            throw PolicyManagementExceptionHandler.handleServerException(
+                    ErrorMessage.ERROR_WHILE_RETRIEVING_POLICY, e);
         }
     }
 
@@ -270,10 +262,31 @@ public class PolicyManagementDAOImpl implements PolicyManagementDAO {
             List<PolicyAction> actions = fetchPolicyActions(base.getId());
             return new Policy(base.getId(), base.getName(), tenantDomain, rules, actions);
         } catch (TransactionException e) {
-            throw new PolicyManagementServerException(
-                    ErrorMessage.ERROR_WHILE_RETRIEVING_POLICY.getMessage(),
-                    ErrorMessage.ERROR_WHILE_RETRIEVING_POLICY.getDescription(),
-                    ErrorMessage.ERROR_WHILE_RETRIEVING_POLICY.getCode(), e);
+            throw PolicyManagementExceptionHandler.handleServerException(
+                    ErrorMessage.ERROR_WHILE_RETRIEVING_POLICY, e);
+        }
+    }
+
+    @Override
+    public String getPolicyIdByName(String policyName, int tenantId) throws PolicyManagementException {
+
+        NamedJdbcTemplate jdbcTemplate =
+                new NamedJdbcTemplate(IdentityDatabaseUtil.getDataSource());
+        try {
+            return jdbcTemplate.<String, RuntimeException>withTransaction(
+                    template -> template.fetchSingleRecord(
+                            PolicyMgtSQLConstants.Query.CHECK_POLICY_NAME_EXISTS,
+                            (resultSet, rowNumber) ->
+                                    resultSet.getString(PolicyMgtSQLConstants.Column.ID),
+                            preparedStatement -> {
+                                preparedStatement.setString(
+                                        PolicyMgtSQLConstants.Column.POLICY_NAME, policyName);
+                                preparedStatement.setInt(
+                                        PolicyMgtSQLConstants.Column.TENANT_ID, tenantId);
+                            }));
+        } catch (TransactionException e) {
+            throw PolicyManagementExceptionHandler.handleServerException(
+                    ErrorMessage.ERROR_WHILE_RETRIEVING_POLICY, e);
         }
     }
 
@@ -297,10 +310,8 @@ public class PolicyManagementDAOImpl implements PolicyManagementDAO {
                                     PolicyMgtSQLConstants.Column.TENANT_ID, tenantId)));
             return policies != null ? policies : Collections.emptyList();
         } catch (TransactionException e) {
-            throw new PolicyManagementServerException(
-                    ErrorMessage.ERROR_WHILE_RETRIEVING_POLICY.getMessage(),
-                    ErrorMessage.ERROR_WHILE_RETRIEVING_POLICY.getDescription(),
-                    ErrorMessage.ERROR_WHILE_RETRIEVING_POLICY.getCode(), e);
+            throw PolicyManagementExceptionHandler.handleServerException(
+                    ErrorMessage.ERROR_WHILE_RETRIEVING_POLICY, e);
         }
     }
 
@@ -321,10 +332,8 @@ public class PolicyManagementDAOImpl implements PolicyManagementDAO {
                                     PolicyMgtSQLConstants.Column.POLICY_ID, policyId)));
             return rules != null ? rules : Collections.emptyList();
         } catch (TransactionException e) {
-            throw new PolicyManagementServerException(
-                    ErrorMessage.ERROR_WHILE_RETRIEVING_POLICY.getMessage(),
-                    ErrorMessage.ERROR_WHILE_RETRIEVING_POLICY.getDescription(),
-                    ErrorMessage.ERROR_WHILE_RETRIEVING_POLICY.getCode(), e);
+            throw PolicyManagementExceptionHandler.handleServerException(
+                    ErrorMessage.ERROR_WHILE_RETRIEVING_POLICY, e);
         }
     }
 
@@ -345,10 +354,8 @@ public class PolicyManagementDAOImpl implements PolicyManagementDAO {
                                     PolicyMgtSQLConstants.Column.POLICY_ID, policyId)));
             return actions != null ? actions : Collections.emptyList();
         } catch (TransactionException e) {
-            throw new PolicyManagementServerException(
-                    ErrorMessage.ERROR_WHILE_RETRIEVING_POLICY.getMessage(),
-                    ErrorMessage.ERROR_WHILE_RETRIEVING_POLICY.getDescription(),
-                    ErrorMessage.ERROR_WHILE_RETRIEVING_POLICY.getCode(), e);
+            throw PolicyManagementExceptionHandler.handleServerException(
+                    ErrorMessage.ERROR_WHILE_RETRIEVING_POLICY, e);
         }
     }
 }

@@ -92,5 +92,6 @@ public interface DeviceManagementDAO {
      */
     void deleteDevice(String deviceId, int tenantId)
             throws DeviceMgtException;
+
 }
 

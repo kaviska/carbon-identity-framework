@@ -25,7 +25,7 @@ import org.wso2.carbon.identity.application.authentication.framework.config.mode
 import org.wso2.carbon.identity.application.authentication.framework.context.TransientObjectWrapper;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.device.policy.management.api.exception.PolicyManagementException;
-import org.wso2.carbon.identity.device.policy.management.api.rule.DevicePolicyEvaluator;
+import org.wso2.carbon.identity.device.policy.management.internal.component.DevicePolicyMgtComponentServiceHolder;
 import org.wso2.carbon.identity.device.policy.management.internal.jwt.DeviceTokenExtractor;
 import org.wso2.carbon.identity.rule.evaluation.api.exception.RuleEvaluationException;
 
@@ -84,7 +84,12 @@ public class DevicePolicyJsFunction implements BiFunction<JsBaseAuthenticationCo
             }
 
             Map<String, Object> deviceData = new DeviceTokenExtractor().extractFromToken(deviceToken, tenantDomain);
-            return new DevicePolicyEvaluator().evaluate(policyName, deviceData, tenantDomain);
+
+            String appId = context.getWrapped().getServiceProviderResourceId();
+            DevicePolicyMgtComponentServiceHolder holder = DevicePolicyMgtComponentServiceHolder.getInstance();
+            holder.getIntegrityDataEnricher().enrich(deviceData, appId, tenantDomain);
+
+            return holder.getDevicePolicyEvaluator().evaluate(policyName, deviceData, tenantDomain);
 
         } catch (PolicyManagementException e) {
             LOG.error("Error while evaluating device policy: " + policyName, e);

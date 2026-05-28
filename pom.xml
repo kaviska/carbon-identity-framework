@@ -74,6 +74,7 @@
         <module>components/rule-mgt</module>
         <module>components/webhook-mgt</module>
         <module>components/action-mgt</module>
+        <module>components/device-policy-mgt</module>
         <module>components/ai-services-mgt</module>
         <module>components/certificate-mgt</module>
         <module>components/servlet-mgt</module>

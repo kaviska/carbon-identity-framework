@@ -30,7 +30,6 @@ import org.wso2.carbon.identity.rule.management.api.model.Value;
 import org.wso2.carbon.identity.rule.management.internal.component.RuleManagementComponentServiceHolder;
 import org.wso2.carbon.identity.rule.metadata.api.exception.RuleMetadataException;
 import org.wso2.carbon.identity.rule.metadata.api.model.FieldDefinition;
-import org.wso2.carbon.identity.rule.metadata.api.model.OptionsInputValue;
 
 import java.util.List;
 import java.util.Map;
@@ -43,7 +42,7 @@ import java.util.Map;
  */
 public class RuleBuilder {
 
-    private static final int MAX_EXPRESSIONS_COMBINED_WITH_AND = 5;
+    private static final int MAX_EXPRESSIONS_COMBINED_WITH_AND = 15;
     private static final int MAX_RULES_COMBINED_WITH_OR = 10;
 
     private final ORCombinedRule.Builder orCombinedRuleBuilder = new ORCombinedRule.Builder();
@@ -246,7 +245,7 @@ public class RuleBuilder {
         }
 
         try {
-            return resolveValue(fieldDefinition, rawValue);
+            return resolveValue(fieldDefinition, rawValue, value);
         } catch (RuleManagementClientException e) {
             setValidationError(e.getMessage());
             return value;
@@ -256,13 +255,24 @@ public class RuleBuilder {
     private Value resolveValue(FieldDefinition fieldDefinition,
                                String rawValue) throws RuleManagementClientException {
 
+        return resolveValue(fieldDefinition, rawValue, null);
+    }
+
+    private Value resolveValue(FieldDefinition fieldDefinition,
+                               String rawValue, Value originalValue) throws RuleManagementClientException {
+
         org.wso2.carbon.identity.rule.metadata.api.model.Value.ValueType
                 fieldDefinitionValueType = fieldDefinition.getValue().getValueType();
+
+        if (originalValue != null && originalValue.getType() == Value.Type.LIST) {
+            return new Value(Value.Type.LIST, rawValue);
+        }
 
         switch (fieldDefinitionValueType) {
             case STRING:
                 return new Value(Value.Type.STRING, rawValue);
             case NUMBER:
+                // Returns RAW if value is a non-numeric symbolic token (e.g. LATEST_ANDROID).
                 return validateNumberValue(rawValue);
             case BOOLEAN:
                 return validateBooleanValue(rawValue);
@@ -281,7 +291,11 @@ public class RuleBuilder {
                 fieldDefinition.getValue().getValueType();
         Value.Type valueType = value.getType();
 
-        if (valueType != Value.Type.RAW && !valueType.name().equals(fieldDefinitionValueType.name())) {
+        // RAW and LIST bypass strict type matching — RAW is stored as-is, LIST is for multi-value (in) operator.
+        if (valueType == Value.Type.RAW || valueType == Value.Type.LIST) {
+            return true;
+        }
+        if (!valueType.name().equals(fieldDefinitionValueType.name())) {
             setValidationError(
                     "Value type " + valueType + " is not supported for field " + fieldDefinition.getField().getName());
             return false;
@@ -291,24 +305,18 @@ public class RuleBuilder {
 
     private boolean isValidOptionsInputValue(FieldDefinition fieldDefinition, String fieldValue) {
 
-        if (fieldDefinition.getValue() instanceof OptionsInputValue &&
-                ((OptionsInputValue) fieldDefinition.getValue()).getValues().stream()
-                        .noneMatch(optionsValue -> optionsValue.getName().equals(fieldValue))) {
-            setValidationError(
-                    "Value " + fieldValue + " is not supported for field " + fieldDefinition.getField().getName());
-            return false;
-        }
-
+        // LIST type carries a comma-separated multi-value — individual items validated at evaluation time.
         return true;
     }
 
-    private Value validateNumberValue(String rawValue) throws RuleManagementClientException {
+    private Value validateNumberValue(String rawValue) {
 
         try {
             Double.parseDouble(rawValue);
             return new Value(Value.Type.NUMBER, rawValue);
         } catch (NumberFormatException e) {
-            throw new RuleManagementClientException("Value " + rawValue + " is not a valid NUMBER.");
+            // Non-numeric token (e.g. LATEST_ANDROID) — stored as RAW and resolved at evaluation time.
+            return new Value(Value.Type.RAW, rawValue);
         }
     }
 

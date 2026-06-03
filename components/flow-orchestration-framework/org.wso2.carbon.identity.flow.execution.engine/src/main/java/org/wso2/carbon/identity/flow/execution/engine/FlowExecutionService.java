@@ -198,6 +198,8 @@ public class FlowExecutionService {
                         .initiatingPersona(Flow.InitiatingPersona.ADMIN)
                         .build());
                 return true;
+            case DEVICE_REGISTRATION:
+                return false;
             default:
                 return false;
         }

@@ -79,7 +79,28 @@ public class RuleEvaluationServiceImpl implements RuleEvaluationService {
         boolean evaluationStatus = ruleEvaluator.evaluate(rule, evaluationData);
         LOG.debug("Evaluated rule: " + rule.getId() + " to: " + evaluationStatus + ".");
 
-        return new RuleEvaluationResult(ruleId, evaluationStatus);
+        return new RuleEvaluationResult(ruleId, evaluationStatus, ruleEvaluator.getFailedFields());
+    }
+
+    @Override
+    public RuleEvaluationResult evaluateResolvedRule(Rule rule, FlowContext flowContext, String tenantDomain)
+            throws RuleEvaluationException {
+
+        if (!rule.isActive()) {
+            return new RuleEvaluationResult(rule.getId(), false);
+        }
+
+        FieldExtractor fieldExtractor =
+                new FieldExtractor(getRuleMetaFromRuleMetadataService(flowContext.getFlowType(), tenantDomain));
+        List<Field> fieldsInRule = fieldExtractor.extractFields(rule);
+
+        Map<String, FieldValue> evaluationData =
+                getEvaluationData(rule.getId(), flowContext, tenantDomain, fieldsInRule);
+
+        RuleEvaluator ruleEvaluator = new RuleEvaluator(RuleEvaluationComponentServiceHolder.getInstance()
+                .getOperatorRegistry());
+        boolean evaluationStatus = ruleEvaluator.evaluate(rule, evaluationData);
+        return new RuleEvaluationResult(rule.getId(), evaluationStatus, ruleEvaluator.getFailedFields());
     }
 
     private Map<String, FieldValue> getEvaluationData(String ruleId, FlowContext flowContext,

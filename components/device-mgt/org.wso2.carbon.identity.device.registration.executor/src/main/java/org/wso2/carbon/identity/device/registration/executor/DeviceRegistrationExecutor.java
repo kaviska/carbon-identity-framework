@@ -21,30 +21,29 @@ package org.wso2.carbon.identity.device.registration.executor;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.device.mgt.api.constant.ErrorMessage;
 import org.wso2.carbon.identity.device.mgt.api.exception.DeviceMgtClientException;
 import org.wso2.carbon.identity.device.mgt.api.exception.DeviceMgtException;
 import org.wso2.carbon.identity.device.mgt.api.model.DeviceRegistrationInitiation;
 import org.wso2.carbon.identity.device.mgt.api.model.RegisteredDevice;
 import org.wso2.carbon.identity.device.mgt.api.service.DeviceManagementService;
-import org.wso2.carbon.identity.device.policy.management.api.exception.PolicyManagementException;
-import org.wso2.carbon.identity.device.policy.management.api.service.DevicePolicyEvaluator;
+import org.wso2.carbon.identity.device.policy.api.service.DevicePolicyEvaluator;
 import org.wso2.carbon.identity.device.registration.executor.internal.DeviceRegistrationExecutorDataHolder;
 import org.wso2.carbon.identity.flow.execution.engine.exception.FlowEngineException;
 import org.wso2.carbon.identity.flow.execution.engine.graph.Executor;
 import org.wso2.carbon.identity.flow.execution.engine.model.ExecutorResponse;
 import org.wso2.carbon.identity.flow.execution.engine.model.FlowExecutionContext;
 import org.wso2.carbon.identity.flow.mgt.model.NodeConfig;
+import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementException;
 import org.wso2.carbon.identity.rule.evaluation.api.exception.RuleEvaluationException;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import static org.apache.commons.lang.StringUtils.isBlank;
 import static org.apache.commons.lang.StringUtils.isNotBlank;
@@ -179,7 +178,7 @@ public class DeviceRegistrationExecutor implements Executor {
                     service.initiateDeviceRegistration(username, context.getTenantDomain());
 
             if (LOG.isDebugEnabled()) {
-                LOG.debug("Device registration initiated for user: " + username
+                LOG.debug("Device registration initiated for user: " + LoggerUtils.getMaskedContent(username)
                         + " registrationId: " + initiation.getRegistrationId());
             }
 
@@ -344,21 +343,13 @@ public class DeviceRegistrationExecutor implements Executor {
     }
 
     /**
-     * Evaluates device policy compliance using attributes submitted by the SDK in Phase 2.
-     * Accepts a comma-separated list of policy names and applies OR logic — the device is
-     * considered compliant if it satisfies at least one policy. This mirrors the adaptive
-     * auth script pattern where platform-specific policies are evaluated together.
+     * Evaluates device compliance against a single named policy using attributes submitted by the
+     * SDK in Phase 2.
      *
-     * <p>Examples:
-     * <ul>
-     *   <li>{@code "iOSPolicy-01"} — single policy, must pass.</li>
-     *   <li>{@code "iOSPolicy-01,AndroidPolicy-01"} — passes if either platform policy passes.</li>
-     * </ul>
-     *
-     * @return null if the device is compliant with at least one policy, or an error
-     *         ExecutorResponse listing per-policy failures if all policies fail.
+     * @return null if the device is compliant, or an error ExecutorResponse describing the failed
+     *         fields if the device does not comply.
      */
-    private ExecutorResponse evaluatePolicy(String policyNames, FlowExecutionContext context) {
+    private ExecutorResponse evaluatePolicy(String policyName, FlowExecutionContext context) {
 
         DeviceRegistrationExecutorDataHolder holder = DeviceRegistrationExecutorDataHolder.getInstance();
         DevicePolicyEvaluator evaluator = holder.getDevicePolicyEvaluator();
@@ -371,39 +362,18 @@ public class DeviceRegistrationExecutor implements Executor {
         holder.getIntegrityDataEnricher().enrich(deviceData, context.getApplicationId(),
                 context.getTenantDomain());
 
-        String[] policies = policyNames.split(",");
-        // LinkedHashMap preserves insertion order for deterministic error messages.
-        Map<String, String> failedResults = new LinkedHashMap<>();
-
         try {
-            for (String policy : policies) {
-                String trimmed = policy.trim();
-                if (isBlank(trimmed)) {
-                    continue;
+            String failedFields = evaluator.evaluate(policyName, deviceData, context.getTenantDomain());
+            if (failedFields == null) {
+                // Device is compliant.
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("Device passed policy: " + policyName);
                 }
-                String failedFields = evaluator.evaluate(trimmed, deviceData,
-                        context.getTenantDomain());
-                if (failedFields == null) {
-                    // At least one policy passed — device is compliant.
-                    if (LOG.isDebugEnabled()) {
-                        LOG.debug("Device passed policy: " + trimmed);
-                    }
-                    return null;
-                }
-                failedResults.put(trimmed, failedFields);
-            }
-
-            // All evaluated policies failed.
-            if (failedResults.isEmpty()) {
-                // policyNames was blank or all entries were whitespace — treat as no policy.
                 return null;
             }
 
-            String description = failedResults.entrySet().stream()
-                    .map(e -> e.getKey() + ": [" + e.getValue() + "]")
-                    .collect(Collectors.joining(", "));
             if (LOG.isDebugEnabled()) {
-                LOG.debug("Device failed all policies. " + description);
+                LOG.debug("Device failed policy: " + policyName + " fields: [" + failedFields + "]");
             }
             ExecutorResponse response = new ExecutorResponse();
             response.setResult(STATUS_USER_ERROR);
@@ -411,17 +381,17 @@ public class DeviceRegistrationExecutor implements Executor {
             response.setErrorMessage(ErrorMessage.ERROR_DEVICE_POLICY_NOT_COMPLIANT.getMessage());
             response.setErrorDescription(String.format(
                     ErrorMessage.ERROR_DEVICE_POLICY_NOT_COMPLIANT.getDescription(),
-                    policyNames, description));
+                    policyName, failedFields));
             return response;
 
         } catch (PolicyManagementException | RuleEvaluationException e) {
-            LOG.error("Policy evaluation failed for policies: " + policyNames, e);
+            LOG.error("Policy evaluation failed for policy: " + policyName, e);
             ExecutorResponse response = new ExecutorResponse();
             response.setResult(STATUS_ERROR);
             response.setErrorCode(ErrorMessage.ERROR_WHILE_EVALUATING_POLICY.getCode());
             response.setErrorMessage(ErrorMessage.ERROR_WHILE_EVALUATING_POLICY.getMessage());
             response.setErrorDescription(String.format(
-                    ErrorMessage.ERROR_WHILE_EVALUATING_POLICY.getDescription(), policyNames));
+                    ErrorMessage.ERROR_WHILE_EVALUATING_POLICY.getDescription(), policyName));
             return response;
         }
     }

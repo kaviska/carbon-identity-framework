@@ -19,8 +19,8 @@
 package org.wso2.carbon.identity.device.registration.executor.internal;
 
 import org.wso2.carbon.identity.device.mgt.api.service.DeviceManagementService;
-import org.wso2.carbon.identity.device.policy.management.api.service.DevicePolicyEvaluator;
-import org.wso2.carbon.identity.device.policy.management.api.service.IntegrityDataEnricher;
+import org.wso2.carbon.identity.device.policy.api.service.DevicePolicyEvaluator;
+import org.wso2.carbon.identity.device.policy.api.service.IntegrityDataEnricher;
 
 /**
  * Holds OSGi service references for the device registration executor bundle.

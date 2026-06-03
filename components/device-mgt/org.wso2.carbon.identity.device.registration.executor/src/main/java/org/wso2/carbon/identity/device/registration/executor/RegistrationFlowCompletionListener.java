@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.device.registration.executor;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.device.mgt.api.exception.DeviceMgtException;
 import org.wso2.carbon.identity.device.mgt.api.model.RegisteredDevice;
 import org.wso2.carbon.identity.device.mgt.api.service.DeviceManagementService;
@@ -82,7 +83,7 @@ public class RegistrationFlowCompletionListener extends AbstractFlowExecutionLis
 
         if (StringUtils.isBlank(userId)) {
             LOG.error("Cannot persist device registration: userId is blank after flow completion for user: "
-                    + context.getFlowUser().getUsername()
+                    + LoggerUtils.getMaskedContent(context.getFlowUser().getUsername())
                     + " contextId: " + context.getContextIdentifier());
             return true;
         }

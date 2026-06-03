@@ -24,7 +24,6 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.device.mgt.api.constant.ErrorMessage;
 import org.wso2.carbon.identity.device.mgt.api.exception.DeviceMgtClientException;
 import org.wso2.carbon.identity.device.mgt.api.exception.DeviceMgtException;
-import org.wso2.carbon.identity.device.mgt.api.exception.DeviceMgtServerException;
 import org.wso2.carbon.identity.device.mgt.api.model.DeviceRegistrationInitiation;
 import org.wso2.carbon.identity.device.mgt.api.model.RegisteredDevice;
 import org.wso2.carbon.identity.device.mgt.api.service.DeviceManagementService;
@@ -34,6 +33,7 @@ import org.wso2.carbon.identity.device.mgt.internal.cache.DeviceRegistrationCach
 import org.wso2.carbon.identity.device.mgt.internal.cache.DeviceRegistrationContext;
 import org.wso2.carbon.identity.device.mgt.internal.dao.DeviceManagementDAO;
 import org.wso2.carbon.identity.device.mgt.internal.dao.impl.DeviceManagementDAOImpl;
+import org.wso2.carbon.identity.device.mgt.internal.util.DeviceManagementExceptionHandler;
 
 import java.security.InvalidKeyException;
 import java.security.KeyFactory;
@@ -141,11 +141,8 @@ public class DeviceManagementServiceImpl implements DeviceManagementService {
                 DeviceRegistrationCache.getInstance().getValueFromCache(cacheKey, tenantDomain);
 
         if (cacheEntry == null) {
-            throw new DeviceMgtClientException(
-                    ErrorMessage.ERROR_REGISTRATION_CONTEXT_NOT_FOUND.getMessage(),
-                    String.format(ErrorMessage.ERROR_REGISTRATION_CONTEXT_NOT_FOUND.getDescription(),
-                            registrationId),
-                    ErrorMessage.ERROR_REGISTRATION_CONTEXT_NOT_FOUND.getCode());
+            throw DeviceManagementExceptionHandler.handleClientException(
+                    ErrorMessage.ERROR_REGISTRATION_CONTEXT_NOT_FOUND, registrationId);
         }
 
         DeviceRegistrationContext context = cacheEntry.getContext();
@@ -247,27 +244,18 @@ public class DeviceManagementServiceImpl implements DeviceManagementService {
             boolean valid = sig.verify(signatureBytes);
 
             if (!valid) {
-                throw new DeviceMgtClientException(
-                        ErrorMessage.ERROR_INVALID_DEVICE_SIGNATURE.getMessage(),
-                        String.format(ErrorMessage.ERROR_INVALID_DEVICE_SIGNATURE.getDescription(),
-                                registrationId),
-                        ErrorMessage.ERROR_INVALID_DEVICE_SIGNATURE.getCode());
+                throw DeviceManagementExceptionHandler.handleClientException(
+                        ErrorMessage.ERROR_INVALID_DEVICE_SIGNATURE, registrationId);
             }
         } catch (NoSuchAlgorithmException | InvalidKeySpecException |
                  InvalidKeyException | SignatureException e) {
             if (e instanceof SignatureException && e.getMessage() != null
                     && e.getMessage().contains("verification failed")) {
-                throw new DeviceMgtClientException(
-                        ErrorMessage.ERROR_INVALID_DEVICE_SIGNATURE.getMessage(),
-                        String.format(ErrorMessage.ERROR_INVALID_DEVICE_SIGNATURE.getDescription(),
-                                registrationId),
-                        ErrorMessage.ERROR_INVALID_DEVICE_SIGNATURE.getCode(), e);
+                throw DeviceManagementExceptionHandler.handleClientException(
+                        ErrorMessage.ERROR_INVALID_DEVICE_SIGNATURE, e, registrationId);
             }
-            throw new DeviceMgtServerException(
-                    ErrorMessage.ERROR_WHILE_VERIFYING_SIGNATURE.getMessage(),
-                    String.format(ErrorMessage.ERROR_WHILE_VERIFYING_SIGNATURE.getDescription(),
-                            registrationId),
-                    ErrorMessage.ERROR_WHILE_VERIFYING_SIGNATURE.getCode(), e);
+            throw DeviceManagementExceptionHandler.handleServerException(
+                    ErrorMessage.ERROR_WHILE_VERIFYING_SIGNATURE, e, registrationId);
         }
     }
 
@@ -277,10 +265,8 @@ public class DeviceManagementServiceImpl implements DeviceManagementService {
         RegisteredDevice existing = deviceManagementDAO.getDeviceById(
                 deviceId, IdentityTenantUtil.getTenantId(tenantDomain));
         if (existing == null) {
-            throw new DeviceMgtClientException(
-                    ErrorMessage.ERROR_DEVICE_NOT_FOUND.getMessage(),
-                    String.format(ErrorMessage.ERROR_DEVICE_NOT_FOUND.getDescription(), deviceId),
-                    ErrorMessage.ERROR_DEVICE_NOT_FOUND.getCode());
+            throw DeviceManagementExceptionHandler.handleClientException(
+                    ErrorMessage.ERROR_DEVICE_NOT_FOUND, deviceId);
         }
     }
 
@@ -288,10 +274,8 @@ public class DeviceManagementServiceImpl implements DeviceManagementService {
             throws DeviceMgtClientException {
 
         if (value == null || value.trim().isEmpty()) {
-            throw new DeviceMgtClientException(
-                    ErrorMessage.ERROR_INVALID_DEVICE_FIELD.getMessage(),
-                    String.format(ErrorMessage.ERROR_INVALID_DEVICE_FIELD.getDescription(), fieldName),
-                    ErrorMessage.ERROR_INVALID_DEVICE_FIELD.getCode());
+            throw DeviceManagementExceptionHandler.handleClientException(
+                    ErrorMessage.ERROR_INVALID_DEVICE_FIELD, fieldName);
         }
     }
 }

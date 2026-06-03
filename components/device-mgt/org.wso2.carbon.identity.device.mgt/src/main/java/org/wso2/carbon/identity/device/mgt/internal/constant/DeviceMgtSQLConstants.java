@@ -1,27 +1,27 @@
 /*
-* Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com) All Rights Reserved.
-*
-* WSO2 LLC. licenses this file to you under the Apache License,
-* Version 2.0 (the "License"); you may not use this file except
-* in compliance with the License.
-* You may obtain a copy of the License at
-*
-* http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing,
-* software distributed under the License is distributed on an
-* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-* KIND, either express or implied. See the License for the
-* specific language governing permissions and limitations
-* under the License.
-*/
+ * Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
+ *
+ * WSO2 LLC. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 
 package org.wso2.carbon.identity.device.mgt.internal.constant;
 
 /**
  * SQL constants used by the device management DAO layer.
  */
-public class DeviceMgtSQLConstants {
+public final class DeviceMgtSQLConstants {
 
     private DeviceMgtSQLConstants() {
     }
@@ -29,7 +29,7 @@ public class DeviceMgtSQLConstants {
     /**
      * Column and named-parameter names.
      */
-    public static class Column {
+    public static final class Column {
 
         public static final String ID = "ID";
         public static final String USER_ID = "USER_ID";
@@ -48,7 +48,7 @@ public class DeviceMgtSQLConstants {
     /**
      * SQL query definitions.
      */
-    public static class Query {
+    public static final class Query {
 
         public static final String REGISTER_DEVICE =
                 "INSERT INTO IDN_REGISTERED_DEVICE " +
@@ -88,5 +88,3 @@ public class DeviceMgtSQLConstants {
         }
     }
 }
-
-

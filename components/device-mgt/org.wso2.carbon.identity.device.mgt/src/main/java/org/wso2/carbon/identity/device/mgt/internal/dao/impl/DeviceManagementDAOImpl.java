@@ -1,20 +1,20 @@
 /*
-* Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com) All Rights Reserved.
-*
-* WSO2 LLC. licenses this file to you under the Apache License,
-* Version 2.0 (the "License"); you may not use this file except
-* in compliance with the License.
-* You may obtain a copy of the License at
-*
-* http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing,
-* software distributed under the License is distributed on an
-* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-* KIND, either express or implied. See the License for the
-* specific language governing permissions and limitations
-* under the License.
-*/
+ * Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
+ *
+ * WSO2 LLC. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 
 package org.wso2.carbon.identity.device.mgt.internal.dao.impl;
 
@@ -25,10 +25,10 @@ import org.wso2.carbon.database.utils.jdbc.exceptions.TransactionException;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.device.mgt.api.constant.ErrorMessage;
 import org.wso2.carbon.identity.device.mgt.api.exception.DeviceMgtException;
-import org.wso2.carbon.identity.device.mgt.api.exception.DeviceMgtServerException;
 import org.wso2.carbon.identity.device.mgt.api.model.RegisteredDevice;
 import org.wso2.carbon.identity.device.mgt.internal.constant.DeviceMgtSQLConstants;
 import org.wso2.carbon.identity.device.mgt.internal.dao.DeviceManagementDAO;
+import org.wso2.carbon.identity.device.mgt.internal.util.DeviceManagementExceptionHandler;
 
 import java.util.List;
 
@@ -69,10 +69,8 @@ public class DeviceManagementDAOImpl implements DeviceManagementDAO {
             });
 
         } catch (TransactionException e) {
-            throw new DeviceMgtServerException(
-                    ErrorMessage.ERROR_WHILE_REGISTERING_DEVICE.getMessage(),
-                    ErrorMessage.ERROR_WHILE_REGISTERING_DEVICE.getDescription(),
-                    ErrorMessage.ERROR_WHILE_REGISTERING_DEVICE.getCode(), e);
+            throw DeviceManagementExceptionHandler.handleServerException(
+                    ErrorMessage.ERROR_WHILE_REGISTERING_DEVICE, e);
         }
 
         if (LOG.isDebugEnabled()) {
@@ -107,10 +105,8 @@ public class DeviceManagementDAOImpl implements DeviceManagementDAO {
                             }));
 
         } catch (TransactionException e) {
-            throw new DeviceMgtServerException(
-                    ErrorMessage.ERROR_WHILE_RETRIEVING_DEVICE.getMessage(),
-                    ErrorMessage.ERROR_WHILE_RETRIEVING_DEVICE.getDescription(),
-                    ErrorMessage.ERROR_WHILE_RETRIEVING_DEVICE.getCode(), e);
+            throw DeviceManagementExceptionHandler.handleServerException(
+                    ErrorMessage.ERROR_WHILE_RETRIEVING_DEVICE, e);
         }
     }
 
@@ -140,10 +136,8 @@ public class DeviceManagementDAOImpl implements DeviceManagementDAO {
                             }));
 
         } catch (TransactionException e) {
-            throw new DeviceMgtServerException(
-                    ErrorMessage.ERROR_WHILE_RETRIEVING_DEVICE.getMessage(),
-                    ErrorMessage.ERROR_WHILE_RETRIEVING_DEVICE.getDescription(),
-                    ErrorMessage.ERROR_WHILE_RETRIEVING_DEVICE.getCode(), e);
+            throw DeviceManagementExceptionHandler.handleServerException(
+                    ErrorMessage.ERROR_WHILE_RETRIEVING_DEVICE, e);
         }
     }
 
@@ -170,10 +164,8 @@ public class DeviceManagementDAOImpl implements DeviceManagementDAO {
                                     DeviceMgtSQLConstants.Column.TENANT_ID, tenantId)));
 
         } catch (TransactionException e) {
-            throw new DeviceMgtServerException(
-                    ErrorMessage.ERROR_WHILE_RETRIEVING_DEVICE.getMessage(),
-                    ErrorMessage.ERROR_WHILE_RETRIEVING_DEVICE.getDescription(),
-                    ErrorMessage.ERROR_WHILE_RETRIEVING_DEVICE.getCode(), e);
+            throw DeviceManagementExceptionHandler.handleServerException(
+                    ErrorMessage.ERROR_WHILE_RETRIEVING_DEVICE, e);
         }
     }
 
@@ -196,10 +188,8 @@ public class DeviceManagementDAOImpl implements DeviceManagementDAO {
             });
 
         } catch (TransactionException e) {
-            throw new DeviceMgtServerException(
-                    ErrorMessage.ERROR_WHILE_UPDATING_DEVICE.getMessage(),
-                    ErrorMessage.ERROR_WHILE_UPDATING_DEVICE.getDescription(),
-                    ErrorMessage.ERROR_WHILE_UPDATING_DEVICE.getCode(), e);
+            throw DeviceManagementExceptionHandler.handleServerException(
+                    ErrorMessage.ERROR_WHILE_UPDATING_DEVICE, e);
         }
 
         if (LOG.isDebugEnabled()) {
@@ -227,10 +217,8 @@ public class DeviceManagementDAOImpl implements DeviceManagementDAO {
             });
 
         } catch (TransactionException e) {
-            throw new DeviceMgtServerException(
-                    ErrorMessage.ERROR_WHILE_DELETING_DEVICE.getMessage(),
-                    ErrorMessage.ERROR_WHILE_DELETING_DEVICE.getDescription(),
-                    ErrorMessage.ERROR_WHILE_DELETING_DEVICE.getCode(), e);
+            throw DeviceManagementExceptionHandler.handleServerException(
+                    ErrorMessage.ERROR_WHILE_DELETING_DEVICE, e);
         }
 
         if (LOG.isDebugEnabled()) {
@@ -238,5 +226,3 @@ public class DeviceManagementDAOImpl implements DeviceManagementDAO {
         }
     }
 }
-
-

@@ -24,7 +24,6 @@ import org.wso2.carbon.identity.device.policy.api.service.DevicePolicyEvaluator;
 import org.wso2.carbon.identity.device.policy.internal.component.DevicePolicyComponentServiceHolder;
 import org.wso2.carbon.identity.device.policy.internal.config.DeviceFieldConfig;
 import org.wso2.carbon.identity.device.policy.internal.config.DeviceFieldConfigLoader;
-import org.wso2.carbon.identity.device.policy.internal.config.OsVersionRegistry;
 import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementException;
 import org.wso2.carbon.identity.policy.management.api.model.Policy;
 import org.wso2.carbon.identity.policy.management.api.model.PolicyRule;
@@ -32,17 +31,9 @@ import org.wso2.carbon.identity.rule.evaluation.api.exception.RuleEvaluationExce
 import org.wso2.carbon.identity.rule.evaluation.api.model.FlowContext;
 import org.wso2.carbon.identity.rule.evaluation.api.model.FlowType;
 import org.wso2.carbon.identity.rule.evaluation.api.model.RuleEvaluationResult;
-import org.wso2.carbon.identity.rule.management.api.model.ANDCombinedRule;
-import org.wso2.carbon.identity.rule.management.api.model.Expression;
-import org.wso2.carbon.identity.rule.management.api.model.ORCombinedRule;
-import org.wso2.carbon.identity.rule.management.api.model.Rule;
-import org.wso2.carbon.identity.rule.management.api.model.Value;
 
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -52,9 +43,6 @@ public class DevicePolicyEvaluatorImpl implements DevicePolicyEvaluator {
 
     private static final Log LOG = LogFactory.getLog(DevicePolicyEvaluatorImpl.class);
     private static final String DEVICE_PLATFORM_FIELD = "platform";
-
-    private static final Set<String> OS_VERSION_FIELDS = new HashSet<>(Arrays.asList(
-            "androidOsVersion", "iosOsVersion", "macosOsVersion", "windowsOsVersion"));
 
     @Override
     public String evaluate(String policyName, Map<String, Object> deviceData, String tenantDomain)
@@ -91,63 +79,15 @@ public class DevicePolicyEvaluatorImpl implements DevicePolicyEvaluator {
             return null;
         }
 
-        Rule resolvedRule = resolveSymbolicOsVersions(matchingRule.getRule());
         FlowContext flowContext = new FlowContext(FlowType.DEVICE_POLICY, deviceData);
         RuleEvaluationResult result = DevicePolicyComponentServiceHolder.getInstance()
                 .getRuleEvaluationService()
-                .evaluateResolvedRule(resolvedRule, flowContext, tenantDomain);
+                .evaluate(matchingRule.getRule().getId(), flowContext, tenantDomain);
 
         if (!result.isRuleSatisfied()) {
             return String.join(", ", result.getFailedFields());
         }
         return null;
-    }
-
-    private Rule resolveSymbolicOsVersions(Rule rule) {
-
-        ORCombinedRule orRule = (ORCombinedRule) rule;
-        ORCombinedRule.Builder orBuilder = new ORCombinedRule.Builder()
-                .setId(rule.getId())
-                .setActive(rule.isActive());
-
-        for (ANDCombinedRule andRule : orRule.getRules()) {
-            ANDCombinedRule.Builder andBuilder = new ANDCombinedRule.Builder();
-            for (Expression expression : andRule.getExpressions()) {
-                andBuilder.addExpression(resolveExpression(expression));
-            }
-            orBuilder.addRule(andBuilder.build());
-        }
-        return orBuilder.build();
-    }
-
-    private Expression resolveExpression(Expression expression) {
-
-        if (!OS_VERSION_FIELDS.contains(expression.getField())) {
-            return expression;
-        }
-
-        Value.Type type = expression.getValue().getType();
-        String fieldValue = expression.getValue().getFieldValue();
-
-        if (type == Value.Type.LIST) {
-            String resolved = OsVersionRegistry.getInstance().resolveList(fieldValue);
-            return new Expression.Builder()
-                    .field(expression.getField())
-                    .operator(expression.getOperator())
-                    .value(new Value(Value.Type.LIST, resolved))
-                    .build();
-        }
-
-        if (type == Value.Type.RAW) {
-            String resolved = OsVersionRegistry.getInstance().resolveToken(fieldValue);
-            return new Expression.Builder()
-                    .field(expression.getField())
-                    .operator(expression.getOperator())
-                    .value(new Value(Value.Type.NUMBER, resolved))
-                    .build();
-        }
-
-        return expression;
     }
 
     @Override

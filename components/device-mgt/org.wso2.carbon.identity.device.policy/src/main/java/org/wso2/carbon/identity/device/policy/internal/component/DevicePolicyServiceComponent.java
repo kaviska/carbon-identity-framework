@@ -33,12 +33,14 @@ import org.wso2.carbon.identity.client.attestation.mgt.services.ClientAttestatio
 import org.wso2.carbon.identity.device.mgt.api.service.DeviceManagementService;
 import org.wso2.carbon.identity.device.policy.api.service.DevicePolicyEvaluator;
 import org.wso2.carbon.identity.device.policy.api.service.IntegrityDataEnricher;
+import org.wso2.carbon.identity.device.policy.internal.config.OsVersionRegistry;
 import org.wso2.carbon.identity.device.policy.internal.js.DevicePolicyJsFunction;
 import org.wso2.carbon.identity.device.policy.internal.rule.DevicePolicyEvaluationDataProvider;
 import org.wso2.carbon.identity.device.policy.internal.service.impl.DevicePolicyEvaluatorImpl;
 import org.wso2.carbon.identity.device.policy.internal.service.impl.IntegrityDataEnricherImpl;
 import org.wso2.carbon.identity.policy.management.api.service.PolicyManagementService;
 import org.wso2.carbon.identity.rule.evaluation.api.provider.RuleEvaluationDataProvider;
+import org.wso2.carbon.identity.rule.evaluation.api.resolver.SymbolicValueResolverRegistry;
 import org.wso2.carbon.identity.rule.evaluation.api.service.RuleEvaluationService;
 
 /**
@@ -77,6 +79,13 @@ public class DevicePolicyServiceComponent {
                     "isDevicePolicyCompliant",
                     new DevicePolicyJsFunction());
 
+            OsVersionRegistry osVersionResolver = OsVersionRegistry.getInstance();
+            SymbolicValueResolverRegistry resolverRegistry = SymbolicValueResolverRegistry.getInstance();
+            resolverRegistry.register("androidOsVersion", osVersionResolver);
+            resolverRegistry.register("iosOsVersion", osVersionResolver);
+            resolverRegistry.register("macosOsVersion", osVersionResolver);
+            resolverRegistry.register("windowsOsVersion", osVersionResolver);
+
             LOG.debug("Device policy bundle activated.");
         } catch (Throwable e) {
             LOG.error("Error while initializing device policy service component.", e);
@@ -86,6 +95,11 @@ public class DevicePolicyServiceComponent {
     @Deactivate
     protected void deactivate(ComponentContext context) {
 
+        SymbolicValueResolverRegistry resolverRegistry = SymbolicValueResolverRegistry.getInstance();
+        resolverRegistry.deregister("androidOsVersion");
+        resolverRegistry.deregister("iosOsVersion");
+        resolverRegistry.deregister("macosOsVersion");
+        resolverRegistry.deregister("windowsOsVersion");
         LOG.debug("Device policy bundle deactivated.");
     }
 

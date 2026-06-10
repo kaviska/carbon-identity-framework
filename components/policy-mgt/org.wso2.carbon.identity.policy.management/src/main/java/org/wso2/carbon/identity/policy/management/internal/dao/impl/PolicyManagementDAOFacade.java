@@ -70,8 +70,8 @@ public class PolicyManagementDAOFacade implements PolicyManagementDAO {
 
         try {
             for (PolicyRule pr : policy.getRules()) {
-                validateRule(pr.getRule(), tenantDomain);
-                Rule createdRule = ruleManagementService.addRule(pr.getRule(), tenantDomain);
+                Rule validatedRule = validateAndBuildRule(pr.getRule(), tenantDomain);
+                Rule createdRule = ruleManagementService.addRule(validatedRule, tenantDomain);
                 createdRuleIds.add(createdRule.getId());
                 rulesWithIds.add(new PolicyRule(pr.getId(), createdRule.getId(), pr.getPlatform(), null));
                 if (LOG.isDebugEnabled()) {
@@ -112,8 +112,8 @@ public class PolicyManagementDAOFacade implements PolicyManagementDAO {
 
         try {
             for (PolicyRule pr : policy.getRules()) {
-                validateRule(pr.getRule(), tenantDomain);
-                Rule createdRule = ruleManagementService.addRule(pr.getRule(), tenantDomain);
+                Rule validatedRule = validateAndBuildRule(pr.getRule(), tenantDomain);
+                Rule createdRule = ruleManagementService.addRule(validatedRule, tenantDomain);
                 createdRuleIds.add(createdRule.getId());
                 rulesWithIds.add(new PolicyRule(pr.getId(), createdRule.getId(), pr.getPlatform(), null));
             }
@@ -174,7 +174,7 @@ public class PolicyManagementDAOFacade implements PolicyManagementDAO {
         return policyManagementDAO.getPolicyIdByName(policyName, tenantId);
     }
 
-    private void validateRule(Rule rule, String tenantDomain) throws PolicyManagementException {
+    private Rule validateAndBuildRule(Rule rule, String tenantDomain) throws PolicyManagementException {
 
         try {
             RuleBuilder ruleBuilder = RuleBuilder.create(FlowType.DEVICE_POLICY, tenantDomain);
@@ -189,7 +189,7 @@ public class PolicyManagementDAOFacade implements PolicyManagementDAO {
                     ruleBuilder.addAndExpression(expression);
                 }
             }
-            ruleBuilder.build();
+            return ruleBuilder.build();
         } catch (RuleManagementClientException e) {
             throw PolicyManagementExceptionHandler.handleClientException(
                     ErrorMessage.ERROR_INVALID_POLICY_RULE, e, e.getMessage());

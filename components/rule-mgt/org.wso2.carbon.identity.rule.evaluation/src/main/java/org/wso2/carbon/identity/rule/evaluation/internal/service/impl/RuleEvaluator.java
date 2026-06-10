@@ -23,10 +23,13 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.rule.evaluation.api.exception.RuleEvaluationException;
 import org.wso2.carbon.identity.rule.evaluation.api.model.FieldValue;
 import org.wso2.carbon.identity.rule.evaluation.api.model.Operator;
+import org.wso2.carbon.identity.rule.evaluation.api.resolver.SymbolicValueResolver;
+import org.wso2.carbon.identity.rule.evaluation.api.resolver.SymbolicValueResolverRegistry;
 import org.wso2.carbon.identity.rule.management.api.model.ANDCombinedRule;
 import org.wso2.carbon.identity.rule.management.api.model.Expression;
 import org.wso2.carbon.identity.rule.management.api.model.ORCombinedRule;
 import org.wso2.carbon.identity.rule.management.api.model.Rule;
+import org.wso2.carbon.identity.rule.management.api.model.Value;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -118,6 +121,10 @@ public class RuleEvaluator {
 
         Operator operator = operatorRegistry.getOperator(expression.getOperator());
 
+        if (expression.getValue().getType() == Value.Type.SYMBOLIC) {
+            return evaluateSymbolicExpression(expression, fieldValue, operator);
+        }
+
         // Evaluate based on the value type of the field
         if (fieldValue.getValueType().equals(STRING)) {
             return operator.apply(fieldValue.getValue(), expression.getValue().getFieldValue());
@@ -145,6 +152,25 @@ public class RuleEvaluator {
                 .map(String::trim)
                 .map(Double::parseDouble)
                 .anyMatch(v -> v.equals(deviceValue));
+    }
+
+    private boolean evaluateSymbolicExpression(Expression expression, FieldValue fieldValue, Operator operator)
+            throws RuleEvaluationException {
+
+        SymbolicValueResolver resolver = SymbolicValueResolverRegistry.getInstance()
+                .getResolver(expression.getField());
+        if (resolver == null) {
+            throw new RuleEvaluationException(
+                    "No symbolic resolver registered for field: " + expression.getField());
+        }
+        Value resolved = resolver.resolve(expression.getValue().getFieldValue());
+        if (resolved.getType() == Value.Type.NUMBER) {
+            return operator.apply(fieldValue.getValue(), Double.parseDouble(resolved.getFieldValue()));
+        } else if (resolved.getType() == Value.Type.LIST) {
+            return evaluateInForNumber((Double) fieldValue.getValue(), resolved.getFieldValue());
+        }
+        throw new RuleEvaluationException(
+                "Symbolic resolver returned unsupported type: " + resolved.getType());
     }
 
     private boolean applyOperatorForList(Operator operator, Object fieldValue, Object expressionValue) {

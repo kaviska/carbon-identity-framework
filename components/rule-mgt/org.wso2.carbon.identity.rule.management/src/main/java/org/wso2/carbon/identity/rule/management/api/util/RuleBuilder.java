@@ -264,7 +264,9 @@ public class RuleBuilder {
         org.wso2.carbon.identity.rule.metadata.api.model.Value.ValueType
                 fieldDefinitionValueType = fieldDefinition.getValue().getValueType();
 
-        if (originalValue != null && originalValue.getType() == Value.Type.LIST) {
+        boolean isSymbolicField = fieldDefinitionValueType ==
+                org.wso2.carbon.identity.rule.metadata.api.model.Value.ValueType.SYMBOLIC;
+        if (originalValue != null && originalValue.getType() == Value.Type.LIST && !isSymbolicField) {
             return new Value(Value.Type.LIST, rawValue);
         }
 
@@ -272,12 +274,13 @@ public class RuleBuilder {
             case STRING:
                 return new Value(Value.Type.STRING, rawValue);
             case NUMBER:
-                // Returns RAW if value is a non-numeric symbolic token (e.g. LATEST_ANDROID).
                 return validateNumberValue(rawValue);
             case BOOLEAN:
                 return validateBooleanValue(rawValue);
             case REFERENCE:
                 return new Value(Value.Type.REFERENCE, rawValue);
+            case SYMBOLIC:
+                return new Value(Value.Type.SYMBOLIC, rawValue);
             default:
                 throw new RuleManagementClientException(
                         "Unsupported value type: " + fieldDefinitionValueType + " for field: " +

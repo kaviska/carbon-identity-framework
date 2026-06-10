@@ -124,7 +124,7 @@
     ],
     "value": {
       "inputType": "options",
-      "valueType": "number",
+      "valueType": "symbolic",
       "values": [
         { "name": "LATEST_ANDROID",        "displayName": "Latest Android" },
         { "name": "SECOND_LATEST_ANDROID", "displayName": "Second Latest Android" },
@@ -152,7 +152,7 @@
     ],
     "value": {
       "inputType": "options",
-      "valueType": "number",
+      "valueType": "symbolic",
       "values": [
         { "name": "LATEST_IOS",        "displayName": "Latest iOS" },
         { "name": "SECOND_LATEST_IOS", "displayName": "Second Latest iOS" },
@@ -184,7 +184,7 @@
     ],
     "value": {
       "inputType": "options",
-      "valueType": "number",
+      "valueType": "symbolic",
       "values": [
         { "name": "LATEST_MACOS",        "displayName": "Latest macOS" },
         { "name": "SECOND_LATEST_MACOS", "displayName": "Second Latest macOS" },
@@ -207,7 +207,7 @@
     ],
     "value": {
       "inputType": "options",
-      "valueType": "number",
+      "valueType": "symbolic",
       "values": [
         { "name": "LATEST_WINDOWS",        "displayName": "Latest Windows" },
         { "name": "SECOND_LATEST_WINDOWS", "displayName": "Second Latest Windows" },

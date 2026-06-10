@@ -22,6 +22,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.rule.evaluation.api.resolver.SymbolicValueResolver;
+import org.wso2.carbon.identity.rule.management.api.model.Value;
 
 import java.io.File;
 import java.util.Arrays;
@@ -37,7 +39,7 @@ import java.util.stream.Collectors;
  * LATEST_MACOS, SECOND_LATEST_MACOS, LATEST_WINDOWS, SECOND_LATEST_WINDOWS.
  * When admin updates os-versions.json and restarts, all policies using symbolic names auto-resolve.
  */
-public class OsVersionRegistry {
+public class OsVersionRegistry implements SymbolicValueResolver {
 
     private static final Log LOG = LogFactory.getLog(OsVersionRegistry.class);
     private static final String CONFIG_PATH = "repository" + File.separator + "resources"
@@ -65,6 +67,15 @@ public class OsVersionRegistry {
             }
         }
         return instance;
+    }
+
+    @Override
+    public Value resolve(String symbolicValue) {
+
+        if (symbolicValue.contains(",")) {
+            return new Value(Value.Type.LIST, resolveList(symbolicValue));
+        }
+        return new Value(Value.Type.NUMBER, resolveToken(symbolicValue));
     }
 
     /**

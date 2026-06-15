@@ -25,7 +25,8 @@ import org.wso2.carbon.identity.policy.management.api.constant.ErrorMessage;
 import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementClientException;
 import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementException;
 import org.wso2.carbon.identity.policy.management.api.model.Policy;
-import org.wso2.carbon.identity.policy.management.api.model.PolicyRule;
+import org.wso2.carbon.identity.policy.management.api.model.PolicyResource;
+import org.wso2.carbon.identity.policy.management.api.model.ResourceType;
 import org.wso2.carbon.identity.policy.management.api.service.PolicyManagementService;
 import org.wso2.carbon.identity.policy.management.api.util.PolicyManagementExceptionHandler;
 import org.wso2.carbon.identity.policy.management.internal.component.PolicyMgtComponentServiceHolder;
@@ -79,7 +80,7 @@ public class PolicyManagementServiceImpl implements PolicyManagementService {
                 UUID.randomUUID().toString(),
                 policy.getName(),
                 tenantDomain,
-                policy.getRules());
+                policy.getResources());
 
         return policyManagementDAO.addPolicy(policyWithId, tenantId);
     }
@@ -123,7 +124,7 @@ public class PolicyManagementServiceImpl implements PolicyManagementService {
         if (policy == null) {
             return null;
         }
-        return hydrateRules(policy, tenantDomain);
+        return hydrateResources(policy, tenantDomain);
     }
 
     @Override
@@ -138,7 +139,7 @@ public class PolicyManagementServiceImpl implements PolicyManagementService {
         if (policy == null) {
             return null;
         }
-        return hydrateRules(policy, tenantDomain);
+        return hydrateResources(policy, tenantDomain);
     }
 
     @Override
@@ -150,22 +151,27 @@ public class PolicyManagementServiceImpl implements PolicyManagementService {
         return policyManagementDAO.getPolicies(IdentityTenantUtil.getTenantId(tenantDomain));
     }
 
-    // Actions are not hydrated — actionIds are sufficient for the executor.
-    private Policy hydrateRules(Policy policy, String tenantDomain) throws PolicyManagementException {
+    // Only RULE resources are hydrated; actions are referenced by id and need no hydration here.
+    private Policy hydrateResources(Policy policy, String tenantDomain) throws PolicyManagementException {
 
-        List<PolicyRule> hydratedRules = new ArrayList<>();
-        for (PolicyRule pr : policy.getRules()) {
+        List<PolicyResource> hydratedResources = new ArrayList<>();
+        for (PolicyResource pr : policy.getResources()) {
+            if (pr.getResourceType() != ResourceType.RULE) {
+                hydratedResources.add(pr);
+                continue;
+            }
             try {
                 Rule rule = PolicyMgtComponentServiceHolder.getInstance()
                         .getRuleManagementService()
-                        .getRuleByRuleId(pr.getRuleId(), tenantDomain);
-                hydratedRules.add(new PolicyRule(pr.getId(), pr.getRuleId(), pr.getPlatform(), rule));
+                        .getRuleByRuleId(pr.getResourceId(), tenantDomain);
+                hydratedResources.add(new PolicyResource(
+                        pr.getId(), pr.getTarget(), ResourceType.RULE, pr.getResourceId(), rule));
             } catch (RuleManagementException e) {
                 throw PolicyManagementExceptionHandler.handleServerException(
                         ErrorMessage.ERROR_WHILE_RETRIEVING_POLICY, e);
             }
         }
-        return new Policy(policy.getId(), policy.getName(), policy.getTenantDomain(), hydratedRules);
+        return new Policy(policy.getId(), policy.getName(), policy.getTenantDomain(), hydratedResources);
     }
 
     private void validateIfPolicyExists(String policyId, String tenantDomain)
@@ -190,21 +196,22 @@ public class PolicyManagementServiceImpl implements PolicyManagementService {
             throw PolicyManagementExceptionHandler.handleClientException(
                     ErrorMessage.ERROR_INVALID_POLICY_REQUEST_FIELD, "Policy name");
         }
-        validateUniquePlatformsInRules(policy);
+        validateUniqueTargetsPerResourceType(policy);
     }
 
-    private void validateUniquePlatformsInRules(Policy policy) throws PolicyManagementClientException {
+    private void validateUniqueTargetsPerResourceType(Policy policy) throws PolicyManagementClientException {
 
-        Set<String> seenPlatforms = new HashSet<>();
-        for (PolicyRule rule : policy.getRules()) {
-            if (rule.getPlatform() == null) {
+        Set<String> seenTargets = new HashSet<>();
+        for (PolicyResource resource : policy.getResources()) {
+            if (resource.getTarget() == null) {
                 continue;
             }
-            String normalized = rule.getPlatform().toLowerCase(Locale.ROOT);
-            if (!seenPlatforms.add(normalized)) {
+            String key = resource.getResourceType().name() + "|"
+                    + resource.getTarget().toLowerCase(Locale.ROOT);
+            if (!seenTargets.add(key)) {
                 throw PolicyManagementExceptionHandler.handleClientException(
                         ErrorMessage.ERROR_DUPLICATE_PLATFORM_IN_POLICY,
-                        policy.getName(), rule.getPlatform());
+                        policy.getName(), resource.getTarget());
             }
         }
     }

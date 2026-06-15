@@ -25,8 +25,6 @@ import org.wso2.carbon.identity.device.policy.internal.component.DevicePolicyCom
 import org.wso2.carbon.identity.device.policy.internal.config.DeviceFieldConfig;
 import org.wso2.carbon.identity.device.policy.internal.config.DeviceFieldConfigLoader;
 import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementException;
-import org.wso2.carbon.identity.policy.management.api.model.Policy;
-import org.wso2.carbon.identity.policy.management.api.model.PolicyRule;
 import org.wso2.carbon.identity.rule.evaluation.api.exception.RuleEvaluationException;
 import org.wso2.carbon.identity.rule.evaluation.api.model.FlowContext;
 import org.wso2.carbon.identity.rule.evaluation.api.model.FlowType;
@@ -48,41 +46,18 @@ public class DevicePolicyEvaluatorImpl implements DevicePolicyEvaluator {
     public String evaluate(String policyName, Map<String, Object> deviceData, String tenantDomain)
             throws PolicyManagementException, RuleEvaluationException {
 
-        Policy policy = DevicePolicyComponentServiceHolder.getInstance()
-                .getPolicyManagementService()
-                .getPolicyByName(policyName, tenantDomain);
+        String platform = (String) deviceData.get(DEVICE_PLATFORM_FIELD);
+        FlowContext flowContext = new FlowContext(FlowType.DEVICE_POLICY, deviceData);
+        RuleEvaluationResult result = DevicePolicyComponentServiceHolder.getInstance()
+                .getPolicyEvaluationService()
+                .evaluate(policyName, platform != null ? platform : "", flowContext, tenantDomain);
 
-        if (policy == null) {
+        if (result == null) {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Policy not found: " + policyName + " for tenant: " + tenantDomain);
             }
             return policyName + ":policy_not_found";
         }
-
-        return evaluateRule(policy, deviceData, tenantDomain);
-    }
-
-    private String evaluateRule(Policy policy, Map<String, Object> deviceData, String tenantDomain)
-            throws PolicyManagementException, RuleEvaluationException {
-
-        String platform = (String) deviceData.get(DEVICE_PLATFORM_FIELD);
-        if (platform == null || platform.isEmpty()) {
-            return null;
-        }
-
-        PolicyRule matchingRule = policy.getRules().stream()
-                .filter(r -> platform.equalsIgnoreCase(r.getPlatform()))
-                .findFirst()
-                .orElse(null);
-
-        if (matchingRule == null || matchingRule.getRule() == null) {
-            return null;
-        }
-
-        FlowContext flowContext = new FlowContext(FlowType.DEVICE_POLICY, deviceData);
-        RuleEvaluationResult result = DevicePolicyComponentServiceHolder.getInstance()
-                .getRuleEvaluationService()
-                .evaluate(matchingRule.getRule().getId(), flowContext, tenantDomain);
 
         if (!result.isRuleSatisfied()) {
             return String.join(", ", result.getFailedFields());

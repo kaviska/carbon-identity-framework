@@ -28,8 +28,11 @@ import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
+import org.wso2.carbon.identity.policy.management.api.service.PolicyEvaluationService;
 import org.wso2.carbon.identity.policy.management.api.service.PolicyManagementService;
+import org.wso2.carbon.identity.policy.management.internal.service.impl.PolicyEvaluationServiceImpl;
 import org.wso2.carbon.identity.policy.management.internal.service.impl.PolicyManagementServiceImpl;
+import org.wso2.carbon.identity.rule.evaluation.api.service.RuleEvaluationService;
 import org.wso2.carbon.identity.rule.management.api.service.RuleManagementService;
 
 /**
@@ -51,6 +54,9 @@ public class PolicyMgtServiceComponent {
             PolicyManagementServiceImpl policyManagementService = PolicyManagementServiceImpl.getInstance();
             bundleCtx.registerService(PolicyManagementService.class.getName(), policyManagementService, null);
             PolicyMgtComponentServiceHolder.getInstance().setPolicyManagementService(policyManagementService);
+
+            PolicyEvaluationServiceImpl policyEvaluationService = PolicyEvaluationServiceImpl.getInstance();
+            bundleCtx.registerService(PolicyEvaluationService.class.getName(), policyEvaluationService, null);
             LOG.debug("Policy management bundle activated.");
         } catch (Throwable e) {
             LOG.error("Error while initializing policy management service component.", e);
@@ -80,5 +86,24 @@ public class PolicyMgtServiceComponent {
 
         PolicyMgtComponentServiceHolder.getInstance().setRuleManagementService(null);
         LOG.debug("RuleManagementService unset in Policy Management component.");
+    }
+
+    @Reference(
+            name = "rule.evaluation.service",
+            service = RuleEvaluationService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetRuleEvaluationService"
+    )
+    protected void setRuleEvaluationService(RuleEvaluationService ruleEvaluationService) {
+
+        PolicyMgtComponentServiceHolder.getInstance().setRuleEvaluationService(ruleEvaluationService);
+        LOG.debug("RuleEvaluationService set in Policy Management component.");
+    }
+
+    protected void unsetRuleEvaluationService(RuleEvaluationService ruleEvaluationService) {
+
+        PolicyMgtComponentServiceHolder.getInstance().setRuleEvaluationService(null);
+        LOG.debug("RuleEvaluationService unset in Policy Management component.");
     }
 }

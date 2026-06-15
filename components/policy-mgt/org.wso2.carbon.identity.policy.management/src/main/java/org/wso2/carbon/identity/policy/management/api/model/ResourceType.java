@@ -16,27 +16,17 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.policy.management.internal.cache;
-
-import org.wso2.carbon.identity.core.cache.BaseCache;
-import org.wso2.carbon.utils.CarbonUtils;
+package org.wso2.carbon.identity.policy.management.api.model;
 
 /**
- * Cache for Policy Management.
+ * Type of resource attached to a policy for a given target.
+ * Stored in the database as its {@code name()} value.
  */
-public class PolicyCache extends BaseCache<PolicyCacheKey, PolicyCacheEntry> {
+public enum ResourceType {
 
-    private static final String CACHE_NAME = "PolicyCache";
-    private static final PolicyCache INSTANCE = new PolicyCache();
+    /** An IS-native rule managed by rule-mgt. */
+    RULE,
 
-    public PolicyCache() {
-
-        super(CACHE_NAME);
-    }
-
-    public static PolicyCache getInstance() {
-
-        CarbonUtils.checkSecurity();
-        return INSTANCE;
-    }
+    /** An external action managed by action-mgt. */
+    ACTION
 }

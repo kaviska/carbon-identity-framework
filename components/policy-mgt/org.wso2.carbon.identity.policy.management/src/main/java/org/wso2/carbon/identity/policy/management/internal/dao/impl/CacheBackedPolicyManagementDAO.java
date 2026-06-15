@@ -28,10 +28,11 @@ import org.wso2.carbon.identity.policy.management.internal.cache.PolicyCacheKey;
 import org.wso2.carbon.identity.policy.management.internal.dao.PolicyManagementDAO;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Cache-backed Policy Management DAO.
- * Wraps PolicyManagementDAOFacade with an in-process cache to reduce DB hits on the hot path.
+ * Wraps a PolicyManagementDAO with an in-process cache to reduce DB hits on the hot path.
  * Hot path: getPolicyByName (called on every device evaluation) is served from cache after first read.
  * Cache is invalidated on add, update, and delete.
  * Both name-based and ID-based entries are maintained so either lookup type can benefit.
@@ -77,16 +78,13 @@ public class CacheBackedPolicyManagementDAO implements PolicyManagementDAO {
     @Override
     public Policy updatePolicy(Policy policy, int tenantId) throws PolicyManagementException {
 
-        // Read old name from cache before clearing so the name-based entry can also be invalidated.
-        PolicyCacheEntry existingEntry = policyCache.getValueFromCache(
-                PolicyCacheKey.forId(policy.getId()), tenantId);
-        if (existingEntry != null) {
-            String oldName = existingEntry.getPolicy().getName();
-            if (!oldName.equals(policy.getName())) {
-                policyCache.clearCacheEntry(PolicyCacheKey.forName(oldName), tenantId);
-                if (LOG.isDebugEnabled()) {
-                    LOG.debug("Policy cache cleared for old name: " + oldName + " on update.");
-                }
+        // Resolve the persisted name from the underlying store (not the cache) so a renamed
+        // policy's old name-based entry is always invalidated, even if its ID entry has expired.
+        Policy existingPolicy = policyManagementDAO.getPolicyById(policy.getId(), tenantId);
+        if (existingPolicy != null && !Objects.equals(existingPolicy.getName(), policy.getName())) {
+            policyCache.clearCacheEntry(PolicyCacheKey.forName(existingPolicy.getName()), tenantId);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Policy cache cleared for old name: " + existingPolicy.getName() + " on update.");
             }
         }
         policyCache.clearCacheEntry(PolicyCacheKey.forId(policy.getId()), tenantId);
@@ -109,15 +107,13 @@ public class CacheBackedPolicyManagementDAO implements PolicyManagementDAO {
     @Override
     public void deletePolicy(String policyId, int tenantId) throws PolicyManagementException {
 
-        // Read name from cache before clearing so the name-based entry can also be invalidated.
-        PolicyCacheEntry existingEntry = policyCache.getValueFromCache(
-                PolicyCacheKey.forId(policyId), tenantId);
-        if (existingEntry != null) {
-            policyCache.clearCacheEntry(
-                    PolicyCacheKey.forName(existingEntry.getPolicy().getName()), tenantId);
+        // Resolve the persisted name from the underlying store (not the cache) so the name-based
+        // entry is always invalidated, even if the ID entry has expired from the cache.
+        Policy existingPolicy = policyManagementDAO.getPolicyById(policyId, tenantId);
+        if (existingPolicy != null) {
+            policyCache.clearCacheEntry(PolicyCacheKey.forName(existingPolicy.getName()), tenantId);
             if (LOG.isDebugEnabled()) {
-                LOG.debug("Policy cache cleared for name: "
-                        + existingEntry.getPolicy().getName() + " on delete.");
+                LOG.debug("Policy cache cleared for name: " + existingPolicy.getName() + " on delete.");
             }
         }
         policyCache.clearCacheEntry(PolicyCacheKey.forId(policyId), tenantId);

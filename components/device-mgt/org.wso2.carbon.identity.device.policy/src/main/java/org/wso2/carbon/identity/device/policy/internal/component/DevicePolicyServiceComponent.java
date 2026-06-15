@@ -38,10 +38,9 @@ import org.wso2.carbon.identity.device.policy.internal.js.DevicePolicyJsFunction
 import org.wso2.carbon.identity.device.policy.internal.rule.DevicePolicyEvaluationDataProvider;
 import org.wso2.carbon.identity.device.policy.internal.service.impl.DevicePolicyEvaluatorImpl;
 import org.wso2.carbon.identity.device.policy.internal.service.impl.IntegrityDataEnricherImpl;
-import org.wso2.carbon.identity.policy.management.api.service.PolicyManagementService;
+import org.wso2.carbon.identity.policy.management.api.service.PolicyEvaluationService;
 import org.wso2.carbon.identity.rule.evaluation.api.provider.RuleEvaluationDataProvider;
 import org.wso2.carbon.identity.rule.evaluation.api.resolver.SymbolicValueResolverRegistry;
-import org.wso2.carbon.identity.rule.evaluation.api.service.RuleEvaluationService;
 
 /**
  * OSGi DS component for the device policy bundle.
@@ -104,22 +103,22 @@ public class DevicePolicyServiceComponent {
     }
 
     @Reference(
-            name = "policy.management.service",
-            service = PolicyManagementService.class,
+            name = "policy.evaluation.service",
+            service = PolicyEvaluationService.class,
             cardinality = ReferenceCardinality.MANDATORY,
             policy = ReferencePolicy.DYNAMIC,
-            unbind = "unsetPolicyManagementService"
+            unbind = "unsetPolicyEvaluationService"
     )
-    protected void setPolicyManagementService(PolicyManagementService policyManagementService) {
+    protected void setPolicyEvaluationService(PolicyEvaluationService policyEvaluationService) {
 
-        DevicePolicyComponentServiceHolder.getInstance().setPolicyManagementService(policyManagementService);
-        LOG.debug("PolicyManagementService set in Device Policy component.");
+        DevicePolicyComponentServiceHolder.getInstance().setPolicyEvaluationService(policyEvaluationService);
+        LOG.debug("PolicyEvaluationService set in Device Policy component.");
     }
 
-    protected void unsetPolicyManagementService(PolicyManagementService policyManagementService) {
+    protected void unsetPolicyEvaluationService(PolicyEvaluationService policyEvaluationService) {
 
-        DevicePolicyComponentServiceHolder.getInstance().setPolicyManagementService(null);
-        LOG.debug("PolicyManagementService unset in Device Policy component.");
+        DevicePolicyComponentServiceHolder.getInstance().setPolicyEvaluationService(null);
+        LOG.debug("PolicyEvaluationService unset in Device Policy component.");
     }
 
     @Reference(
@@ -139,25 +138,6 @@ public class DevicePolicyServiceComponent {
 
         DevicePolicyComponentServiceHolder.getInstance().setDeviceManagementService(null);
         LOG.debug("DeviceManagementService unset in Device Policy component.");
-    }
-
-    @Reference(
-            name = "rule.evaluation.service",
-            service = RuleEvaluationService.class,
-            cardinality = ReferenceCardinality.MANDATORY,
-            policy = ReferencePolicy.DYNAMIC,
-            unbind = "unsetRuleEvaluationService"
-    )
-    protected void setRuleEvaluationService(RuleEvaluationService ruleEvaluationService) {
-
-        DevicePolicyComponentServiceHolder.getInstance().setRuleEvaluationService(ruleEvaluationService);
-        LOG.debug("RuleEvaluationService set in Device Policy component.");
-    }
-
-    protected void unsetRuleEvaluationService(RuleEvaluationService ruleEvaluationService) {
-
-        DevicePolicyComponentServiceHolder.getInstance().setRuleEvaluationService(null);
-        LOG.debug("RuleEvaluationService unset in Device Policy component.");
     }
 
     @Reference(

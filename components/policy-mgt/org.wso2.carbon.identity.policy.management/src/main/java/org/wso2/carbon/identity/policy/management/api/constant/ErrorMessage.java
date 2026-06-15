@@ -24,31 +24,31 @@ package org.wso2.carbon.identity.policy.management.api.constant;
 public enum ErrorMessage {
 
     // Client errors.
-    ERROR_POLICY_NOT_FOUND("DPM-60001", "Policy not found.",
+    ERROR_POLICY_NOT_FOUND("PM-60001", "Policy not found.",
             "No policy found for the given policy id: %s."),
-    ERROR_INVALID_POLICY_REQUEST_FIELD("DPM-60002", "Invalid request.",
+    ERROR_INVALID_POLICY_REQUEST_FIELD("PM-60002", "Invalid request.",
             "%s is empty or invalid."),
-    ERROR_INVALID_POLICY_RULE("DPM-60003", "Invalid policy rule.",
+    ERROR_INVALID_POLICY_RULE("PM-60003", "Invalid policy rule.",
             "Policy rule validation failed: %s"),
-    ERROR_POLICY_ALREADY_EXISTS("DPM-60004", "Policy already exists.",
+    ERROR_POLICY_ALREADY_EXISTS("PM-60004", "Policy already exists.",
             "A policy with name '%s' already exists for the tenant."),
-    ERROR_DUPLICATE_PLATFORM_IN_POLICY("DPM-60005", "Duplicate platform in policy.",
+    ERROR_DUPLICATE_PLATFORM_IN_POLICY("PM-60005", "Duplicate platform in policy.",
             "Policy '%s' has more than one rule for platform '%s'."),
 
     // Server errors.
-    ERROR_WHILE_ADDING_POLICY("DPM-65001", "Error while adding Policy.",
+    ERROR_WHILE_ADDING_POLICY("PM-65001", "Error while adding Policy.",
             "Error while persisting Policy in the system."),
-    ERROR_WHILE_RETRIEVING_POLICY("DPM-65002", "Error while retrieving Policy.",
+    ERROR_WHILE_RETRIEVING_POLICY("PM-65002", "Error while retrieving Policy.",
             "Error while retrieving Policy from the system."),
-    ERROR_WHILE_UPDATING_POLICY("DPM-65003", "Error while updating Policy.",
+    ERROR_WHILE_UPDATING_POLICY("PM-65003", "Error while updating Policy.",
             "Error while updating Policy in the system."),
-    ERROR_WHILE_DELETING_POLICY("DPM-65004", "Error while deleting Policy.",
+    ERROR_WHILE_DELETING_POLICY("PM-65004", "Error while deleting Policy.",
             "Error while deleting Policy from the system."),
-    ERROR_WHILE_ADDING_RULE_FOR_POLICY("DPM-65005", "Error while adding Rule for Policy.",
+    ERROR_WHILE_ADDING_RULE_FOR_POLICY("PM-65005", "Error while adding Rule for Policy.",
             "Error while adding Rule for Policy: %s in the system."),
-    ERROR_WHILE_UPDATING_RULE_FOR_POLICY("DPM-65006", "Error while updating Rule for Policy.",
+    ERROR_WHILE_UPDATING_RULE_FOR_POLICY("PM-65006", "Error while updating Rule for Policy.",
             "Error while updating Rule for Policy: %s in the system."),
-    ERROR_WHILE_DELETING_RULE_FOR_POLICY("DPM-65007", "Error while deleting Rule for Policy.",
+    ERROR_WHILE_DELETING_RULE_FOR_POLICY("PM-65007", "Error while deleting Rule for Policy.",
             "Error while deleting Rule for Policy: %s from the system.");
 
     private final String code;

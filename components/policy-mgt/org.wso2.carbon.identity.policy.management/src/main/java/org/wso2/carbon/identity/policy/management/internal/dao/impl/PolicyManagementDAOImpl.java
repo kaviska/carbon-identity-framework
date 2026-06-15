@@ -29,7 +29,8 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.policy.management.api.constant.ErrorMessage;
 import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementException;
 import org.wso2.carbon.identity.policy.management.api.model.Policy;
-import org.wso2.carbon.identity.policy.management.api.model.PolicyRule;
+import org.wso2.carbon.identity.policy.management.api.model.PolicyResource;
+import org.wso2.carbon.identity.policy.management.api.model.ResourceType;
 import org.wso2.carbon.identity.policy.management.api.util.PolicyManagementExceptionHandler;
 import org.wso2.carbon.identity.policy.management.internal.constant.PolicyMgtSQLConstants;
 import org.wso2.carbon.identity.policy.management.internal.dao.PolicyManagementDAO;
@@ -62,19 +63,21 @@ public class PolicyManagementDAOImpl implements PolicyManagementDAO {
                         policy,
                         false);
 
-                for (PolicyRule policyRule : policy.getRules()) {
-                    final String ruleRowId = UUID.randomUUID().toString();
+                for (PolicyResource policyResource : policy.getResources()) {
+                    final String resourceRowId = UUID.randomUUID().toString();
                     template.executeInsert(
-                            PolicyMgtSQLConstants.Query.ADD_POLICY_RULE,
+                            PolicyMgtSQLConstants.Query.ADD_POLICY_RESOURCE,
                             preparedStatement -> {
-                                preparedStatement.setString(PolicyMgtSQLConstants.Column.ID, ruleRowId);
+                                preparedStatement.setString(PolicyMgtSQLConstants.Column.ID, resourceRowId);
                                 preparedStatement.setString(PolicyMgtSQLConstants.Column.POLICY_ID, policy.getId());
-                                preparedStatement.setString(PolicyMgtSQLConstants.Column.RULE_ID,
-                                        policyRule.getRuleId());
-                                preparedStatement.setString(PolicyMgtSQLConstants.Column.PLATFORM,
-                                        policyRule.getPlatform());
+                                preparedStatement.setString(PolicyMgtSQLConstants.Column.TARGET,
+                                        policyResource.getTarget());
+                                preparedStatement.setString(PolicyMgtSQLConstants.Column.RESOURCE_TYPE,
+                                        policyResource.getResourceType().name());
+                                preparedStatement.setString(PolicyMgtSQLConstants.Column.RESOURCE_ID,
+                                        policyResource.getResourceId());
                             },
-                            policyRule,
+                            policyResource,
                             false);
                 }
 
@@ -106,23 +109,25 @@ public class PolicyManagementDAOImpl implements PolicyManagementDAO {
                         });
 
                 template.executeUpdate(
-                        PolicyMgtSQLConstants.Query.DELETE_POLICY_RULES,
+                        PolicyMgtSQLConstants.Query.DELETE_POLICY_RESOURCES,
                         preparedStatement -> preparedStatement.setString(
                                 PolicyMgtSQLConstants.Column.POLICY_ID, policy.getId()));
 
-                for (PolicyRule policyRule : policy.getRules()) {
-                    final String ruleRowId = UUID.randomUUID().toString();
+                for (PolicyResource policyResource : policy.getResources()) {
+                    final String resourceRowId = UUID.randomUUID().toString();
                     template.executeInsert(
-                            PolicyMgtSQLConstants.Query.ADD_POLICY_RULE,
+                            PolicyMgtSQLConstants.Query.ADD_POLICY_RESOURCE,
                             preparedStatement -> {
-                                preparedStatement.setString(PolicyMgtSQLConstants.Column.ID, ruleRowId);
+                                preparedStatement.setString(PolicyMgtSQLConstants.Column.ID, resourceRowId);
                                 preparedStatement.setString(PolicyMgtSQLConstants.Column.POLICY_ID, policy.getId());
-                                preparedStatement.setString(PolicyMgtSQLConstants.Column.RULE_ID,
-                                        policyRule.getRuleId());
-                                preparedStatement.setString(PolicyMgtSQLConstants.Column.PLATFORM,
-                                        policyRule.getPlatform());
+                                preparedStatement.setString(PolicyMgtSQLConstants.Column.TARGET,
+                                        policyResource.getTarget());
+                                preparedStatement.setString(PolicyMgtSQLConstants.Column.RESOURCE_TYPE,
+                                        policyResource.getResourceType().name());
+                                preparedStatement.setString(PolicyMgtSQLConstants.Column.RESOURCE_ID,
+                                        policyResource.getResourceId());
                             },
-                            policyRule,
+                            policyResource,
                             false);
                 }
 
@@ -183,8 +188,8 @@ public class PolicyManagementDAOImpl implements PolicyManagementDAO {
                 if (base == null) {
                     return null;
                 }
-                List<PolicyRule> rules = fetchPolicyRules(template, base.getId());
-                return new Policy(base.getId(), base.getName(), tenantDomain, rules);
+                List<PolicyResource> resources = fetchPolicyResources(template, base.getId());
+                return new Policy(base.getId(), base.getName(), tenantDomain, resources);
             });
         } catch (TransactionException e) {
             throw PolicyManagementExceptionHandler.handleServerException(
@@ -213,8 +218,8 @@ public class PolicyManagementDAOImpl implements PolicyManagementDAO {
                 if (base == null) {
                     return null;
                 }
-                List<PolicyRule> rules = fetchPolicyRules(template, base.getId());
-                return new Policy(base.getId(), base.getName(), tenantDomain, rules);
+                List<PolicyResource> resources = fetchPolicyResources(template, base.getId());
+                return new Policy(base.getId(), base.getName(), tenantDomain, resources);
             });
         } catch (TransactionException e) {
             throw PolicyManagementExceptionHandler.handleServerException(
@@ -269,19 +274,20 @@ public class PolicyManagementDAOImpl implements PolicyManagementDAO {
         }
     }
 
-    private List<PolicyRule> fetchPolicyRules(NamedTemplate<Policy> template, String policyId)
+    private List<PolicyResource> fetchPolicyResources(NamedTemplate<Policy> template, String policyId)
             throws DataAccessException {
 
-        List<PolicyRule> rules = template.executeQuery(
-                PolicyMgtSQLConstants.Query.GET_POLICY_RULES,
-                (resultSet, rowNumber) -> new PolicyRule(
+        List<PolicyResource> resources = template.executeQuery(
+                PolicyMgtSQLConstants.Query.GET_POLICY_RESOURCES,
+                (resultSet, rowNumber) -> new PolicyResource(
                         resultSet.getString(PolicyMgtSQLConstants.Column.ID),
-                        resultSet.getString(PolicyMgtSQLConstants.Column.RULE_ID),
-                        resultSet.getString(PolicyMgtSQLConstants.Column.PLATFORM),
+                        resultSet.getString(PolicyMgtSQLConstants.Column.TARGET),
+                        ResourceType.valueOf(resultSet.getString(PolicyMgtSQLConstants.Column.RESOURCE_TYPE)),
+                        resultSet.getString(PolicyMgtSQLConstants.Column.RESOURCE_ID),
                         null),
                 preparedStatement -> preparedStatement.setString(
                         PolicyMgtSQLConstants.Column.POLICY_ID, policyId));
-        return rules != null ? rules : Collections.emptyList();
+        return resources != null ? resources : Collections.emptyList();
     }
 
 }

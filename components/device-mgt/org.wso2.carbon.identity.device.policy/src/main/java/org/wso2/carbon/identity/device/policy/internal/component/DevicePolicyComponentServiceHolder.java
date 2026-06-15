@@ -23,8 +23,7 @@ import org.wso2.carbon.identity.client.attestation.mgt.services.ClientAttestatio
 import org.wso2.carbon.identity.device.mgt.api.service.DeviceManagementService;
 import org.wso2.carbon.identity.device.policy.api.service.DevicePolicyEvaluator;
 import org.wso2.carbon.identity.device.policy.api.service.IntegrityDataEnricher;
-import org.wso2.carbon.identity.policy.management.api.service.PolicyManagementService;
-import org.wso2.carbon.identity.rule.evaluation.api.service.RuleEvaluationService;
+import org.wso2.carbon.identity.policy.management.api.service.PolicyEvaluationService;
 
 /**
  * Service holder for the device policy component.
@@ -34,9 +33,8 @@ public class DevicePolicyComponentServiceHolder {
 
     private static final DevicePolicyComponentServiceHolder INSTANCE = new DevicePolicyComponentServiceHolder();
 
-    private PolicyManagementService policyManagementService;
+    private PolicyEvaluationService policyEvaluationService;
     private DeviceManagementService deviceManagementService;
-    private RuleEvaluationService ruleEvaluationService;
     private JsFunctionRegistry jsFunctionRegistry;
     private ClientAttestationService clientAttestationService;
     private DevicePolicyEvaluator devicePolicyEvaluator;
@@ -56,14 +54,14 @@ public class DevicePolicyComponentServiceHolder {
         return INSTANCE;
     }
 
-    public PolicyManagementService getPolicyManagementService() {
+    public PolicyEvaluationService getPolicyEvaluationService() {
 
-        return policyManagementService;
+        return policyEvaluationService;
     }
 
-    public void setPolicyManagementService(PolicyManagementService policyManagementService) {
+    public void setPolicyEvaluationService(PolicyEvaluationService policyEvaluationService) {
 
-        this.policyManagementService = policyManagementService;
+        this.policyEvaluationService = policyEvaluationService;
     }
 
     public DeviceManagementService getDeviceManagementService() {
@@ -74,16 +72,6 @@ public class DevicePolicyComponentServiceHolder {
     public void setDeviceManagementService(DeviceManagementService deviceManagementService) {
 
         this.deviceManagementService = deviceManagementService;
-    }
-
-    public RuleEvaluationService getRuleEvaluationService() {
-
-        return ruleEvaluationService;
-    }
-
-    public void setRuleEvaluationService(RuleEvaluationService ruleEvaluationService) {
-
-        this.ruleEvaluationService = ruleEvaluationService;
     }
 
     public JsFunctionRegistry getJsFunctionRegistry() {

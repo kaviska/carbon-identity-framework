@@ -22,7 +22,7 @@ import org.wso2.carbon.identity.core.cache.CacheEntry;
 import org.wso2.carbon.identity.policy.management.api.model.Policy;
 
 /**
- * Cache entry for Device Policy Management.
+ * Cache entry for Policy Management.
  * Stores an un-hydrated Policy (rule IDs only, no full Rule objects).
  */
 public class PolicyCacheEntry extends CacheEntry {

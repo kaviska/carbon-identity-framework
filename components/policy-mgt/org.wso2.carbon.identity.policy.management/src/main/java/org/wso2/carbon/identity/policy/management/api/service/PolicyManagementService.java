@@ -20,7 +20,7 @@ package org.wso2.carbon.identity.policy.management.api.service;
 
 import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementException;
 import org.wso2.carbon.identity.policy.management.api.model.Policy;
-import org.wso2.carbon.identity.policy.management.api.model.PolicyRule;
+import org.wso2.carbon.identity.policy.management.api.model.PolicyResource;
 
 import java.util.List;
 
@@ -59,7 +59,7 @@ public interface PolicyManagementService {
     void deletePolicy(String policyId, String tenantDomain) throws PolicyManagementException;
 
     /**
-     * Returns the policy by ID with each {@link PolicyRule} hydrated from rule-mgt.
+     * Returns the policy by ID with each rule-typed {@link PolicyResource} hydrated from rule-mgt.
      *
      * @param policyId     Policy ID.
      * @param tenantDomain Tenant domain.
@@ -69,7 +69,7 @@ public interface PolicyManagementService {
     Policy getPolicyById(String policyId, String tenantDomain) throws PolicyManagementException;
 
     /**
-     * Returns the policy by name with each {@link PolicyRule} hydrated from rule-mgt.
+     * Returns the policy by name with each rule-typed {@link PolicyResource} hydrated from rule-mgt.
      *
      * @param policyName   Policy name.
      * @param tenantDomain Tenant domain.

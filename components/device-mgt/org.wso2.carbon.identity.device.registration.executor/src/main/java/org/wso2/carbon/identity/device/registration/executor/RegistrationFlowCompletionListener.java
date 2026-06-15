@@ -30,6 +30,9 @@ import org.wso2.carbon.identity.flow.execution.engine.exception.FlowEngineExcept
 import org.wso2.carbon.identity.flow.execution.engine.listener.AbstractFlowExecutionListener;
 import org.wso2.carbon.identity.flow.execution.engine.model.FlowExecutionContext;
 import org.wso2.carbon.identity.flow.execution.engine.model.FlowExecutionStep;
+import org.wso2.carbon.identity.flow.mgt.Constants.FlowTypes;
+
+import static org.wso2.carbon.identity.flow.execution.engine.Constants.STATUS_COMPLETE;
 
 /**
  * Persists a verified device registration to the database once the registration flow is COMPLETE.
@@ -43,9 +46,6 @@ import org.wso2.carbon.identity.flow.execution.engine.model.FlowExecutionStep;
 public class RegistrationFlowCompletionListener extends AbstractFlowExecutionListener {
 
     private static final Log LOG = LogFactory.getLog(RegistrationFlowCompletionListener.class);
-
-    private static final String FLOW_STATUS_COMPLETE = "COMPLETE";
-    private static final String FLOW_TYPE_REGISTRATION = "REGISTRATION";
 
     @Override
     public int getExecutionOrderId() {
@@ -66,14 +66,14 @@ public class RegistrationFlowCompletionListener extends AbstractFlowExecutionLis
     public boolean doPostExecute(FlowExecutionStep step, FlowExecutionContext context)
             throws FlowEngineException {
 
-        if (!FLOW_TYPE_REGISTRATION.equals(context.getFlowType())) {
+        if (!FlowTypes.REGISTRATION.getType().equals(context.getFlowType())) {
             return true;
         }
-        if (!FLOW_STATUS_COMPLETE.equals(step.getFlowStatus())) {
+        if (!STATUS_COMPLETE.equals(step.getFlowStatus())) {
             return true;
         }
 
-        Object deviceObj = context.getProperty(DeviceRegistrationExecutor.CTX_DEVICE_REGISTRATION);
+        Object deviceObj = context.getProperty(DeviceRegistrationExecutorConstants.CTX_DEVICE_REGISTRATION);
         if (deviceObj == null) {
             return true;
         }

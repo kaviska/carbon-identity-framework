@@ -21,7 +21,7 @@ package org.wso2.carbon.identity.policy.management.internal.cache;
 import org.wso2.carbon.identity.core.cache.CacheKey;
 
 /**
- * Cache key for Device Policy Management.
+ * Cache key for Policy Management.
  * Supports lookup by policy ID or by policy name using prefixed string keys,
  * so both types can share a single cache instance without collision.
  */

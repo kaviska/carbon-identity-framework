@@ -18,6 +18,9 @@
 
 package org.wso2.carbon.identity.device.registration.executor;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
@@ -34,6 +37,7 @@ import org.wso2.carbon.identity.flow.execution.engine.exception.FlowEngineExcept
 import org.wso2.carbon.identity.flow.execution.engine.graph.Executor;
 import org.wso2.carbon.identity.flow.execution.engine.model.ExecutorResponse;
 import org.wso2.carbon.identity.flow.execution.engine.model.FlowExecutionContext;
+import org.wso2.carbon.identity.flow.mgt.Constants.FlowTypes;
 import org.wso2.carbon.identity.flow.mgt.model.NodeConfig;
 import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementException;
 import org.wso2.carbon.identity.rule.evaluation.api.exception.RuleEvaluationException;
@@ -51,6 +55,7 @@ import static org.wso2.carbon.identity.flow.execution.engine.Constants.ExecutorS
 import static org.wso2.carbon.identity.flow.execution.engine.Constants.ExecutorStatus.STATUS_COMPLETE;
 import static org.wso2.carbon.identity.flow.execution.engine.Constants.ExecutorStatus.STATUS_ERROR;
 import static org.wso2.carbon.identity.flow.execution.engine.Constants.ExecutorStatus.STATUS_USER_ERROR;
+import static org.wso2.carbon.identity.flow.execution.engine.Constants.USERNAME_CLAIM_URI;
 
 /**
  * Flow executor for generic device registration.
@@ -72,22 +77,20 @@ public class DeviceRegistrationExecutor implements Executor {
 
     private static final Log LOG = LogFactory.getLog(DeviceRegistrationExecutor.class);
 
-    public static final String EXECUTOR_NAME = "DeviceRegistrationExecutor";
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final TypeReference<Map<String, Object>> MAP_TYPE_REFERENCE =
+            new TypeReference<Map<String, Object>>() { };
 
     private static final String CTX_REGISTRATION_ID = "device.registration.id";
-
-    // Holds the verified-but-not-yet-persisted RegisteredDevice in REGISTRATION flows.
-    // RegistrationFlowCompletionListener reads this after UserProvisioningExecutor has run.
-    public static final String CTX_DEVICE_REGISTRATION = "device.registration.data";
 
     private static final String PROP_REGISTRATION_ID = "registrationId";
     private static final String PROP_CHALLENGE = "challenge";
 
-    private static final String FIELD_PUBLIC_KEY   = "publicKey";
-    private static final String FIELD_SIGNATURE    = "signature";
+    private static final String FIELD_PUBLIC_KEY = "publicKey";
+    private static final String FIELD_SIGNATURE = "signature";
     private static final String FIELD_DEVICE_MODEL = "deviceModel";
-    private static final String FIELD_METADATA     = "metadata";
-    private static final String FIELD_DEVICE_DATA  = "deviceData";
+    private static final String FIELD_METADATA = "metadata";
+    private static final String FIELD_DEVICE_DATA = "deviceData";
 
     private static final String META_POLICY_NAME = "policyName";
 
@@ -96,7 +99,7 @@ public class DeviceRegistrationExecutor implements Executor {
 
     @Override
     public String getName() {
-        return EXECUTOR_NAME;
+        return DeviceRegistrationExecutorConstants.EXECUTOR_NAME;
     }
 
     @Override
@@ -126,6 +129,11 @@ public class DeviceRegistrationExecutor implements Executor {
             } catch (DeviceMgtException e) {
                 LOG.error("Failed to rollback persisted device: " + persistedDeviceId
                         + " in tenant: " + context.getTenantDomain(), e);
+                ExecutorResponse response = new ExecutorResponse(STATUS_ERROR);
+                response.setErrorCode(e.getErrorCode());
+                response.setErrorMessage(e.getMessage());
+                response.setErrorDescription(e.getDescription());
+                return response;
             }
         }
         // Challenge cache entry expires automatically via TTL; nothing else to undo.
@@ -134,7 +142,7 @@ public class DeviceRegistrationExecutor implements Executor {
 
     @Override
     public List<String> getInitiationData() {
-        return Collections.emptyList();
+        return Collections.singletonList(USERNAME_CLAIM_URI);
     }
 
     /**
@@ -185,7 +193,6 @@ public class DeviceRegistrationExecutor implements Executor {
             Map<String, String> additionalInfo = new HashMap<>();
             additionalInfo.put(PROP_REGISTRATION_ID, initiation.getRegistrationId());
             additionalInfo.put(PROP_CHALLENGE, initiation.getChallenge());
-
 
             Map<String, Object> contextProperties = new HashMap<>();
             contextProperties.put(CTX_REGISTRATION_ID, initiation.getRegistrationId());
@@ -259,14 +266,14 @@ public class DeviceRegistrationExecutor implements Executor {
                 }
             }
 
-            if ("REGISTRATION".equals(context.getFlowType())) {
+            if (FlowTypes.REGISTRATION.getType().equals(context.getFlowType())) {
                 // userId is not yet assigned — UserProvisioningExecutor runs at END after this.
                 // Defer the DB write to RegistrationFlowCompletionListener, which fires after
                 // COMPLETE and has the real userId from FlowUser.
                 ExecutorResponse response = new ExecutorResponse();
                 response.setResult(STATUS_COMPLETE);
                 Map<String, Object> ctxProps = new HashMap<>();
-                ctxProps.put(CTX_DEVICE_REGISTRATION, verified);
+                ctxProps.put(DeviceRegistrationExecutorConstants.CTX_DEVICE_REGISTRATION, verified);
                 response.setContextProperty(ctxProps);
                 return response;
             }
@@ -319,7 +326,6 @@ public class DeviceRegistrationExecutor implements Executor {
      * Extracts device attributes from the SDK's Phase 2 input.
      * The SDK sends all device attributes as a JSON object under the {@code "deviceData"} key.
      */
-    @SuppressWarnings("unchecked")
     private Map<String, Object> parseDeviceData(Map<String, String> input) {
 
         Map<String, Object> deviceData = new HashMap<>();
@@ -331,12 +337,8 @@ public class DeviceRegistrationExecutor implements Executor {
             return deviceData;
         }
         try {
-            com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>> typeRef =
-                    new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() { };
-            Map<String, Object> parsed = new com.fasterxml.jackson.databind.ObjectMapper()
-                    .readValue(json, typeRef);
-            deviceData.putAll(parsed);
-        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            deviceData.putAll(OBJECT_MAPPER.readValue(json, MAP_TYPE_REFERENCE));
+        } catch (JsonProcessingException e) {
             LOG.error("Failed to parse deviceData JSON submitted by SDK.", e);
         }
         return deviceData;

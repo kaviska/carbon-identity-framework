@@ -20,7 +20,7 @@ package org.wso2.carbon.identity.policy.management.internal.constant;
 
 /**
  * SQL constants for Policy Management DAO.
- * Three tables: IDN_POLICY (main), IDN_POLICY_RULE (M:N with rule-mgt), IDN_POLICY_ACTION (M:N with action-mgt).
+ * Two tables: IDN_POLICY (main) and IDN_POLICY_RESOURCE (polymorphic attachment of rules/actions to a policy).
  */
 public final class PolicyMgtSQLConstants {
 
@@ -35,8 +35,9 @@ public final class PolicyMgtSQLConstants {
         public static final String POLICY_ID = "POLICY_ID";
         public static final String POLICY_NAME = "POLICY_NAME";
         public static final String TENANT_ID = "TENANT_ID";
-        public static final String RULE_ID = "RULE_ID";
-        public static final String PLATFORM = "PLATFORM";
+        public static final String TARGET = "TARGET";
+        public static final String RESOURCE_TYPE = "RESOURCE_TYPE";
+        public static final String RESOURCE_ID = "RESOURCE_ID";
 
         private Column() {
 
@@ -74,17 +75,17 @@ public final class PolicyMgtSQLConstants {
                 "SELECT ID FROM IDN_POLICY " +
                         "WHERE POLICY_NAME = :POLICY_NAME; AND TENANT_ID = :TENANT_ID;";
 
-        // IDN_POLICY_RULE junction table.
-        public static final String ADD_POLICY_RULE =
-                "INSERT INTO IDN_POLICY_RULE (ID, POLICY_ID, RULE_ID, PLATFORM) " +
-                        "VALUES (:ID;, :POLICY_ID;, :RULE_ID;, :PLATFORM;)";
+        // IDN_POLICY_RESOURCE attachment table.
+        public static final String ADD_POLICY_RESOURCE =
+                "INSERT INTO IDN_POLICY_RESOURCE (ID, POLICY_ID, TARGET, RESOURCE_TYPE, RESOURCE_ID) " +
+                        "VALUES (:ID;, :POLICY_ID;, :TARGET;, :RESOURCE_TYPE;, :RESOURCE_ID;)";
 
-        public static final String GET_POLICY_RULES =
-                "SELECT ID, RULE_ID, PLATFORM FROM IDN_POLICY_RULE " +
+        public static final String GET_POLICY_RESOURCES =
+                "SELECT ID, TARGET, RESOURCE_TYPE, RESOURCE_ID FROM IDN_POLICY_RESOURCE " +
                         "WHERE POLICY_ID = :POLICY_ID;";
 
-        public static final String DELETE_POLICY_RULES =
-                "DELETE FROM IDN_POLICY_RULE WHERE POLICY_ID = :POLICY_ID;";
+        public static final String DELETE_POLICY_RESOURCES =
+                "DELETE FROM IDN_POLICY_RESOURCE WHERE POLICY_ID = :POLICY_ID;";
 
         private Query() {
 

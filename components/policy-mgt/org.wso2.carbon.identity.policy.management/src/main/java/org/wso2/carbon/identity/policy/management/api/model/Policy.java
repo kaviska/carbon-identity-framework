@@ -29,14 +29,14 @@ public class Policy {
     private final String id;
     private final String name;
     private final String tenantDomain;
-    private final List<PolicyRule> rules;
+    private final List<PolicyResource> resources;
 
-    public Policy(String id, String name, String tenantDomain, List<PolicyRule> rules) {
+    public Policy(String id, String name, String tenantDomain, List<PolicyResource> resources) {
 
         this.id = id;
         this.name = name;
         this.tenantDomain = tenantDomain;
-        this.rules = rules != null ? Collections.unmodifiableList(rules) : Collections.emptyList();
+        this.resources = resources != null ? Collections.unmodifiableList(resources) : Collections.emptyList();
     }
 
     public String getId() {
@@ -54,8 +54,8 @@ public class Policy {
         return tenantDomain;
     }
 
-    public List<PolicyRule> getRules() {
+    public List<PolicyResource> getResources() {
 
-        return rules;
+        return resources;
     }
 }

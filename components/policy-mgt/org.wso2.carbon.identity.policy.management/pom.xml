@@ -78,6 +78,12 @@
             <artifactId>org.wso2.carbon.identity.rule.management</artifactId>
         </dependency>
 
+        <!-- Rule evaluation - RuleEvaluationService, FlowContext, RuleEvaluationResult -->
+        <dependency>
+            <groupId>org.wso2.carbon.identity.framework</groupId>
+            <artifactId>org.wso2.carbon.identity.rule.evaluation</artifactId>
+        </dependency>
+
         <!-- Test dependencies -->
         <dependency>
             <groupId>org.testng</groupId>
@@ -142,6 +148,12 @@
                             org.wso2.carbon.identity.rule.management.api.service;
                             version="${carbon.identity.package.import.version.range}",
                             org.wso2.carbon.identity.rule.management.api.util;
+                            version="${carbon.identity.package.import.version.range}",
+                            org.wso2.carbon.identity.rule.evaluation.api.exception;
+                            version="${carbon.identity.package.import.version.range}",
+                            org.wso2.carbon.identity.rule.evaluation.api.model;
+                            version="${carbon.identity.package.import.version.range}",
+                            org.wso2.carbon.identity.rule.evaluation.api.service;
                             version="${carbon.identity.package.import.version.range}",
                             org.wso2.carbon.utils;
                             version="${carbon.kernel.package.import.version.range}",

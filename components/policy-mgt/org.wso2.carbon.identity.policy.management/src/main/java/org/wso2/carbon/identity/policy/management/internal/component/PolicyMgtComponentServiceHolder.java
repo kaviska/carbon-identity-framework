@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.policy.management.internal.component;
 
 import org.wso2.carbon.identity.policy.management.api.service.PolicyManagementService;
+import org.wso2.carbon.identity.rule.evaluation.api.service.RuleEvaluationService;
 import org.wso2.carbon.identity.rule.management.api.service.RuleManagementService;
 
 /**
@@ -30,6 +31,7 @@ public class PolicyMgtComponentServiceHolder {
     private static final PolicyMgtComponentServiceHolder INSTANCE = new PolicyMgtComponentServiceHolder();
 
     private RuleManagementService ruleManagementService;
+    private RuleEvaluationService ruleEvaluationService;
     private PolicyManagementService policyManagementService;
 
     private PolicyMgtComponentServiceHolder() {
@@ -54,6 +56,16 @@ public class PolicyMgtComponentServiceHolder {
     public void setRuleManagementService(RuleManagementService ruleManagementService) {
 
         this.ruleManagementService = ruleManagementService;
+    }
+
+    public RuleEvaluationService getRuleEvaluationService() {
+
+        return ruleEvaluationService;
+    }
+
+    public void setRuleEvaluationService(RuleEvaluationService ruleEvaluationService) {
+
+        this.ruleEvaluationService = ruleEvaluationService;
     }
 
     public PolicyManagementService getPolicyManagementService() {

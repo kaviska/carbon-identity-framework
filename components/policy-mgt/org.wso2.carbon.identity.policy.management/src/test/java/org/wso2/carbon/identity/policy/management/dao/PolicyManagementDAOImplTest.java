@@ -28,7 +28,8 @@ import org.wso2.carbon.identity.common.testng.WithH2Database;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementException;
 import org.wso2.carbon.identity.policy.management.api.model.Policy;
-import org.wso2.carbon.identity.policy.management.api.model.PolicyRule;
+import org.wso2.carbon.identity.policy.management.api.model.PolicyResource;
+import org.wso2.carbon.identity.policy.management.api.model.ResourceType;
 import org.wso2.carbon.identity.policy.management.internal.dao.impl.PolicyManagementDAOImpl;
 
 import java.util.Collections;
@@ -73,21 +74,21 @@ public class PolicyManagementDAOImplTest {
     @Test(priority = 1)
     public void testAddPolicy() throws PolicyManagementException {
 
-        List<PolicyRule> rules = Collections.singletonList(
-                new PolicyRule(null, TEST_RULE_ID, "android", null));
+        List<PolicyResource> resources = Collections.singletonList(
+                new PolicyResource(null, "android", ResourceType.RULE, TEST_RULE_ID, null));
 
         Policy policy = new Policy(
                 UUID.randomUUID().toString(),
                 TEST_POLICY_NAME,
                 TENANT_DOMAIN,
-                rules);
+                resources);
 
         Policy result = policyManagementDAO.addPolicy(policy, TENANT_ID);
 
         Assert.assertNotNull(result);
         Assert.assertEquals(result.getName(), TEST_POLICY_NAME);
-        Assert.assertEquals(result.getRules().size(), 1);
-        Assert.assertEquals(result.getRules().get(0).getPlatform(), "android");
+        Assert.assertEquals(result.getResources().size(), 1);
+        Assert.assertEquals(result.getResources().get(0).getTarget(), "android");
 
         createdPolicyId = result.getId();
     }
@@ -100,8 +101,8 @@ public class PolicyManagementDAOImplTest {
         Assert.assertNotNull(result);
         Assert.assertEquals(result.getId(), createdPolicyId);
         Assert.assertEquals(result.getName(), TEST_POLICY_NAME);
-        Assert.assertEquals(result.getRules().size(), 1);
-        Assert.assertEquals(result.getRules().get(0).getRuleId(), TEST_RULE_ID);
+        Assert.assertEquals(result.getResources().size(), 1);
+        Assert.assertEquals(result.getResources().get(0).getResourceId(), TEST_RULE_ID);
     }
 
     @Test(priority = 3, dependsOnMethods = {"testAddPolicy"})
@@ -110,17 +111,17 @@ public class PolicyManagementDAOImplTest {
         String updatedName = "UpdatedPolicy";
         String updatedRuleId = UUID.randomUUID().toString();
 
-        List<PolicyRule> updatedRules = Collections.singletonList(
-                new PolicyRule(null, updatedRuleId, "ios", null));
+        List<PolicyResource> updatedResources = Collections.singletonList(
+                new PolicyResource(null, "ios", ResourceType.RULE, updatedRuleId, null));
 
-        Policy updatedPolicy = new Policy(createdPolicyId, updatedName, TENANT_DOMAIN, updatedRules);
+        Policy updatedPolicy = new Policy(createdPolicyId, updatedName, TENANT_DOMAIN, updatedResources);
 
         Policy result = policyManagementDAO.updatePolicy(updatedPolicy, TENANT_ID);
 
         Assert.assertNotNull(result);
         Assert.assertEquals(result.getName(), updatedName);
-        Assert.assertEquals(result.getRules().size(), 1);
-        Assert.assertEquals(result.getRules().get(0).getPlatform(), "ios");
+        Assert.assertEquals(result.getResources().size(), 1);
+        Assert.assertEquals(result.getResources().get(0).getTarget(), "ios");
     }
 
     @Test(priority = 4, dependsOnMethods = {"testAddPolicy"})

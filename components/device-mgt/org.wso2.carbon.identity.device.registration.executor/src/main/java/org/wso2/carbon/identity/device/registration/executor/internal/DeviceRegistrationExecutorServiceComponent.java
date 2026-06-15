@@ -42,7 +42,7 @@ import org.wso2.carbon.identity.flow.execution.engine.listener.FlowExecutionList
  * On activation it registers {@link DeviceRegistrationExecutor} as an {@link Executor} OSGi
  * service. The flow execution engine's ServiceComponent picks it up automatically via its
  * MULTIPLE/DYNAMIC @Reference binding for Executor.class and adds it to the executor registry
- * keyed by {@link DeviceRegistrationExecutor#EXECUTOR_NAME}.
+ * keyed by the executor name defined in DeviceRegistrationExecutorConstants.
  */
 @Component(
         name = "device.registration.executor.component",

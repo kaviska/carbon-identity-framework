@@ -188,8 +188,6 @@
                             version="${carbon.identity.package.import.version.range}",
                             org.wso2.carbon.identity.rule.evaluation.api.provider;
                             version="${carbon.identity.package.import.version.range}",
-                            org.wso2.carbon.identity.rule.evaluation.api.service;
-                            version="${carbon.identity.package.import.version.range}",
                             org.wso2.carbon.identity.rule.evaluation.api.resolver;
                             version="${carbon.identity.package.import.version.range}",
                             org.wso2.carbon.identity.application.authentication.framework;

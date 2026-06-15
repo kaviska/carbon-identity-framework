@@ -22,6 +22,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementException;
 import org.wso2.carbon.identity.policy.management.api.model.Policy;
+import org.wso2.carbon.identity.policy.management.api.model.PolicyBasicInfo;
 import org.wso2.carbon.identity.policy.management.internal.cache.PolicyCache;
 import org.wso2.carbon.identity.policy.management.internal.cache.PolicyCacheEntry;
 import org.wso2.carbon.identity.policy.management.internal.cache.PolicyCacheKey;
@@ -186,17 +187,36 @@ public class CacheBackedPolicyManagementDAO implements PolicyManagementDAO {
     }
 
     /**
-     * Get all Policies for a tenant.
-     * This method directly invokes the data layer operation without caching.
+     * Get a page of Policy summaries for a tenant, optionally filtered by name.
+     * Paginated lists are not cached (every filter/page combination is distinct and any mutation
+     * would invalidate them), so this directly invokes the data layer operation.
      *
      * @param tenantId Tenant ID.
-     * @return List of Policy objects. Never {@code null}.
+     * @param filter   Name filter; {@code null} or blank means no filter.
+     * @param offset   Zero-based start index.
+     * @param limit    Maximum number of results.
+     * @return List of policy summaries. Never {@code null}.
      * @throws PolicyManagementException Policy Management Exception.
      */
     @Override
-    public List<Policy> getPolicies(int tenantId) throws PolicyManagementException {
+    public List<PolicyBasicInfo> getPolicies(int tenantId, String filter, int offset, int limit)
+            throws PolicyManagementException {
 
-        return policyManagementDAO.getPolicies(tenantId);
+        return policyManagementDAO.getPolicies(tenantId, filter, offset, limit);
+    }
+
+    /**
+     * Count Policies matching the given filter. Not cached; directly invokes the data layer.
+     *
+     * @param tenantId Tenant ID.
+     * @param filter   Name filter; {@code null} or blank means count all.
+     * @return Total number of matching policies.
+     * @throws PolicyManagementException Policy Management Exception.
+     */
+    @Override
+    public int getPolicyCount(int tenantId, String filter) throws PolicyManagementException {
+
+        return policyManagementDAO.getPolicyCount(tenantId, filter);
     }
 
     /**

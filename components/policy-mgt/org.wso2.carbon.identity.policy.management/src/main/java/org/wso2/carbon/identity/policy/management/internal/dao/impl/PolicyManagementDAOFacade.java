@@ -24,6 +24,7 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.policy.management.api.constant.ErrorMessage;
 import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementException;
 import org.wso2.carbon.identity.policy.management.api.model.Policy;
+import org.wso2.carbon.identity.policy.management.api.model.PolicyBasicInfo;
 import org.wso2.carbon.identity.policy.management.api.model.PolicyResource;
 import org.wso2.carbon.identity.policy.management.api.model.ResourceType;
 import org.wso2.carbon.identity.policy.management.api.util.PolicyManagementExceptionHandler;
@@ -168,9 +169,16 @@ public class PolicyManagementDAOFacade implements PolicyManagementDAO {
     }
 
     @Override
-    public List<Policy> getPolicies(int tenantId) throws PolicyManagementException {
+    public List<PolicyBasicInfo> getPolicies(int tenantId, String filter, int offset, int limit)
+            throws PolicyManagementException {
 
-        return policyManagementDAO.getPolicies(tenantId);
+        return policyManagementDAO.getPolicies(tenantId, filter, offset, limit);
+    }
+
+    @Override
+    public int getPolicyCount(int tenantId, String filter) throws PolicyManagementException {
+
+        return policyManagementDAO.getPolicyCount(tenantId, filter);
     }
 
     @Override

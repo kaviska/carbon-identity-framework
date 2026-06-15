@@ -39,6 +39,12 @@ public final class PolicyMgtSQLConstants {
         public static final String RESOURCE_TYPE = "RESOURCE_TYPE";
         public static final String RESOURCE_ID = "RESOURCE_ID";
 
+        public static final String FILTER = "FILTER";
+        public static final String LIMIT = "LIMIT";
+        public static final String OFFSET = "OFFSET";
+        public static final String LOWER_BOUND = "LOWER_BOUND";
+        public static final String UPPER_BOUND = "UPPER_BOUND";
+
         private Column() {
 
         }
@@ -67,9 +73,59 @@ public final class PolicyMgtSQLConstants {
                 "SELECT ID, POLICY_NAME FROM IDN_POLICY " +
                         "WHERE POLICY_NAME = :POLICY_NAME; AND TENANT_ID = :TENANT_ID;";
 
-        public static final String GET_ALL_POLICIES =
-                "SELECT ID, POLICY_NAME FROM IDN_POLICY " +
-                        "WHERE TENANT_ID = :TENANT_ID; ORDER BY POLICY_NAME ASC";
+        // Paginated policy listing. A name filter fragment (LOWER(POLICY_NAME) LIKE LOWER(:FILTER;))
+        // is appended via the *_FILTER variants. Pagination syntax differs per database, so a variant
+        // is selected at runtime based on the detected database type.
+
+        // Default: H2, MySQL, MariaDB, PostgreSQL.
+        public static final String GET_POLICIES_PAGINATED =
+                "SELECT ID, POLICY_NAME FROM IDN_POLICY WHERE TENANT_ID = :TENANT_ID; " +
+                        "ORDER BY POLICY_NAME ASC LIMIT :LIMIT; OFFSET :OFFSET;";
+
+        public static final String GET_POLICIES_PAGINATED_FILTER =
+                "SELECT ID, POLICY_NAME FROM IDN_POLICY WHERE TENANT_ID = :TENANT_ID; " +
+                        "AND LOWER(POLICY_NAME) LIKE LOWER(:FILTER;) " +
+                        "ORDER BY POLICY_NAME ASC LIMIT :LIMIT; OFFSET :OFFSET;";
+
+        // MS SQL Server.
+        public static final String GET_POLICIES_PAGINATED_MSSQL =
+                "SELECT ID, POLICY_NAME FROM IDN_POLICY WHERE TENANT_ID = :TENANT_ID; " +
+                        "ORDER BY POLICY_NAME ASC OFFSET :OFFSET; ROWS FETCH NEXT :LIMIT; ROWS ONLY";
+
+        public static final String GET_POLICIES_PAGINATED_FILTER_MSSQL =
+                "SELECT ID, POLICY_NAME FROM IDN_POLICY WHERE TENANT_ID = :TENANT_ID; " +
+                        "AND LOWER(POLICY_NAME) LIKE LOWER(:FILTER;) " +
+                        "ORDER BY POLICY_NAME ASC OFFSET :OFFSET; ROWS FETCH NEXT :LIMIT; ROWS ONLY";
+
+        // Oracle.
+        public static final String GET_POLICIES_PAGINATED_ORACLE =
+                "SELECT ID, POLICY_NAME FROM (SELECT ID, POLICY_NAME, rownum AS rnum FROM " +
+                        "(SELECT ID, POLICY_NAME FROM IDN_POLICY WHERE TENANT_ID = :TENANT_ID; " +
+                        "ORDER BY POLICY_NAME ASC) WHERE rownum <= :UPPER_BOUND;) WHERE rnum > :OFFSET;";
+
+        public static final String GET_POLICIES_PAGINATED_FILTER_ORACLE =
+                "SELECT ID, POLICY_NAME FROM (SELECT ID, POLICY_NAME, rownum AS rnum FROM " +
+                        "(SELECT ID, POLICY_NAME FROM IDN_POLICY WHERE TENANT_ID = :TENANT_ID; " +
+                        "AND LOWER(POLICY_NAME) LIKE LOWER(:FILTER;) ORDER BY POLICY_NAME ASC) " +
+                        "WHERE rownum <= :UPPER_BOUND;) WHERE rnum > :OFFSET;";
+
+        // DB2.
+        public static final String GET_POLICIES_PAGINATED_DB2 =
+                "SELECT ID, POLICY_NAME FROM (SELECT ROW_NUMBER() OVER(ORDER BY POLICY_NAME ASC) AS rn, " +
+                        "ID, POLICY_NAME FROM IDN_POLICY WHERE TENANT_ID = :TENANT_ID;) " +
+                        "WHERE rn BETWEEN :LOWER_BOUND; AND :UPPER_BOUND;";
+
+        public static final String GET_POLICIES_PAGINATED_FILTER_DB2 =
+                "SELECT ID, POLICY_NAME FROM (SELECT ROW_NUMBER() OVER(ORDER BY POLICY_NAME ASC) AS rn, " +
+                        "ID, POLICY_NAME FROM IDN_POLICY WHERE TENANT_ID = :TENANT_ID; " +
+                        "AND LOWER(POLICY_NAME) LIKE LOWER(:FILTER;)) WHERE rn BETWEEN :LOWER_BOUND; AND :UPPER_BOUND;";
+
+        public static final String GET_POLICIES_COUNT =
+                "SELECT COUNT(*) FROM IDN_POLICY WHERE TENANT_ID = :TENANT_ID;";
+
+        public static final String GET_POLICIES_COUNT_FILTER =
+                "SELECT COUNT(*) FROM IDN_POLICY WHERE TENANT_ID = :TENANT_ID; " +
+                        "AND LOWER(POLICY_NAME) LIKE LOWER(:FILTER;)";
 
         public static final String CHECK_POLICY_NAME_EXISTS =
                 "SELECT ID FROM IDN_POLICY " +

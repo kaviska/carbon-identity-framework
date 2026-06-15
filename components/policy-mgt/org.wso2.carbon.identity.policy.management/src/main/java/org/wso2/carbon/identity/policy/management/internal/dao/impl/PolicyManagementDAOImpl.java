@@ -21,20 +21,24 @@ package org.wso2.carbon.identity.policy.management.internal.dao.impl;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.database.utils.jdbc.NamedJdbcTemplate;
+import org.wso2.carbon.database.utils.jdbc.NamedPreparedStatement;
 import org.wso2.carbon.database.utils.jdbc.NamedTemplate;
 import org.wso2.carbon.database.utils.jdbc.exceptions.DataAccessException;
 import org.wso2.carbon.database.utils.jdbc.exceptions.TransactionException;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.JdbcUtils;
 import org.wso2.carbon.identity.policy.management.api.constant.ErrorMessage;
 import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementException;
 import org.wso2.carbon.identity.policy.management.api.model.Policy;
+import org.wso2.carbon.identity.policy.management.api.model.PolicyBasicInfo;
 import org.wso2.carbon.identity.policy.management.api.model.PolicyResource;
 import org.wso2.carbon.identity.policy.management.api.model.ResourceType;
 import org.wso2.carbon.identity.policy.management.api.util.PolicyManagementExceptionHandler;
 import org.wso2.carbon.identity.policy.management.internal.constant.PolicyMgtSQLConstants;
 import org.wso2.carbon.identity.policy.management.internal.dao.PolicyManagementDAO;
 
+import java.sql.SQLException;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -251,26 +255,129 @@ public class PolicyManagementDAOImpl implements PolicyManagementDAO {
     }
 
     @Override
-    public List<Policy> getPolicies(int tenantId) throws PolicyManagementException {
+    public List<PolicyBasicInfo> getPolicies(int tenantId, String filter, int offset, int limit)
+            throws PolicyManagementException {
 
-        String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
+        // FETCH NEXT 0 ROWS (MS SQL) is invalid and an empty page is meaningless, so short-circuit.
+        if (limit <= 0) {
+            return Collections.emptyList();
+        }
+        int safeOffset = Math.max(offset, 0);
+        boolean hasFilter = filter != null && !filter.trim().isEmpty();
+        String filterValue = hasFilter ? "%" + filter.trim() + "%" : null;
+
         NamedJdbcTemplate jdbcTemplate =
                 new NamedJdbcTemplate(IdentityDatabaseUtil.getDataSource());
         try {
-            List<Policy> policies = jdbcTemplate.<List<Policy>, RuntimeException>withTransaction(
+            PaginationStyle style = resolvePaginationStyle();
+            String query = resolvePaginatedQuery(style, hasFilter);
+            List<PolicyBasicInfo> policies = jdbcTemplate.<List<PolicyBasicInfo>, RuntimeException>withTransaction(
                     template -> template.executeQuery(
-                            PolicyMgtSQLConstants.Query.GET_ALL_POLICIES,
-                            (resultSet, rowNumber) -> new Policy(
+                            query,
+                            (resultSet, rowNumber) -> new PolicyBasicInfo(
                                     resultSet.getString(PolicyMgtSQLConstants.Column.ID),
-                                    resultSet.getString(PolicyMgtSQLConstants.Column.POLICY_NAME),
-                                    tenantDomain,
-                                    Collections.emptyList()),
-                            preparedStatement -> preparedStatement.setInt(
-                                    PolicyMgtSQLConstants.Column.TENANT_ID, tenantId)));
+                                    resultSet.getString(PolicyMgtSQLConstants.Column.POLICY_NAME)),
+                            preparedStatement -> {
+                                preparedStatement.setInt(PolicyMgtSQLConstants.Column.TENANT_ID, tenantId);
+                                if (hasFilter) {
+                                    preparedStatement.setString(PolicyMgtSQLConstants.Column.FILTER, filterValue);
+                                }
+                                bindPaginationParams(preparedStatement, style, safeOffset, limit);
+                            }));
             return policies != null ? policies : Collections.emptyList();
+        } catch (TransactionException | DataAccessException e) {
+            throw PolicyManagementExceptionHandler.handleServerException(
+                    ErrorMessage.ERROR_WHILE_RETRIEVING_POLICY, e);
+        }
+    }
+
+    @Override
+    public int getPolicyCount(int tenantId, String filter) throws PolicyManagementException {
+
+        boolean hasFilter = filter != null && !filter.trim().isEmpty();
+        String filterValue = hasFilter ? "%" + filter.trim() + "%" : null;
+        String query = hasFilter ? PolicyMgtSQLConstants.Query.GET_POLICIES_COUNT_FILTER
+                : PolicyMgtSQLConstants.Query.GET_POLICIES_COUNT;
+
+        NamedJdbcTemplate jdbcTemplate =
+                new NamedJdbcTemplate(IdentityDatabaseUtil.getDataSource());
+        try {
+            Integer count = jdbcTemplate.<Integer, RuntimeException>withTransaction(
+                    template -> template.fetchSingleRecord(
+                            query,
+                            (resultSet, rowNumber) -> resultSet.getInt(1),
+                            preparedStatement -> {
+                                preparedStatement.setInt(PolicyMgtSQLConstants.Column.TENANT_ID, tenantId);
+                                if (hasFilter) {
+                                    preparedStatement.setString(PolicyMgtSQLConstants.Column.FILTER, filterValue);
+                                }
+                            }));
+            return count != null ? count : 0;
         } catch (TransactionException e) {
             throw PolicyManagementExceptionHandler.handleServerException(
                     ErrorMessage.ERROR_WHILE_RETRIEVING_POLICY, e);
+        }
+    }
+
+    /**
+     * Supported database-specific pagination dialects.
+     */
+    private enum PaginationStyle {
+        DEFAULT, MSSQL, ORACLE, DB2
+    }
+
+    private PaginationStyle resolvePaginationStyle() throws DataAccessException {
+
+        // H2, MySQL, MariaDB and PostgreSQL all accept the LIMIT ... OFFSET ... syntax (DEFAULT).
+        if (JdbcUtils.isOracleDB()) {
+            return PaginationStyle.ORACLE;
+        }
+        if (JdbcUtils.isDB2DB()) {
+            return PaginationStyle.DB2;
+        }
+        if (JdbcUtils.isMSSqlDB()) {
+            return PaginationStyle.MSSQL;
+        }
+        return PaginationStyle.DEFAULT;
+    }
+
+    private String resolvePaginatedQuery(PaginationStyle style, boolean hasFilter) {
+
+        switch (style) {
+            case ORACLE:
+                return hasFilter ? PolicyMgtSQLConstants.Query.GET_POLICIES_PAGINATED_FILTER_ORACLE
+                        : PolicyMgtSQLConstants.Query.GET_POLICIES_PAGINATED_ORACLE;
+            case DB2:
+                return hasFilter ? PolicyMgtSQLConstants.Query.GET_POLICIES_PAGINATED_FILTER_DB2
+                        : PolicyMgtSQLConstants.Query.GET_POLICIES_PAGINATED_DB2;
+            case MSSQL:
+                return hasFilter ? PolicyMgtSQLConstants.Query.GET_POLICIES_PAGINATED_FILTER_MSSQL
+                        : PolicyMgtSQLConstants.Query.GET_POLICIES_PAGINATED_MSSQL;
+            default:
+                return hasFilter ? PolicyMgtSQLConstants.Query.GET_POLICIES_PAGINATED_FILTER
+                        : PolicyMgtSQLConstants.Query.GET_POLICIES_PAGINATED;
+        }
+    }
+
+    private void bindPaginationParams(NamedPreparedStatement preparedStatement, PaginationStyle style,
+                                      int offset, int limit) throws SQLException {
+
+        switch (style) {
+            case ORACLE:
+                preparedStatement.setInt(PolicyMgtSQLConstants.Column.UPPER_BOUND, offset + limit);
+                preparedStatement.setInt(PolicyMgtSQLConstants.Column.OFFSET, offset);
+                break;
+            case DB2:
+                preparedStatement.setInt(PolicyMgtSQLConstants.Column.LOWER_BOUND, offset + 1);
+                preparedStatement.setInt(PolicyMgtSQLConstants.Column.UPPER_BOUND, offset + limit);
+                break;
+            case MSSQL:
+                preparedStatement.setInt(PolicyMgtSQLConstants.Column.OFFSET, offset);
+                preparedStatement.setInt(PolicyMgtSQLConstants.Column.LIMIT, limit);
+                break;
+            default:
+                preparedStatement.setInt(PolicyMgtSQLConstants.Column.LIMIT, limit);
+                preparedStatement.setInt(PolicyMgtSQLConstants.Column.OFFSET, offset);
         }
     }
 

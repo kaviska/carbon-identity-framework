@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.policy.management.api.service;
 
 import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementException;
 import org.wso2.carbon.identity.policy.management.api.model.Policy;
+import org.wso2.carbon.identity.policy.management.api.model.PolicyBasicInfo;
 import org.wso2.carbon.identity.policy.management.api.model.PolicyResource;
 
 import java.util.List;
@@ -79,12 +80,26 @@ public interface PolicyManagementService {
     Policy getPolicyByName(String policyName, String tenantDomain) throws PolicyManagementException;
 
     /**
-     * Returns all policies for the tenant. Rules are not hydrated; call {@link #getPolicyById} for the
-     * hydrated form.
+     * Returns a page of policy summaries for the tenant, optionally filtered by name. Summaries are
+     * lightweight (no hydrated rules); call {@link #getPolicyById} for the full hydrated policy.
      *
      * @param tenantDomain Tenant domain.
-     * @return List of policies (never {@code null}).
+     * @param filter       Name filter; {@code null} or blank returns all policies.
+     * @param offset       Zero-based start index.
+     * @param limit        Maximum number of results to return.
+     * @return Page of policy summaries (never {@code null}).
      * @throws PolicyManagementException If retrieval fails.
      */
-    List<Policy> getPolicies(String tenantDomain) throws PolicyManagementException;
+    List<PolicyBasicInfo> getPolicies(String tenantDomain, String filter, int offset, int limit)
+            throws PolicyManagementException;
+
+    /**
+     * Returns the total number of policies matching the given filter, for pagination.
+     *
+     * @param tenantDomain Tenant domain.
+     * @param filter       Name filter; {@code null} or blank counts all policies.
+     * @return Total number of matching policies.
+     * @throws PolicyManagementException If retrieval fails.
+     */
+    int getPolicyCount(String tenantDomain, String filter) throws PolicyManagementException;
 }

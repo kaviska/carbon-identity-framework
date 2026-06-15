@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.policy.management.internal.dao;
 
 import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementException;
 import org.wso2.carbon.identity.policy.management.api.model.Policy;
+import org.wso2.carbon.identity.policy.management.api.model.PolicyBasicInfo;
 
 import java.util.List;
 
@@ -41,7 +42,10 @@ public interface PolicyManagementDAO {
 
     Policy getPolicyByName(String policyName, int tenantId) throws PolicyManagementException;
 
-    List<Policy> getPolicies(int tenantId) throws PolicyManagementException;
+    List<PolicyBasicInfo> getPolicies(int tenantId, String filter, int offset, int limit)
+            throws PolicyManagementException;
+
+    int getPolicyCount(int tenantId, String filter) throws PolicyManagementException;
 
     String getPolicyIdByName(String policyName, int tenantId) throws PolicyManagementException;
 }

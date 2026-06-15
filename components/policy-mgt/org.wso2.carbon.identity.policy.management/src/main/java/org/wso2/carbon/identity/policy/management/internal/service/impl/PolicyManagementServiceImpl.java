@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com) All Rights Reserved.
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -11,7 +11,7 @@
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
+ * KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -25,6 +25,7 @@ import org.wso2.carbon.identity.policy.management.api.constant.ErrorMessage;
 import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementClientException;
 import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementException;
 import org.wso2.carbon.identity.policy.management.api.model.Policy;
+import org.wso2.carbon.identity.policy.management.api.model.PolicyBasicInfo;
 import org.wso2.carbon.identity.policy.management.api.model.PolicyResource;
 import org.wso2.carbon.identity.policy.management.api.model.ResourceType;
 import org.wso2.carbon.identity.policy.management.api.service.PolicyManagementService;
@@ -143,12 +144,24 @@ public class PolicyManagementServiceImpl implements PolicyManagementService {
     }
 
     @Override
-    public List<Policy> getPolicies(String tenantDomain) throws PolicyManagementException {
+    public List<PolicyBasicInfo> getPolicies(String tenantDomain, String filter, int offset, int limit)
+            throws PolicyManagementException {
 
         if (LOG.isDebugEnabled()) {
-            LOG.debug(String.format("Getting all policies for tenant: %s", tenantDomain));
+            LOG.debug(String.format("Listing policies for tenant: %s with filter: %s, offset: %d, limit: %d",
+                    tenantDomain, filter, offset, limit));
         }
-        return policyManagementDAO.getPolicies(IdentityTenantUtil.getTenantId(tenantDomain));
+        return policyManagementDAO.getPolicies(
+                IdentityTenantUtil.getTenantId(tenantDomain), filter, offset, limit);
+    }
+
+    @Override
+    public int getPolicyCount(String tenantDomain, String filter) throws PolicyManagementException {
+
+        if (LOG.isDebugEnabled()) {
+            LOG.debug(String.format("Counting policies for tenant: %s with filter: %s", tenantDomain, filter));
+        }
+        return policyManagementDAO.getPolicyCount(IdentityTenantUtil.getTenantId(tenantDomain), filter);
     }
 
     // Only RULE resources are hydrated; actions are referenced by id and need no hydration here.

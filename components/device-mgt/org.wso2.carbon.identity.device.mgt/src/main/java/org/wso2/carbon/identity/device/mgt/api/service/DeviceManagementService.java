@@ -1,8 +1,8 @@
 package org.wso2.carbon.identity.device.mgt.api.service;
 
 import org.wso2.carbon.identity.device.mgt.api.exception.DeviceMgtException;
+import org.wso2.carbon.identity.device.mgt.api.model.Device;
 import org.wso2.carbon.identity.device.mgt.api.model.DeviceRegistrationInitiation;
-import org.wso2.carbon.identity.device.mgt.api.model.RegisteredDevice;
 
 import java.util.List;
 
@@ -25,33 +25,10 @@ public interface DeviceManagementService {
             throws DeviceMgtException;
 
     /**
-     * Phase 2 of the two-phase registration protocol.
-     * Retrieves the cached registration context by registrationId, verifies the ECDSA signature
-     * (SHA256withECDSA) against the stored challenge, persists the device, and clears the cache.
-     *
-     * @param registrationId  Opaque token returned by initiateDeviceRegistration.
-     * @param publicKey       Base64-encoded EC public key in X.509/SubjectPublicKeyInfo DER format.
-     * @param signature       Base64-encoded ECDSA signature over the challenge bytes.
-     * @param deviceName      Human-readable name for the device.
-     * @param deviceModel     Hardware model string (nullable).
-     * @param metadata        Optional JSON string for extensible attributes (nullable).
-     * @param tenantDomain    Tenant domain.
-     * @return The persisted RegisteredDevice with server-assigned id and registeredAt.
-     */
-    RegisteredDevice completeDeviceRegistration(
-            String registrationId,
-            String publicKey,
-            String signature,
-            String deviceName,
-            String deviceModel,
-            String metadata,
-            String tenantDomain) throws DeviceMgtException;
-
-    /**
      * Verifies the device registration challenge-response without persisting to the database.
      * Used during registration flows where the user does not yet have a provisioned userId —
      * the caller stores the returned object in the flow context and defers the DB write to
-     * {@link #persistDevice(RegisteredDevice, String)} once UserProvisioningExecutor has run.
+     * {@link #persistDevice(Device, String)} once UserProvisioningExecutor has run.
      *
      * @param registrationId Opaque token returned by initiateDeviceRegistration.
      * @param publicKey      Base64-encoded EC public key (X.509/SubjectPublicKeyInfo DER).
@@ -60,10 +37,10 @@ public interface DeviceManagementService {
      * @param deviceModel    Hardware model string (nullable).
      * @param metadata       Optional JSON string for extensible attributes (nullable).
      * @param tenantDomain   Tenant domain.
-     * @return A RegisteredDevice whose userId is a placeholder — caller must replace it with the
-     *         real userId before calling {@link #persistDevice(RegisteredDevice, String)}.
+     * @return A Device whose userId is a placeholder — caller must replace it with the
+     *         real userId before calling {@link #persistDevice(Device, String)}.
      */
-    RegisteredDevice verifyDeviceRegistration(
+    Device verifyDeviceRegistration(
             String registrationId,
             String publicKey,
             String signature,
@@ -73,23 +50,23 @@ public interface DeviceManagementService {
             String tenantDomain) throws DeviceMgtException;
 
     /**
-     * Persists a pre-verified {@link RegisteredDevice} to the database.
+     * Persists a pre-verified {@link Device} to the database.
      * Counterpart to {@link #verifyDeviceRegistration}: call this after replacing the placeholder
      * userId with the real provisioned userId.
      *
      * @param device       The verified device to persist.
      * @param tenantDomain Tenant domain.
      */
-    void persistDevice(RegisteredDevice device, String tenantDomain) throws DeviceMgtException;
+    void persistDevice(Device device, String tenantDomain) throws DeviceMgtException;
 
     /**
      * Retrieves a device by its UUID.
      *
-     * @param deviceId     UUID of the device (IDN_REGISTERED_DEVICE.ID).
+     * @param deviceId     UUID of the device (IDN_DEVICE.ID).
      * @param tenantDomain Tenant domain.
-     * @return The RegisteredDevice, or null if not found.
+     * @return The Device, or null if not found.
      */
-    RegisteredDevice getDeviceById(String deviceId, String tenantDomain)
+    Device getDeviceById(String deviceId, String tenantDomain)
             throws DeviceMgtException;
 
     /**
@@ -97,18 +74,18 @@ public interface DeviceManagementService {
      *
      * @param userId       WSO2 user identifier.
      * @param tenantDomain Tenant domain.
-     * @return List of active RegisteredDevice objects. Empty list if none found.
+     * @return List of active Device objects. Empty list if none found.
      */
-    List<RegisteredDevice> getDevicesByUserId(String userId, String tenantDomain)
+    List<Device> getDevicesByUserId(String userId, String tenantDomain)
             throws DeviceMgtException;
 
     /**
      * Retrieves all devices registered in the tenant.
      *
      * @param tenantDomain Tenant domain.
-     * @return List of all RegisteredDevice objects. Empty list if none found.
+     * @return List of all Device objects. Empty list if none found.
      */
-    List<RegisteredDevice> getAllDevices(String tenantDomain)
+    List<Device> getAllDevices(String tenantDomain)
             throws DeviceMgtException;
 
     /**
@@ -117,9 +94,9 @@ public interface DeviceManagementService {
      * @param deviceId     UUID of the device.
      * @param deviceName   New name for the device.
      * @param tenantDomain Tenant domain.
-     * @return The updated RegisteredDevice.
+     * @return The updated Device.
      */
-    RegisteredDevice updateDeviceName(String deviceId, String deviceName, String tenantDomain)
+    Device updateDeviceName(String deviceId, String deviceName, String tenantDomain)
             throws DeviceMgtException;
 
     /**

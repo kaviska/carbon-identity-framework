@@ -24,6 +24,7 @@ import org.wso2.carbon.identity.device.mgt.api.service.DeviceManagementService;
 import org.wso2.carbon.identity.device.policy.api.service.DevicePolicyEvaluator;
 import org.wso2.carbon.identity.device.policy.api.service.IntegrityDataEnricher;
 import org.wso2.carbon.identity.policy.management.api.service.PolicyEvaluationService;
+import org.wso2.carbon.identity.policy.management.api.service.PolicyManagementService;
 
 /**
  * Service holder for the device policy component.
@@ -34,6 +35,7 @@ public class DevicePolicyComponentServiceHolder {
     private static final DevicePolicyComponentServiceHolder INSTANCE = new DevicePolicyComponentServiceHolder();
 
     private PolicyEvaluationService policyEvaluationService;
+    private PolicyManagementService policyManagementService;
     private DeviceManagementService deviceManagementService;
     private JsFunctionRegistry jsFunctionRegistry;
     private ClientAttestationService clientAttestationService;
@@ -62,6 +64,16 @@ public class DevicePolicyComponentServiceHolder {
     public void setPolicyEvaluationService(PolicyEvaluationService policyEvaluationService) {
 
         this.policyEvaluationService = policyEvaluationService;
+    }
+
+    public PolicyManagementService getPolicyManagementService() {
+
+        return policyManagementService;
+    }
+
+    public void setPolicyManagementService(PolicyManagementService policyManagementService) {
+
+        this.policyManagementService = policyManagementService;
     }
 
     public DeviceManagementService getDeviceManagementService() {

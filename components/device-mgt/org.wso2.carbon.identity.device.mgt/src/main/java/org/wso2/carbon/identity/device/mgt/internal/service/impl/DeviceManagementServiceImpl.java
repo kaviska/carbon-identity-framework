@@ -24,8 +24,8 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.device.mgt.api.constant.ErrorMessage;
 import org.wso2.carbon.identity.device.mgt.api.exception.DeviceMgtClientException;
 import org.wso2.carbon.identity.device.mgt.api.exception.DeviceMgtException;
+import org.wso2.carbon.identity.device.mgt.api.model.Device;
 import org.wso2.carbon.identity.device.mgt.api.model.DeviceRegistrationInitiation;
-import org.wso2.carbon.identity.device.mgt.api.model.RegisteredDevice;
 import org.wso2.carbon.identity.device.mgt.api.service.DeviceManagementService;
 import org.wso2.carbon.identity.device.mgt.internal.cache.DeviceRegistrationCache;
 import org.wso2.carbon.identity.device.mgt.internal.cache.DeviceRegistrationCacheEntry;
@@ -40,6 +40,7 @@ import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.SecureRandom;
+import java.security.Signature;
 import java.security.SignatureException;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
@@ -100,29 +101,7 @@ public class DeviceManagementServiceImpl implements DeviceManagementService {
     }
 
     @Override
-    public RegisteredDevice completeDeviceRegistration(
-            String registrationId,
-            String publicKey,
-            String signature,
-            String deviceName,
-            String deviceModel,
-            String metadata,
-            String tenantDomain) throws DeviceMgtException {
-
-        RegisteredDevice verified = verifyDeviceRegistration(
-                registrationId, publicKey, signature, deviceName, deviceModel, metadata, tenantDomain);
-        RegisteredDevice registered = deviceManagementDAO.registerDevice(
-                verified, IdentityTenantUtil.getTenantId(tenantDomain));
-
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("Device registration completed for user: " + verified.getUserId() +
-                    " in tenant: " + tenantDomain + " with device ID: " + registered.getId());
-        }
-        return registered;
-    }
-
-    @Override
-    public RegisteredDevice verifyDeviceRegistration(
+    public Device verifyDeviceRegistration(
             String registrationId,
             String publicKey,
             String signature,
@@ -154,7 +133,7 @@ public class DeviceManagementServiceImpl implements DeviceManagementService {
             LOG.debug("Device registration verified (not yet persisted) for user: " + context.getUsername() +
                     " in tenant: " + tenantDomain);
         }
-        return new RegisteredDevice.Builder()
+        return new Device.Builder()
                 .id(registrationId)
                 .userId(context.getUsername())
                 .deviceName(deviceName)
@@ -167,7 +146,7 @@ public class DeviceManagementServiceImpl implements DeviceManagementService {
     }
 
     @Override
-    public void persistDevice(RegisteredDevice device, String tenantDomain) throws DeviceMgtException {
+    public void persistDevice(Device device, String tenantDomain) throws DeviceMgtException {
 
         deviceManagementDAO.registerDevice(device, IdentityTenantUtil.getTenantId(tenantDomain));
 
@@ -178,7 +157,7 @@ public class DeviceManagementServiceImpl implements DeviceManagementService {
     }
 
     @Override
-    public RegisteredDevice getDeviceById(String deviceId, String tenantDomain)
+    public Device getDeviceById(String deviceId, String tenantDomain)
             throws DeviceMgtException {
 
         validateRequiredField(deviceId, "deviceId");
@@ -187,7 +166,7 @@ public class DeviceManagementServiceImpl implements DeviceManagementService {
     }
 
     @Override
-    public List<RegisteredDevice> getDevicesByUserId(String userId, String tenantDomain)
+    public List<Device> getDevicesByUserId(String userId, String tenantDomain)
             throws DeviceMgtException {
 
         validateRequiredField(userId, "userId");
@@ -196,13 +175,13 @@ public class DeviceManagementServiceImpl implements DeviceManagementService {
     }
 
     @Override
-    public List<RegisteredDevice> getAllDevices(String tenantDomain) throws DeviceMgtException {
+    public List<Device> getAllDevices(String tenantDomain) throws DeviceMgtException {
 
         return deviceManagementDAO.getAllDevices(IdentityTenantUtil.getTenantId(tenantDomain));
     }
 
     @Override
-    public RegisteredDevice updateDeviceName(String deviceId, String deviceName, String tenantDomain)
+    public Device updateDeviceName(String deviceId, String deviceName, String tenantDomain)
             throws DeviceMgtException {
 
         validateRequiredField(deviceId, "deviceId");
@@ -238,7 +217,7 @@ public class DeviceManagementServiceImpl implements DeviceManagementService {
             byte[] challengeBytes = Base64.getUrlDecoder().decode(challenge);
             byte[] signatureBytes = Base64.getDecoder().decode(signatureBase64);
 
-            java.security.Signature sig = java.security.Signature.getInstance("SHA256withECDSA");
+            Signature sig = Signature.getInstance("SHA256withECDSA");
             sig.initVerify(publicKey);
             sig.update(challengeBytes);
             boolean valid = sig.verify(signatureBytes);
@@ -262,7 +241,7 @@ public class DeviceManagementServiceImpl implements DeviceManagementService {
     private void validateDeviceExists(String deviceId, String tenantDomain)
             throws DeviceMgtException {
 
-        RegisteredDevice existing = deviceManagementDAO.getDeviceById(
+        Device existing = deviceManagementDAO.getDeviceById(
                 deviceId, IdentityTenantUtil.getTenantId(tenantDomain));
         if (existing == null) {
             throw DeviceManagementExceptionHandler.handleClientException(

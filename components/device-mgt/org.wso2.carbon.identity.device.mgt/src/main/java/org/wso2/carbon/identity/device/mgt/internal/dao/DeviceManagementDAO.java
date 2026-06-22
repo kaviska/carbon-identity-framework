@@ -19,7 +19,7 @@
 package org.wso2.carbon.identity.device.mgt.internal.dao;
 
 import org.wso2.carbon.identity.device.mgt.api.exception.DeviceMgtException;
-import org.wso2.carbon.identity.device.mgt.api.model.RegisteredDevice;
+import org.wso2.carbon.identity.device.mgt.api.model.Device;
 
 import java.util.List;
 
@@ -36,7 +36,7 @@ public interface DeviceManagementDAO {
      * @return Persisted device.
      * @throws DeviceMgtException If persistence fails.
      */
-    RegisteredDevice registerDevice(RegisteredDevice device, int tenantId)
+    Device registerDevice(Device device, int tenantId)
             throws DeviceMgtException;
 
     /**
@@ -47,7 +47,7 @@ public interface DeviceManagementDAO {
      * @return Device or {@code null}.
      * @throws DeviceMgtException If retrieval fails.
      */
-    RegisteredDevice getDeviceById(String deviceId, int tenantId)
+    Device getDeviceById(String deviceId, int tenantId)
             throws DeviceMgtException;
 
     /**
@@ -58,7 +58,7 @@ public interface DeviceManagementDAO {
      * @return Active devices.
      * @throws DeviceMgtException If retrieval fails.
      */
-    List<RegisteredDevice> getDevicesByUserId(String userId, int tenantId)
+    List<Device> getDevicesByUserId(String userId, int tenantId)
             throws DeviceMgtException;
 
     /**
@@ -68,7 +68,7 @@ public interface DeviceManagementDAO {
      * @return All devices in the tenant.
      * @throws DeviceMgtException If retrieval fails.
      */
-    List<RegisteredDevice> getAllDevices(int tenantId)
+    List<Device> getAllDevices(int tenantId)
             throws DeviceMgtException;
 
     /**
@@ -80,7 +80,7 @@ public interface DeviceManagementDAO {
      * @return Updated device.
      * @throws DeviceMgtException If update fails.
      */
-    RegisteredDevice updateDeviceName(String deviceId, String deviceName, int tenantId)
+    Device updateDeviceName(String deviceId, String deviceName, int tenantId)
             throws DeviceMgtException;
 
     /**

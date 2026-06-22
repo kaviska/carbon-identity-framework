@@ -26,7 +26,7 @@ import com.nimbusds.jwt.SignedJWT;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.device.mgt.api.exception.DeviceMgtException;
-import org.wso2.carbon.identity.device.mgt.api.model.RegisteredDevice;
+import org.wso2.carbon.identity.device.mgt.api.model.Device;
 import org.wso2.carbon.identity.device.policy.api.constant.DevicePolicyErrorMessage;
 import org.wso2.carbon.identity.device.policy.internal.component.DevicePolicyComponentServiceHolder;
 import org.wso2.carbon.identity.device.policy.internal.util.DevicePolicyExceptionHandler;
@@ -103,7 +103,7 @@ public class DeviceTokenExtractor {
             // Strip any stray leading/trailing quotes or backslashes introduced by JWT serialisation bugs.
             deviceId = deviceId.replaceAll("[\"\\\\]+$", "").replaceAll("^[\"\\\\]+", "").trim();
 
-            RegisteredDevice device = DevicePolicyComponentServiceHolder.getInstance()
+            Device device = DevicePolicyComponentServiceHolder.getInstance()
                     .getDeviceManagementService()
                     .getDeviceById(deviceId, tenantDomain);
 

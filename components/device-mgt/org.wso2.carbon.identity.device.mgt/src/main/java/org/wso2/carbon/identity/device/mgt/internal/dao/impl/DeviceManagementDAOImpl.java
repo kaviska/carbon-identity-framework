@@ -25,7 +25,7 @@ import org.wso2.carbon.database.utils.jdbc.exceptions.TransactionException;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.device.mgt.api.constant.ErrorMessage;
 import org.wso2.carbon.identity.device.mgt.api.exception.DeviceMgtException;
-import org.wso2.carbon.identity.device.mgt.api.model.RegisteredDevice;
+import org.wso2.carbon.identity.device.mgt.api.model.Device;
 import org.wso2.carbon.identity.device.mgt.internal.constant.DeviceMgtSQLConstants;
 import org.wso2.carbon.identity.device.mgt.internal.dao.DeviceManagementDAO;
 import org.wso2.carbon.identity.device.mgt.internal.util.DeviceManagementExceptionHandler;
@@ -40,7 +40,7 @@ public class DeviceManagementDAOImpl implements DeviceManagementDAO {
     private static final Log LOG = LogFactory.getLog(DeviceManagementDAOImpl.class);
 
     @Override
-    public RegisteredDevice registerDevice(RegisteredDevice device, int tenantId)
+    public Device registerDevice(Device device, int tenantId)
             throws DeviceMgtException {
 
         NamedJdbcTemplate jdbcTemplate = new NamedJdbcTemplate(IdentityDatabaseUtil.getDataSource());
@@ -51,7 +51,6 @@ public class DeviceManagementDAOImpl implements DeviceManagementDAO {
                         DeviceMgtSQLConstants.Query.REGISTER_DEVICE,
                         preparedStatement -> {
                             preparedStatement.setString(DeviceMgtSQLConstants.Column.ID, device.getId());
-                            preparedStatement.setString(DeviceMgtSQLConstants.Column.USER_ID, device.getUserId());
                             preparedStatement.setString(
                                     DeviceMgtSQLConstants.Column.DEVICE_NAME, device.getDeviceName());
                             preparedStatement.setString(
@@ -62,6 +61,15 @@ public class DeviceManagementDAOImpl implements DeviceManagementDAO {
                                     DeviceMgtSQLConstants.Column.REGISTERED_AT, device.getRegisteredAt());
                             preparedStatement.setInt(DeviceMgtSQLConstants.Column.TENANT_ID, tenantId);
                             preparedStatement.setString(DeviceMgtSQLConstants.Column.METADATA, device.getMetadata());
+                        },
+                        device,
+                        false);
+                template.executeInsert(
+                        DeviceMgtSQLConstants.Query.ADD_USER_DEVICE,
+                        preparedStatement -> {
+                            preparedStatement.setString(DeviceMgtSQLConstants.Column.DEVICE_ID, device.getId());
+                            preparedStatement.setString(DeviceMgtSQLConstants.Column.USER_ID, device.getUserId());
+                            preparedStatement.setInt(DeviceMgtSQLConstants.Column.TENANT_ID, tenantId);
                         },
                         device,
                         false);
@@ -80,16 +88,16 @@ public class DeviceManagementDAOImpl implements DeviceManagementDAO {
     }
 
     @Override
-    public RegisteredDevice getDeviceById(String deviceId, int tenantId)
+    public Device getDeviceById(String deviceId, int tenantId)
             throws DeviceMgtException {
 
         NamedJdbcTemplate jdbcTemplate = new NamedJdbcTemplate(IdentityDatabaseUtil.getDataSource());
 
         try {
-            return jdbcTemplate.<RegisteredDevice, RuntimeException>withTransaction(
+            return jdbcTemplate.<Device, RuntimeException>withTransaction(
                     template -> template.fetchSingleRecord(
                             DeviceMgtSQLConstants.Query.GET_DEVICE_BY_ID,
-                            (resultSet, rowNumber) -> new RegisteredDevice.Builder()
+                            (resultSet, rowNumber) -> new Device.Builder()
                                     .id(resultSet.getString(DeviceMgtSQLConstants.Column.ID))
                                     .userId(resultSet.getString(DeviceMgtSQLConstants.Column.USER_ID))
                                     .deviceName(resultSet.getString(DeviceMgtSQLConstants.Column.DEVICE_NAME))
@@ -111,16 +119,16 @@ public class DeviceManagementDAOImpl implements DeviceManagementDAO {
     }
 
     @Override
-    public List<RegisteredDevice> getDevicesByUserId(String userId, int tenantId)
+    public List<Device> getDevicesByUserId(String userId, int tenantId)
             throws DeviceMgtException {
 
         NamedJdbcTemplate jdbcTemplate = new NamedJdbcTemplate(IdentityDatabaseUtil.getDataSource());
 
         try {
-            return jdbcTemplate.<List<RegisteredDevice>, RuntimeException>withTransaction(
+            return jdbcTemplate.<List<Device>, RuntimeException>withTransaction(
                     template -> template.executeQuery(
                             DeviceMgtSQLConstants.Query.GET_DEVICES_BY_USER_ID,
-                            (resultSet, rowNumber) -> new RegisteredDevice.Builder()
+                            (resultSet, rowNumber) -> new Device.Builder()
                                     .id(resultSet.getString(DeviceMgtSQLConstants.Column.ID))
                                     .userId(resultSet.getString(DeviceMgtSQLConstants.Column.USER_ID))
                                     .deviceName(resultSet.getString(DeviceMgtSQLConstants.Column.DEVICE_NAME))
@@ -142,15 +150,15 @@ public class DeviceManagementDAOImpl implements DeviceManagementDAO {
     }
 
     @Override
-    public List<RegisteredDevice> getAllDevices(int tenantId) throws DeviceMgtException {
+    public List<Device> getAllDevices(int tenantId) throws DeviceMgtException {
 
         NamedJdbcTemplate jdbcTemplate = new NamedJdbcTemplate(IdentityDatabaseUtil.getDataSource());
 
         try {
-            return jdbcTemplate.<List<RegisteredDevice>, RuntimeException>withTransaction(
+            return jdbcTemplate.<List<Device>, RuntimeException>withTransaction(
                     template -> template.executeQuery(
                             DeviceMgtSQLConstants.Query.GET_ALL_DEVICES,
-                            (resultSet, rowNumber) -> new RegisteredDevice.Builder()
+                            (resultSet, rowNumber) -> new Device.Builder()
                                     .id(resultSet.getString(DeviceMgtSQLConstants.Column.ID))
                                     .userId(resultSet.getString(DeviceMgtSQLConstants.Column.USER_ID))
                                     .deviceName(resultSet.getString(DeviceMgtSQLConstants.Column.DEVICE_NAME))
@@ -170,7 +178,7 @@ public class DeviceManagementDAOImpl implements DeviceManagementDAO {
     }
 
     @Override
-    public RegisteredDevice updateDeviceName(String deviceId, String deviceName, int tenantId)
+    public Device updateDeviceName(String deviceId, String deviceName, int tenantId)
             throws DeviceMgtException {
 
         NamedJdbcTemplate jdbcTemplate = new NamedJdbcTemplate(IdentityDatabaseUtil.getDataSource());
@@ -207,6 +215,12 @@ public class DeviceManagementDAOImpl implements DeviceManagementDAO {
 
         try {
             jdbcTemplate.<Void, RuntimeException>withTransaction(template -> {
+                template.executeUpdate(
+                        DeviceMgtSQLConstants.Query.DELETE_USER_DEVICE,
+                        preparedStatement -> {
+                            preparedStatement.setString(DeviceMgtSQLConstants.Column.DEVICE_ID, deviceId);
+                            preparedStatement.setInt(DeviceMgtSQLConstants.Column.TENANT_ID, tenantId);
+                        });
                 template.executeUpdate(
                         DeviceMgtSQLConstants.Query.DELETE_DEVICE,
                         preparedStatement -> {

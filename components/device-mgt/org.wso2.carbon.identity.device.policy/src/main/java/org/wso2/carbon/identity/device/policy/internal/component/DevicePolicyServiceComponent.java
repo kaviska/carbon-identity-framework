@@ -31,14 +31,17 @@ import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.identity.application.authentication.framework.JsFunctionRegistry;
 import org.wso2.carbon.identity.client.attestation.mgt.services.ClientAttestationService;
 import org.wso2.carbon.identity.device.mgt.api.service.DeviceManagementService;
+import org.wso2.carbon.identity.device.policy.api.service.DeviceFieldMetadataService;
 import org.wso2.carbon.identity.device.policy.api.service.DevicePolicyEvaluator;
 import org.wso2.carbon.identity.device.policy.api.service.IntegrityDataEnricher;
 import org.wso2.carbon.identity.device.policy.internal.config.OsVersionRegistry;
 import org.wso2.carbon.identity.device.policy.internal.js.DevicePolicyJsFunction;
 import org.wso2.carbon.identity.device.policy.internal.rule.DevicePolicyEvaluationDataProvider;
+import org.wso2.carbon.identity.device.policy.internal.service.impl.DeviceFieldMetadataServiceImpl;
 import org.wso2.carbon.identity.device.policy.internal.service.impl.DevicePolicyEvaluatorImpl;
 import org.wso2.carbon.identity.device.policy.internal.service.impl.IntegrityDataEnricherImpl;
 import org.wso2.carbon.identity.policy.management.api.service.PolicyEvaluationService;
+import org.wso2.carbon.identity.policy.management.api.service.PolicyManagementService;
 import org.wso2.carbon.identity.rule.evaluation.api.provider.RuleEvaluationDataProvider;
 import org.wso2.carbon.identity.rule.evaluation.api.resolver.SymbolicValueResolverRegistry;
 
@@ -68,6 +71,8 @@ public class DevicePolicyServiceComponent {
             bundleCtx.registerService(IntegrityDataEnricher.class.getName(), integrityDataEnricher, null);
             bundleCtx.registerService(RuleEvaluationDataProvider.class.getName(),
                     new DevicePolicyEvaluationDataProvider(), null);
+            bundleCtx.registerService(DeviceFieldMetadataService.class.getName(),
+                    new DeviceFieldMetadataServiceImpl(), null);
 
             DevicePolicyComponentServiceHolder holder = DevicePolicyComponentServiceHolder.getInstance();
             holder.setDevicePolicyEvaluator(devicePolicyEvaluator);
@@ -119,6 +124,25 @@ public class DevicePolicyServiceComponent {
 
         DevicePolicyComponentServiceHolder.getInstance().setPolicyEvaluationService(null);
         LOG.debug("PolicyEvaluationService unset in Device Policy component.");
+    }
+
+    @Reference(
+            name = "policy.management.service",
+            service = PolicyManagementService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetPolicyManagementService"
+    )
+    protected void setPolicyManagementService(PolicyManagementService policyManagementService) {
+
+        DevicePolicyComponentServiceHolder.getInstance().setPolicyManagementService(policyManagementService);
+        LOG.debug("PolicyManagementService set in Device Policy component.");
+    }
+
+    protected void unsetPolicyManagementService(PolicyManagementService policyManagementService) {
+
+        DevicePolicyComponentServiceHolder.getInstance().setPolicyManagementService(null);
+        LOG.debug("PolicyManagementService unset in Device Policy component.");
     }
 
     @Reference(

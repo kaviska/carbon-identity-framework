@@ -23,7 +23,7 @@ import java.sql.Timestamp;
 /**
  * Immutable model for a registered device.
  */
-public class RegisteredDevice {
+public class Device {
 
     private final String id;
     private final String userId;
@@ -34,7 +34,7 @@ public class RegisteredDevice {
     private final Timestamp registeredAt;
     private final String metadata;
 
-    private RegisteredDevice(Builder builder) {
+    private Device(Builder builder) {
 
         this.id = builder.id;
         this.userId = builder.userId;
@@ -127,7 +127,7 @@ public class RegisteredDevice {
     }
 
     /**
-     * Builder for {@link RegisteredDevice}.
+     * Builder for {@link Device}.
      */
     public static class Builder {
 
@@ -241,9 +241,9 @@ public class RegisteredDevice {
          *
          * @return Registered device.
          */
-        public RegisteredDevice build() {
+        public Device build() {
 
-            return new RegisteredDevice(this);
+            return new Device(this);
         }
     }
 }

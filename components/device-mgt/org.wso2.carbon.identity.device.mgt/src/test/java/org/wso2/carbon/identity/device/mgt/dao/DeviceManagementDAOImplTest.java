@@ -18,61 +18,33 @@
 
 package org.wso2.carbon.identity.device.mgt.dao;
 
-import org.h2.jdbcx.JdbcDataSource;
-import org.h2.tools.RunScript;
-import org.mockito.MockedStatic;
 import org.testng.Assert;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
-import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
+import org.wso2.carbon.identity.common.testng.WithCarbonHome;
+import org.wso2.carbon.identity.common.testng.WithH2Database;
 import org.wso2.carbon.identity.device.mgt.api.exception.DeviceMgtException;
-import org.wso2.carbon.identity.device.mgt.api.model.RegisteredDevice;
+import org.wso2.carbon.identity.device.mgt.api.model.Device;
 import org.wso2.carbon.identity.device.mgt.internal.dao.impl.DeviceManagementDAOImpl;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-import javax.sql.DataSource;
-
-import static org.mockito.Mockito.mockStatic;
-
 /**
  * Unit tests for {@link DeviceManagementDAOImpl}.
  */
+@WithH2Database(files = {"dbscripts/h2.sql"})
+@WithCarbonHome
 public class DeviceManagementDAOImplTest {
 
     private static final int TENANT_ID = -1234;
+    private static final int OTHER_TENANT_ID = -5678;
     private static final String TEST_USER_ID = "alice@example.com";
+    private static final String SECOND_USER_ID = "carol@example.com";
 
-    private DeviceManagementDAOImpl deviceManagementDAO;
-    private MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil;
+    DeviceManagementDAOImpl deviceManagementDAO = new DeviceManagementDAOImpl();
     private String createdDeviceId;
-
-    /**
-     * Initializes test dependencies.
-     */
-    @BeforeClass
-    public void setUp() throws Exception {
-
-        DataSource dataSource = initializeDatasource();
-        identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
-        identityDatabaseUtil.when(IdentityDatabaseUtil::getDataSource).thenReturn(dataSource);
-        deviceManagementDAO = new DeviceManagementDAOImpl();
-    }
-
-    /**
-     * Clears mocked static resources.
-     */
-    @AfterClass
-    public void tearDown() {
-
-        identityDatabaseUtil.close();
-    }
 
     /**
      * Tests registering a device.
@@ -82,8 +54,8 @@ public class DeviceManagementDAOImplTest {
     @Test(priority = 1)
     public void testRegisterDevice() throws DeviceMgtException {
 
-        RegisteredDevice device = buildDevice(UUID.randomUUID().toString(), "Alice Phone", "ACTIVE");
-        RegisteredDevice result = deviceManagementDAO.registerDevice(device, TENANT_ID);
+        Device device = buildDevice(UUID.randomUUID().toString(), "Alice Phone", "ACTIVE");
+        Device result = deviceManagementDAO.registerDevice(device, TENANT_ID);
 
         Assert.assertNotNull(result);
         Assert.assertEquals(result.getId(), device.getId());
@@ -101,7 +73,7 @@ public class DeviceManagementDAOImplTest {
     @Test(priority = 2, dependsOnMethods = {"testRegisterDevice"})
     public void testGetDeviceById() throws DeviceMgtException {
 
-        RegisteredDevice result = deviceManagementDAO.getDeviceById(createdDeviceId, TENANT_ID);
+        Device result = deviceManagementDAO.getDeviceById(createdDeviceId, TENANT_ID);
 
         Assert.assertNotNull(result);
         Assert.assertEquals(result.getId(), createdDeviceId);
@@ -116,22 +88,22 @@ public class DeviceManagementDAOImplTest {
     @Test(priority = 3)
     public void testGetDeviceByIdNotFound() throws DeviceMgtException {
 
-        RegisteredDevice result = deviceManagementDAO.getDeviceById(UUID.randomUUID().toString(), TENANT_ID);
+        Device result = deviceManagementDAO.getDeviceById(UUID.randomUUID().toString(), TENANT_ID);
         Assert.assertNull(result);
     }
 
     /**
-     * Tests retrieving active devices by user id.
+     * Tests that getDevicesByUserId returns only ACTIVE devices.
      *
      * @throws DeviceMgtException If the DAO operation fails.
      */
     @Test(priority = 4, dependsOnMethods = {"testRegisterDevice"})
     public void testGetDevicesByUserIdOnlyActive() throws DeviceMgtException {
 
-        RegisteredDevice revokedDevice = buildDevice(UUID.randomUUID().toString(), "Old Device", "REVOKED");
+        Device revokedDevice = buildDevice(UUID.randomUUID().toString(), "Old Device", "REVOKED");
         deviceManagementDAO.registerDevice(revokedDevice, TENANT_ID);
 
-        List<RegisteredDevice> devices = deviceManagementDAO.getDevicesByUserId(TEST_USER_ID, TENANT_ID);
+        List<Device> devices = deviceManagementDAO.getDevicesByUserId(TEST_USER_ID, TENANT_ID);
 
         Assert.assertEquals(devices.size(), 1);
         Assert.assertEquals(devices.get(0).getStatus(), "ACTIVE");
@@ -146,7 +118,7 @@ public class DeviceManagementDAOImplTest {
     @Test(priority = 5, dependsOnMethods = {"testRegisterDevice"})
     public void testUpdateDeviceName() throws DeviceMgtException {
 
-        RegisteredDevice updated = deviceManagementDAO.updateDeviceName(createdDeviceId, "Alice Updated", TENANT_ID);
+        Device updated = deviceManagementDAO.updateDeviceName(createdDeviceId, "Alice Updated", TENANT_ID);
 
         Assert.assertNotNull(updated);
         Assert.assertEquals(updated.getDeviceName(), "Alice Updated");
@@ -161,14 +133,157 @@ public class DeviceManagementDAOImplTest {
     public void testDeleteDevice() throws DeviceMgtException {
 
         deviceManagementDAO.deleteDevice(createdDeviceId, TENANT_ID);
-        RegisteredDevice afterDelete = deviceManagementDAO.getDeviceById(createdDeviceId, TENANT_ID);
+        Device afterDelete = deviceManagementDAO.getDeviceById(createdDeviceId, TENANT_ID);
 
         Assert.assertNull(afterDelete);
     }
 
-    private RegisteredDevice buildDevice(String id, String deviceName, String status) {
+    /**
+     * Tests that all fields survive a register + getDeviceById round-trip.
+     *
+     * @throws DeviceMgtException If the DAO operation fails.
+     */
+    @Test(priority = 7)
+    public void testRegisterDeviceFullFieldRoundTrip() throws DeviceMgtException {
 
-        return new RegisteredDevice.Builder()
+        String id = UUID.randomUUID().toString();
+        Device device = new Device.Builder()
+                .id(id)
+                .userId(SECOND_USER_ID)
+                .deviceName("Carol Phone")
+                .deviceModel("Pixel 8 Pro")
+                .publicKey("pk-full-" + id)
+                .status("ACTIVE")
+                .registeredAt(Timestamp.from(Instant.now()))
+                .metadata("{\"env\":\"test\"}")
+                .build();
+
+        deviceManagementDAO.registerDevice(device, TENANT_ID);
+        Device result = deviceManagementDAO.getDeviceById(id, TENANT_ID);
+
+        Assert.assertNotNull(result);
+        Assert.assertEquals(result.getId(), id);
+        Assert.assertEquals(result.getUserId(), SECOND_USER_ID);
+        Assert.assertEquals(result.getDeviceName(), "Carol Phone");
+        Assert.assertEquals(result.getDeviceModel(), "Pixel 8 Pro");
+        Assert.assertEquals(result.getPublicKey(), "pk-full-" + id);
+        Assert.assertEquals(result.getStatus(), "ACTIVE");
+        Assert.assertNotNull(result.getRegisteredAt());
+        Assert.assertEquals(result.getMetadata(), "{\"env\":\"test\"}");
+    }
+
+    /**
+     * Tests that a device registered under one tenant is not visible under another.
+     *
+     * @throws DeviceMgtException If the DAO operation fails.
+     */
+    @Test(priority = 8)
+    public void testTenantIsolation() throws DeviceMgtException {
+
+        String id = UUID.randomUUID().toString();
+        deviceManagementDAO.registerDevice(buildDevice(id, "Tenant Device", "ACTIVE"), TENANT_ID);
+
+        Device fromOtherTenant = deviceManagementDAO.getDeviceById(id, OTHER_TENANT_ID);
+        Assert.assertNull(fromOtherTenant);
+
+        List<Device> allOtherTenant = deviceManagementDAO.getAllDevices(OTHER_TENANT_ID);
+        long found = allOtherTenant.stream().filter(d -> d.getId().equals(id)).count();
+        Assert.assertEquals(found, 0);
+    }
+
+    /**
+     * Tests that getAllDevices returns every device registered under the tenant.
+     *
+     * @throws DeviceMgtException If the DAO operation fails.
+     */
+    @Test(priority = 9)
+    public void testGetAllDevices() throws DeviceMgtException {
+
+        String userId = "dave@example.com";
+        String id1 = UUID.randomUUID().toString();
+        String id2 = UUID.randomUUID().toString();
+        deviceManagementDAO.registerDevice(buildDeviceForUser(id1, "Dave Phone 1", userId, "ACTIVE"), OTHER_TENANT_ID);
+        deviceManagementDAO.registerDevice(buildDeviceForUser(id2, "Dave Phone 2", userId, "ACTIVE"), OTHER_TENANT_ID);
+
+        List<Device> all = deviceManagementDAO.getAllDevices(OTHER_TENANT_ID);
+
+        Assert.assertEquals(all.size(), 2);
+        long count = all.stream().filter(d -> d.getUserId().equals(userId)).count();
+        Assert.assertEquals(count, 2);
+    }
+
+    /**
+     * Tests that getDevicesByUserId returns all active devices for a user.
+     *
+     * @throws DeviceMgtException If the DAO operation fails.
+     */
+    @Test(priority = 10)
+    public void testGetDevicesByUserIdMultiple() throws DeviceMgtException {
+
+        String userId = "eve@example.com";
+        String id1 = UUID.randomUUID().toString();
+        String id2 = UUID.randomUUID().toString();
+        deviceManagementDAO.registerDevice(buildDeviceForUser(id1, "Eve Phone 1", userId, "ACTIVE"), TENANT_ID);
+        deviceManagementDAO.registerDevice(buildDeviceForUser(id2, "Eve Phone 2", userId, "ACTIVE"), TENANT_ID);
+
+        List<Device> devices = deviceManagementDAO.getDevicesByUserId(userId, TENANT_ID);
+
+        Assert.assertEquals(devices.size(), 2);
+    }
+
+    /**
+     * Tests that getDevicesByUserId returns an empty list for an unknown user.
+     *
+     * @throws DeviceMgtException If the DAO operation fails.
+     */
+    @Test(priority = 11)
+    public void testGetDevicesByUserIdEmpty() throws DeviceMgtException {
+
+        List<Device> devices = deviceManagementDAO.getDevicesByUserId("unknown@example.com", TENANT_ID);
+
+        Assert.assertNotNull(devices);
+        Assert.assertTrue(devices.isEmpty());
+    }
+
+    /**
+     * Tests that updateDeviceName with a wrong tenant id does not affect the row.
+     *
+     * @throws DeviceMgtException If the DAO operation fails.
+     */
+    @Test(priority = 12)
+    public void testUpdateDeviceNameWrongTenantNoOp() throws DeviceMgtException {
+
+        String id = UUID.randomUUID().toString();
+        deviceManagementDAO.registerDevice(buildDevice(id, "Frank Phone", "ACTIVE"), TENANT_ID);
+
+        deviceManagementDAO.updateDeviceName(id, "Frank New Name", OTHER_TENANT_ID);
+
+        Device result = deviceManagementDAO.getDeviceById(id, TENANT_ID);
+        Assert.assertNotNull(result);
+        Assert.assertEquals(result.getDeviceName(), "Frank Phone");
+    }
+
+    /**
+     * Tests that deleteDevice with a wrong tenant id does not remove the row.
+     *
+     * @throws DeviceMgtException If the DAO operation fails.
+     */
+    @Test(priority = 13)
+    public void testDeleteDeviceWrongTenantNoOp() throws DeviceMgtException {
+
+        String id = UUID.randomUUID().toString();
+        deviceManagementDAO.registerDevice(buildDevice(id, "Grace Phone", "ACTIVE"), TENANT_ID);
+
+        deviceManagementDAO.deleteDevice(id, OTHER_TENANT_ID);
+
+        Device result = deviceManagementDAO.getDeviceById(id, TENANT_ID);
+        Assert.assertNotNull(result);
+        Assert.assertEquals(result.getDeviceName(), "Grace Phone");
+    }
+
+    private Device buildDevice(String id, String deviceName, String status) {
+
+        return new Device.Builder()
                 .id(id)
                 .userId(TEST_USER_ID)
                 .deviceName(deviceName)
@@ -180,19 +295,17 @@ public class DeviceManagementDAOImplTest {
                 .build();
     }
 
-    private DataSource initializeDatasource() throws Exception {
+    private Device buildDeviceForUser(String id, String deviceName, String userId, String status) {
 
-        JdbcDataSource dataSource = new JdbcDataSource();
-        dataSource.setUser("sa");
-        dataSource.setPassword("sa");
-        dataSource.setURL("jdbc:h2:mem:device_mgt_db;DB_CLOSE_DELAY=-1");
-
-        Path scriptPath = Path.of(System.getProperty("user.dir"), "src", "test", "resources", "dbscripts", "h2.sql");
-        try (java.sql.Connection connection = dataSource.getConnection()) {
-            RunScript.execute(connection, Files.newBufferedReader(scriptPath));
-        }
-        return dataSource;
+        return new Device.Builder()
+                .id(id)
+                .userId(userId)
+                .deviceName(deviceName)
+                .deviceModel("Pixel 8")
+                .publicKey("pk-" + id)
+                .status(status)
+                .registeredAt(Timestamp.from(Instant.now()))
+                .metadata(null)
+                .build();
     }
 }
-
-

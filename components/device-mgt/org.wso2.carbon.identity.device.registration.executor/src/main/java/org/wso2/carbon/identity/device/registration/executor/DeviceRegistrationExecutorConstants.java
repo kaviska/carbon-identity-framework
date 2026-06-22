@@ -30,7 +30,7 @@ public class DeviceRegistrationExecutorConstants {
     public static final String EXECUTOR_NAME = "DeviceRegistrationExecutor";
 
     /**
-     * Flow context key holding the verified-but-not-yet-persisted RegisteredDevice in
+     * Flow context key holding the verified-but-not-yet-persisted Device in
      * REGISTRATION flows. Written by DeviceRegistrationExecutor in Phase 2 and read by
      * RegistrationFlowCompletionListener after UserProvisioningExecutor assigns the real userId.
      */

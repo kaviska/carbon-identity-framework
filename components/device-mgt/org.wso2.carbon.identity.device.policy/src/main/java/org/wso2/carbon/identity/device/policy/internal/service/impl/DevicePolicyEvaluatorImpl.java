@@ -25,10 +25,14 @@ import org.wso2.carbon.identity.device.policy.internal.component.DevicePolicyCom
 import org.wso2.carbon.identity.device.policy.internal.config.DeviceFieldConfig;
 import org.wso2.carbon.identity.device.policy.internal.config.DeviceFieldConfigLoader;
 import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementException;
+import org.wso2.carbon.identity.policy.management.api.model.Policy;
+import org.wso2.carbon.identity.policy.management.api.model.PolicyResource;
+import org.wso2.carbon.identity.policy.management.api.model.ResourceType;
 import org.wso2.carbon.identity.rule.evaluation.api.exception.RuleEvaluationException;
 import org.wso2.carbon.identity.rule.evaluation.api.model.FlowContext;
 import org.wso2.carbon.identity.rule.evaluation.api.model.FlowType;
 import org.wso2.carbon.identity.rule.evaluation.api.model.RuleEvaluationResult;
+import org.wso2.carbon.identity.rule.management.api.model.Expression;
 
 import java.util.List;
 import java.util.Map;
@@ -47,6 +51,15 @@ public class DevicePolicyEvaluatorImpl implements DevicePolicyEvaluator {
             throws PolicyManagementException, RuleEvaluationException {
 
         String platform = (String) deviceData.get(DEVICE_PLATFORM_FIELD);
+
+        String missingFields = findMissingRequiredFields(policyName, platform, deviceData, tenantDomain);
+        if (missingFields != null) {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Device data incomplete for policy '" + policyName + "': [" + missingFields + "]");
+            }
+            return missingFields;
+        }
+
         FlowContext flowContext = new FlowContext(FlowType.DEVICE_POLICY, deviceData);
         RuleEvaluationResult result = DevicePolicyComponentServiceHolder.getInstance()
                 .getPolicyEvaluationService()
@@ -63,6 +76,48 @@ public class DevicePolicyEvaluatorImpl implements DevicePolicyEvaluator {
             return String.join(", ", result.getFailedFields());
         }
         return null;
+    }
+
+    /**
+     * Returns a comma-separated list of fields the matching rule requires that the device did not
+     * supply, or null when the device supplied everything the rule needs.
+     *
+     * @param policyName   Policy name.
+     * @param platform     Device platform (rule selector).
+     * @param deviceData   Submitted device attributes.
+     * @param tenantDomain Tenant domain.
+     * @return Missing field names joined by ", ", or null if complete.
+     * @throws PolicyManagementException If the policy cannot be retrieved.
+     */
+    private String findMissingRequiredFields(String policyName, String platform,
+            Map<String, Object> deviceData, String tenantDomain) throws PolicyManagementException {
+
+        if (platform == null || platform.trim().isEmpty()) {
+            return DEVICE_PLATFORM_FIELD;
+        }
+        Policy policy = DevicePolicyComponentServiceHolder.getInstance()
+                .getPolicyManagementService()
+                .getPolicyByName(policyName, tenantDomain);
+        if (policy == null) {
+            return null;
+        }
+        PolicyResource resource = policy.getResources().stream()
+                .filter(r -> r.getResourceType() == ResourceType.RULE
+                        && platform.equalsIgnoreCase(r.getTarget()))
+                .findFirst()
+                .orElse(null);
+        if (resource == null || resource.getRule() == null) {
+            return null;
+        }
+        List<String> missing = resource.getRule().getExpressions().stream()
+                .map(Expression::getField)
+                .distinct()
+                .filter(field -> {
+                    Object value = deviceData.get(field);
+                    return value == null || String.valueOf(value).trim().isEmpty();
+                })
+                .collect(Collectors.toList());
+        return missing.isEmpty() ? null : String.join(", ", missing);
     }
 
     @Override

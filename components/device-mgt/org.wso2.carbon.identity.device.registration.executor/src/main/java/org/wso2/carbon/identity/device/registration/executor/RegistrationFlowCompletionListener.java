@@ -23,7 +23,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.device.mgt.api.exception.DeviceMgtException;
-import org.wso2.carbon.identity.device.mgt.api.model.RegisteredDevice;
+import org.wso2.carbon.identity.device.mgt.api.model.Device;
 import org.wso2.carbon.identity.device.mgt.api.service.DeviceManagementService;
 import org.wso2.carbon.identity.device.registration.executor.internal.DeviceRegistrationExecutorDataHolder;
 import org.wso2.carbon.identity.flow.execution.engine.exception.FlowEngineException;
@@ -40,7 +40,7 @@ import static org.wso2.carbon.identity.flow.execution.engine.Constants.STATUS_CO
  * During a REGISTRATION flow, DeviceRegistrationExecutor verifies the ECDSA challenge-response
  * (Phase 2) but defers the DB write because UserProvisioningExecutor has not yet run and
  * FlowUser.getUserId() is null at that point. This listener fires after UserProvisioningExecutor
- * sets the real userId, reads the verified RegisteredDevice from the flow context, rebinds it to
+ * sets the real userId, reads the verified Device from the flow context, rebinds it to
  * the provisioned userId, and calls DeviceManagementService.persistDevice().
  */
 public class RegistrationFlowCompletionListener extends AbstractFlowExecutionListener {
@@ -78,7 +78,7 @@ public class RegistrationFlowCompletionListener extends AbstractFlowExecutionLis
             return true;
         }
 
-        RegisteredDevice pending = (RegisteredDevice) deviceObj;
+        Device pending = (Device) deviceObj;
         String userId = context.getFlowUser().getUserId();
 
         if (StringUtils.isBlank(userId)) {
@@ -88,7 +88,7 @@ public class RegistrationFlowCompletionListener extends AbstractFlowExecutionLis
             return true;
         }
 
-        RegisteredDevice deviceWithUserId = new RegisteredDevice.Builder()
+        Device deviceWithUserId = new Device.Builder()
                 .id(pending.getId())
                 .userId(userId)
                 .deviceName(pending.getDeviceName())

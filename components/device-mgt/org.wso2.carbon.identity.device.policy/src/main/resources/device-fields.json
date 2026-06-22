@@ -1,111 +1,89 @@
 {
   "fields": [
     {
-      "name": "platform",
-      "displayName": "Platform"
+      "name": "platform"
     },
     {
       "name": "androidOsVersion",
-      "displayName": "Android OS Version",
       "applicablePlatforms": ["android"]
     },
     {
       "name": "iosOsVersion",
-      "displayName": "iOS Version",
       "applicablePlatforms": ["ios"]
     },
     {
       "name": "macosOsVersion",
-      "displayName": "macOS Version",
       "applicablePlatforms": ["macos"]
     },
     {
       "name": "windowsOsVersion",
-      "displayName": "Windows Version",
       "applicablePlatforms": ["windows"]
     },
     {
       "name": "isRooted",
-      "displayName": "Is Rooted",
       "applicablePlatforms": ["android"]
     },
     {
       "name": "usbDebugging",
-      "displayName": "USB Debugging",
       "applicablePlatforms": ["android"]
     },
     {
       "name": "hardwareKeystore",
-      "displayName": "Hardware Keystore",
       "applicablePlatforms": ["android"]
     },
     {
-      "name": "lockScreen",
-      "displayName": "Lock Screen"
+      "name": "lockScreen"
     },
     {
       "name": "biometric",
-      "displayName": "Biometric",
       "applicablePlatforms": ["android"]
     },
     {
       "name": "screenLockComplexity",
-      "displayName": "Screen Lock Complexity",
       "applicablePlatforms": ["android"]
     },
     {
       "name": "diskEncryption",
-      "displayName": "Disk Encryption",
       "applicablePlatforms": ["android","macos","windows"]
     },
     {
       "name": "networkProxies",
-      "displayName": "Network Proxies",
       "applicablePlatforms": ["android"]
     },
     {
       "name": "wifiNetworkSecurity",
-      "displayName": "Wi-Fi Network Security",
       "applicablePlatforms": ["android"]
     },
     {
       "name": "androidIntegrity",
-      "displayName": "Android Integrity",
       "applicablePlatforms": ["android"]
     },
     {
       "name": "iosIntegrity",
-      "displayName": "iOS Device Genuine",
       "applicablePlatforms": ["ios"]
     },
     {
       "name": "passcode",
-      "displayName": "Passcode",
       "applicablePlatforms": ["ios"]
     },
     {
       "name": "touchIdOrFaceId",
-      "displayName": "Touch ID or Face ID",
       "applicablePlatforms": ["ios"]
     },
     {
       "name": "jailbreak",
-      "displayName": "Jailbreak",
       "applicablePlatforms": ["ios"]
     },
     {
       "name": "secureEnclave",
-      "displayName": "Secure Enclave",
       "applicablePlatforms": ["macos"]
     },
     {
       "name": "windowsHello",
-      "displayName": "Windows Hello",
       "applicablePlatforms": ["windows"]
     },
     {
       "name": "trustedPlatformModule",
-      "displayName": "Trusted Platform Module",
       "applicablePlatforms": ["windows"]
     }
   ]

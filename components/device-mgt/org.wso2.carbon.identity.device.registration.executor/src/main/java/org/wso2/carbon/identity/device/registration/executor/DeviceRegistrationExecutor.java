@@ -28,8 +28,8 @@ import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.device.mgt.api.constant.ErrorMessage;
 import org.wso2.carbon.identity.device.mgt.api.exception.DeviceMgtClientException;
 import org.wso2.carbon.identity.device.mgt.api.exception.DeviceMgtException;
+import org.wso2.carbon.identity.device.mgt.api.model.Device;
 import org.wso2.carbon.identity.device.mgt.api.model.DeviceRegistrationInitiation;
-import org.wso2.carbon.identity.device.mgt.api.model.RegisteredDevice;
 import org.wso2.carbon.identity.device.mgt.api.service.DeviceManagementService;
 import org.wso2.carbon.identity.device.policy.api.service.DevicePolicyEvaluator;
 import org.wso2.carbon.identity.device.registration.executor.internal.DeviceRegistrationExecutorDataHolder;
@@ -240,7 +240,7 @@ public class DeviceRegistrationExecutor implements Executor {
             String deviceName = buildDeviceName(context, deviceModel);
 
             // Step 1: Verify signature and clear registration cache entry.
-            RegisteredDevice verified = service.verifyDeviceRegistration(
+            Device verified = service.verifyDeviceRegistration(
                     registrationId,
                     input.get(FIELD_PUBLIC_KEY),
                     input.get(FIELD_SIGNATURE),
@@ -356,10 +356,6 @@ public class DeviceRegistrationExecutor implements Executor {
         DeviceRegistrationExecutorDataHolder holder = DeviceRegistrationExecutorDataHolder.getInstance();
         DevicePolicyEvaluator evaluator = holder.getDevicePolicyEvaluator();
         Map<String, Object> deviceData = parseDeviceData(context.getUserInputData());
-        // Fill any missing fields so the rule engine always sees a complete map.
-        for (String fieldName : evaluator.getFieldNames()) {
-            deviceData.putIfAbsent(fieldName, "not_available");
-        }
 
         holder.getIntegrityDataEnricher().enrich(deviceData, context.getApplicationId(),
                 context.getTenantDomain());

@@ -24,8 +24,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.rule.evaluation.api.resolver.SymbolicValueResolver;
 import org.wso2.carbon.identity.rule.management.api.model.Value;
+import org.wso2.carbon.utils.CarbonUtils;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -34,10 +36,12 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * Singleton registry that loads os-versions.json and resolves symbolic OS version names.
+ * Registry that loads os-versions.json and resolves symbolic OS version names.
  * Symbolic names: LATEST_ANDROID, SECOND_LATEST_ANDROID, LATEST_IOS, SECOND_LATEST_IOS,
  * LATEST_MACOS, SECOND_LATEST_MACOS, LATEST_WINDOWS, SECOND_LATEST_WINDOWS.
- * When admin updates os-versions.json and restarts, all policies using symbolic names auto-resolve.
+ * Must be initialised once at bundle activation via {@link #load()} before any call to
+ * {@link #getInstance()}. If the config file is absent or unparseable, {@link #load()} throws
+ * {@link DevicePolicyConfigException}, causing activation to fail loudly.
  */
 public class OsVersionRegistry implements SymbolicValueResolver {
 
@@ -47,25 +51,50 @@ public class OsVersionRegistry implements SymbolicValueResolver {
             + File.separator + "os-versions.json";
 
     private static volatile OsVersionRegistry instance;
-    private Map<String, List<String>> platformVersions = Collections.emptyMap();
 
-    private OsVersionRegistry() {
+    private final Map<String, List<String>> platformVersions;
 
-        load();
+    private OsVersionRegistry(Map<String, List<String>> platformVersions) {
+
+        this.platformVersions = platformVersions;
     }
 
     /**
-     * Returns the singleton instance, initializing it on first call.
+     * Loads os-versions.json from the IS config directory and initialises the singleton.
+     * Must be called once from the OSGi component {@code @Activate} method.
+     *
+     * @throws DevicePolicyConfigException If the file is absent or cannot be parsed.
+     */
+    public static void load() throws DevicePolicyConfigException {
+
+        String filePath = CarbonUtils.getCarbonHome() + File.separator + CONFIG_PATH;
+        File file = new File(filePath);
+        if (!file.exists() || !file.isFile()) {
+            throw new DevicePolicyConfigException("os-versions.json not found at: " + file.getAbsolutePath());
+        }
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            Map<String, List<String>> loaded =
+                    mapper.readValue(file, new TypeReference<Map<String, List<String>>>() { });
+            instance = new OsVersionRegistry(loaded);
+            if (LOG.isDebugEnabled()) {
+                Map<String, Integer> counts = new HashMap<>();
+                loaded.forEach((k, v) -> counts.put(k, v.size()));
+                LOG.debug("Loaded OS version registry: " + counts);
+            }
+        } catch (IOException e) {
+            throw new DevicePolicyConfigException(
+                    "Failed to parse os-versions.json from: " + filePath, e);
+        }
+    }
+
+    /**
+     * Returns the singleton instance initialised by {@link #load()}.
+     *
+     * @return The loaded {@link OsVersionRegistry}.
      */
     public static OsVersionRegistry getInstance() {
 
-        if (instance == null) {
-            synchronized (OsVersionRegistry.class) {
-                if (instance == null) {
-                    instance = new OsVersionRegistry();
-                }
-            }
-        }
         return instance;
     }
 
@@ -135,24 +164,13 @@ public class OsVersionRegistry implements SymbolicValueResolver {
         return versions.get(versions.size() - 2);
     }
 
-    private void load() {
+    /**
+     * Returns an unmodifiable view of the platform-to-versions map.
+     *
+     * @return Map of platform name to ordered list of version strings.
+     */
+    public Map<String, List<String>> getPlatformVersions() {
 
-        String filePath = System.getProperty("carbon.home") + File.separator + CONFIG_PATH;
-        File file = new File(filePath);
-        if (!file.exists()) {
-            LOG.warn("os-versions.json not found at: " + filePath + ". Symbolic OS version resolution disabled.");
-            return;
-        }
-        try {
-            ObjectMapper mapper = new ObjectMapper();
-            platformVersions = mapper.readValue(file, new TypeReference<Map<String, List<String>>>() { });
-            if (LOG.isDebugEnabled()) {
-                Map<String, Integer> counts = new HashMap<>();
-                platformVersions.forEach((k, v) -> counts.put(k, v.size()));
-                LOG.debug("Loaded OS version registry: " + counts);
-            }
-        } catch (Exception e) {
-            LOG.error("Failed to load os-versions.json from: " + filePath, e);
-        }
+        return Collections.unmodifiableMap(platformVersions);
     }
 }

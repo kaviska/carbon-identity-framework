@@ -37,8 +37,8 @@ public interface DeviceManagementService {
      * @param deviceModel    Hardware model string (nullable).
      * @param metadata       Optional JSON string for extensible attributes (nullable).
      * @param tenantDomain   Tenant domain.
-     * @return A Device whose userId is a placeholder — caller must replace it with the
-     *         real userId before calling {@link #persistDevice(Device, String)}.
+     * @return A Device whose userId is unset — caller must set the real userId before
+     *         calling {@link #persistDevice(Device, String)}.
      */
     Device verifyDeviceRegistration(
             String registrationId,

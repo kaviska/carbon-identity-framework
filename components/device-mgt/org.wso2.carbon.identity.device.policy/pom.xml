@@ -162,6 +162,7 @@
                             version="${carbon.identity.package.export.version}"
                         </Export-Package>
                         <Import-Package>
+                            org.wso2.carbon.utils; version="${carbon.kernel.package.import.version.range}",
                             org.apache.commons.logging; version="${import.package.version.commons.logging}",
                             org.apache.commons.lang; version="${commons-lang.wso2.osgi.version.range}",
                             org.osgi.framework; version="${osgi.framework.imp.pkg.version.range}",

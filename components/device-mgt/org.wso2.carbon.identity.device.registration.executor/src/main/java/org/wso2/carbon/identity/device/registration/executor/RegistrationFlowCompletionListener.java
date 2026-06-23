@@ -88,16 +88,7 @@ public class RegistrationFlowCompletionListener extends AbstractFlowExecutionLis
             return true;
         }
 
-        Device deviceWithUserId = new Device.Builder()
-                .id(pending.getId())
-                .userId(userId)
-                .deviceName(pending.getDeviceName())
-                .deviceModel(pending.getDeviceModel())
-                .publicKey(pending.getPublicKey())
-                .status(pending.getStatus())
-                .registeredAt(pending.getRegisteredAt())
-                .metadata(pending.getMetadata())
-                .build();
+        Device deviceWithUserId = new Device.Builder(pending).userId(userId).build();
 
         DeviceManagementService service =
                 DeviceRegistrationExecutorDataHolder.getInstance().getDeviceManagementService();

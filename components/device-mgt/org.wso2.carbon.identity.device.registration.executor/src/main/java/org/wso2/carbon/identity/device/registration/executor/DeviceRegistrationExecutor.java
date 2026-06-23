@@ -145,10 +145,6 @@ public class DeviceRegistrationExecutor implements Executor {
         return Collections.singletonList(USERNAME_CLAIM_URI);
     }
 
-    /**
-     * Reads the optional policyName from executor metadata configured by the admin.
-     * Returns null if not configured, which skips policy evaluation entirely.
-     */
     private String resolvePolicyName(FlowExecutionContext context) {
 
         NodeConfig node = context.getCurrentNode();
@@ -170,8 +166,9 @@ public class DeviceRegistrationExecutor implements Executor {
         try {
             // Use real UUID if already available (invite flow); fall back to username (self-registration).
             String userId = context.getFlowUser().getUserId();
-            String username = isNotBlank(userId) ? userId : context.getFlowUser().getUsername();
-            if (isBlank(username)) {
+            String userIdentifier = isNotBlank(userId) ? userId : context.getFlowUser().getUsername();
+
+            if (isBlank(userIdentifier)) {
                 ExecutorResponse response = new ExecutorResponse();
                 response.setResult(STATUS_ERROR);
                 response.setErrorCode(ErrorMessage.ERROR_USER_NOT_IDENTIFIED.getCode());
@@ -179,14 +176,15 @@ public class DeviceRegistrationExecutor implements Executor {
                 response.setErrorDescription(ErrorMessage.ERROR_USER_NOT_IDENTIFIED.getDescription());
                 return response;
             }
-            // Set username on thread-local context so downstream services (audit, events) can read it.
-            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(username);
+            // Set the resolved user identifier on thread-local context so downstream services
+            // (audit, events) can read it.
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(userIdentifier);
 
             DeviceRegistrationInitiation initiation =
-                    service.initiateDeviceRegistration(username, context.getTenantDomain());
+                    service.initiateDeviceRegistration(userIdentifier, context.getTenantDomain());
 
             if (LOG.isDebugEnabled()) {
-                LOG.debug("Device registration initiated for user: " + LoggerUtils.getMaskedContent(username)
+                LOG.debug("Device registration initiated for user: " + LoggerUtils.getMaskedContent(userIdentifier)
                         + " registrationId: " + initiation.getRegistrationId());
             }
 
@@ -197,9 +195,6 @@ public class DeviceRegistrationExecutor implements Executor {
             Map<String, Object> contextProperties = new HashMap<>();
             contextProperties.put(CTX_REGISTRATION_ID, initiation.getRegistrationId());
 
-            // If a compliance policy is configured, tell the SDK to send device attributes
-            // as a single nested object under the "deviceData" key. The SDK bundles whatever
-            // device attributes it has into that object; the server parses it in Phase 2.
             List<String> requiredFields = new ArrayList<>(
                     Arrays.asList(FIELD_PUBLIC_KEY, FIELD_SIGNATURE));
             List<String> optionalFields = new ArrayList<>(
@@ -267,9 +262,6 @@ public class DeviceRegistrationExecutor implements Executor {
             }
 
             if (FlowTypes.REGISTRATION.getType().equals(context.getFlowType())) {
-                // userId is not yet assigned — UserProvisioningExecutor runs at END after this.
-                // Defer the DB write to RegistrationFlowCompletionListener, which fires after
-                // COMPLETE and has the real userId from FlowUser.
                 ExecutorResponse response = new ExecutorResponse();
                 response.setResult(STATUS_COMPLETE);
                 Map<String, Object> ctxProps = new HashMap<>();
@@ -278,8 +270,10 @@ public class DeviceRegistrationExecutor implements Executor {
                 return response;
             }
 
-            // Non-registration flow: userId already exists, persist immediately.
-            service.persistDevice(verified, context.getTenantDomain());
+            // Non-registration flow: the user already exists, so bind the real userId and persist now.
+            String userId = context.getFlowUser().getUserId();
+            Device toPersist = new Device.Builder(verified).userId(userId).build();
+            service.persistDevice(toPersist, context.getTenantDomain());
 
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Device registration completed for registrationId: " + registrationId);
@@ -287,7 +281,7 @@ public class DeviceRegistrationExecutor implements Executor {
             // Record the device ID so rollback() can delete it if a subsequent executor fails.
             ExecutorResponse response = new ExecutorResponse(STATUS_COMPLETE);
             Map<String, Object> ctxProps = new HashMap<>();
-            ctxProps.put(CTX_PERSISTED_DEVICE_ID, verified.getId());
+            ctxProps.put(CTX_PERSISTED_DEVICE_ID, toPersist.getId());
             response.setContextProperty(ctxProps);
             return response;
 
@@ -310,10 +304,6 @@ public class DeviceRegistrationExecutor implements Executor {
         }
     }
 
-    /**
-     * Builds a device name automatically from the authenticated username and optional device model.
-     * Format: "{username}'s {deviceModel}" or "{username}'s Device" when model is absent.
-     */
     private String buildDeviceName(FlowExecutionContext context, String deviceModel) {
 
         String userId = context.getFlowUser().getUserId();
@@ -322,10 +312,6 @@ public class DeviceRegistrationExecutor implements Executor {
         return isNotBlank(deviceModel) ? base + "'s " + deviceModel : base + "'s Device";
     }
 
-    /**
-     * Extracts device attributes from the SDK's Phase 2 input.
-     * The SDK sends all device attributes as a JSON object under the {@code "deviceData"} key.
-     */
     private Map<String, Object> parseDeviceData(Map<String, String> input) {
 
         Map<String, Object> deviceData = new HashMap<>();
@@ -344,13 +330,6 @@ public class DeviceRegistrationExecutor implements Executor {
         return deviceData;
     }
 
-    /**
-     * Evaluates device compliance against a single named policy using attributes submitted by the
-     * SDK in Phase 2.
-     *
-     * @return null if the device is compliant, or an error ExecutorResponse describing the failed
-     *         fields if the device does not comply.
-     */
     private ExecutorResponse evaluatePolicy(String policyName, FlowExecutionContext context) {
 
         DeviceRegistrationExecutorDataHolder holder = DeviceRegistrationExecutorDataHolder.getInstance();

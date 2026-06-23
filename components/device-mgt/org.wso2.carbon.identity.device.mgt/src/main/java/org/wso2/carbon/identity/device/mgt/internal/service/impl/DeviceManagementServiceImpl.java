@@ -133,9 +133,10 @@ public class DeviceManagementServiceImpl implements DeviceManagementService {
             LOG.debug("Device registration verified (not yet persisted) for user: " + context.getUsername() +
                     " in tenant: " + tenantDomain);
         }
+        // userId is intentionally left unset here. The caller must stamp the real
+        // user UUID via persistDevice (inline) or the completion listener (registration).
         return new Device.Builder()
                 .id(registrationId)
-                .userId(context.getUsername())
                 .deviceName(deviceName)
                 .deviceModel(deviceModel)
                 .publicKey(publicKey)
@@ -148,6 +149,10 @@ public class DeviceManagementServiceImpl implements DeviceManagementService {
     @Override
     public void persistDevice(Device device, String tenantDomain) throws DeviceMgtException {
 
+        if (device.getUserId() == null || device.getUserId().trim().isEmpty()) {
+            throw DeviceManagementExceptionHandler.handleServerException(
+                    ErrorMessage.ERROR_USER_ID_REQUIRED);
+        }
         deviceManagementDAO.registerDevice(device, IdentityTenantUtil.getTenantId(tenantDomain));
 
         if (LOG.isDebugEnabled()) {

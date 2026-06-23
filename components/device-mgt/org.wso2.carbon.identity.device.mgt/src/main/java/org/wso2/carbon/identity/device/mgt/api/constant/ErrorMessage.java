@@ -53,7 +53,9 @@ public enum ErrorMessage {
     ERROR_WHILE_VERIFYING_SIGNATURE("DM-65005", "Error while verifying device signature.",
             "An unexpected error occurred during signature verification for registration ID: %s."),
     ERROR_WHILE_EVALUATING_POLICY("DM-65006", "Error while evaluating device policy.",
-            "An error occurred while evaluating policy '%s'.");
+            "An error occurred while evaluating policy '%s'."),
+    ERROR_USER_ID_REQUIRED("DM-65007", "User identifier required.",
+            "Cannot persist device: a valid user identifier (userId) was not set before persistence.");
 
     private final String code;
     private final String message;

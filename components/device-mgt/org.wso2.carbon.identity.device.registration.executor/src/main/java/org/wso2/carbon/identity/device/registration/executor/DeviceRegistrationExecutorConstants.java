@@ -24,16 +24,8 @@ package org.wso2.carbon.identity.device.registration.executor;
  */
 public class DeviceRegistrationExecutorConstants {
 
-    /**
-     * Unique executor name used by the flow execution engine registry.
-     */
     public static final String EXECUTOR_NAME = "DeviceRegistrationExecutor";
 
-    /**
-     * Flow context key holding the verified-but-not-yet-persisted Device in
-     * REGISTRATION flows. Written by DeviceRegistrationExecutor in Phase 2 and read by
-     * RegistrationFlowCompletionListener after UserProvisioningExecutor assigns the real userId.
-     */
     public static final String CTX_DEVICE_REGISTRATION = "device.registration.data";
 
     private DeviceRegistrationExecutorConstants() {

@@ -141,6 +141,29 @@ public class Device {
         private String metadata;
 
         /**
+         * Creates an empty builder.
+         */
+        public Builder() {
+        }
+
+        /**
+         * Creates a builder pre-populated with the fields of an existing device.
+         *
+         * @param device Source device to copy fields from.
+         */
+        public Builder(Device device) {
+
+            this.id = device.id;
+            this.userId = device.userId;
+            this.deviceName = device.deviceName;
+            this.deviceModel = device.deviceModel;
+            this.publicKey = device.publicKey;
+            this.status = device.status;
+            this.registeredAt = device.registeredAt;
+            this.metadata = device.metadata;
+        }
+
+        /**
          * Sets the device identifier.
          *
          * @param id Device identifier.

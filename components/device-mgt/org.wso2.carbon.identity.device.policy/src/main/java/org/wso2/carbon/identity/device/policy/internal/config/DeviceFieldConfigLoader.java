@@ -23,15 +23,18 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.utils.CarbonUtils;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
 /**
- * Singleton loader for device-fields.json.
- * Reads the config once from $CARBON_HOME/repository/resources/identity/device-policy/device-fields.json
- * and caches it. Used by both DevicePolicyEvaluatorImpl (header mapping) and the metadata API (platform filter).
+ * Loader for device-fields.json.
+ * Must be initialised once at bundle activation via {@link #load()} before any call to
+ * {@link #getInstance()}. If the config file is absent or unparseable, {@link #load()} throws
+ * {@link DevicePolicyConfigException}, causing activation to fail loudly.
  */
 public class DeviceFieldConfigLoader {
 
@@ -41,50 +44,59 @@ public class DeviceFieldConfigLoader {
             + File.separator + "device-fields.json";
 
     private static volatile DeviceFieldConfigLoader instance;
-    private List<DeviceFieldConfig> fields = Collections.emptyList();
 
-    private DeviceFieldConfigLoader() {
+    private final List<DeviceFieldConfig> fields;
 
-        load();
+    private DeviceFieldConfigLoader(List<DeviceFieldConfig> fields) {
+
+        this.fields = fields;
     }
 
     /**
-     * Returns the singleton instance, initializing it on first call.
+     * Loads device-fields.json from the IS config directory and initialises the singleton.
+     * Must be called once from the OSGi component {@code @Activate} method.
+     *
+     * @throws DevicePolicyConfigException If the file is absent or cannot be parsed.
      */
-    public static DeviceFieldConfigLoader getInstance() {
+    public static void load() throws DevicePolicyConfigException {
 
-        if (instance == null) {
-            synchronized (DeviceFieldConfigLoader.class) {
-                if (instance == null) {
-                    instance = new DeviceFieldConfigLoader();
-                }
-            }
-        }
-        return instance;
-    }
-
-    public List<DeviceFieldConfig> getFields() {
-
-        return Collections.unmodifiableList(fields);
-    }
-
-    private void load() {
-
-        String filePath = System.getProperty("carbon.home") + File.separator + CONFIG_PATH;
+        String filePath = CarbonUtils.getCarbonHome() + File.separator + CONFIG_PATH;
         File file = new File(filePath);
-        if (!file.exists()) {
-            LOG.warn("device-fields.json not found at: " + filePath + ". Device field config will be empty.");
-            return;
+        if (!file.exists() || !file.isFile()) {
+            throw new DevicePolicyConfigException("device-fields.json not found at: " + file.getAbsolutePath());
         }
         try {
             ObjectMapper mapper = new ObjectMapper();
             JsonNode root = mapper.readTree(file);
-            fields = mapper.convertValue(root.get("fields"), new TypeReference<List<DeviceFieldConfig>>() { });
+            List<DeviceFieldConfig> loaded =
+                    mapper.convertValue(root.get("fields"), new TypeReference<List<DeviceFieldConfig>>() { });
+            instance = new DeviceFieldConfigLoader(loaded);
             if (LOG.isDebugEnabled()) {
-                LOG.debug("Loaded " + fields.size() + " device field configs from: " + filePath);
+                LOG.debug("Loaded " + loaded.size() + " device field configs from: " + filePath);
             }
-        } catch (Exception e) {
-            LOG.error("Failed to load device-fields.json from: " + filePath, e);
+        } catch (IOException e) {
+            throw new DevicePolicyConfigException(
+                    "Failed to parse device-fields.json from: " + filePath, e);
         }
+    }
+
+    /**
+     * Returns the singleton instance initialised by {@link #load()}.
+     *
+     * @return The loaded {@link DeviceFieldConfigLoader}.
+     */
+    public static DeviceFieldConfigLoader getInstance() {
+
+        return instance;
+    }
+
+    /**
+     * Returns an unmodifiable view of the loaded device field configurations.
+     *
+     * @return List of {@link DeviceFieldConfig}.
+     */
+    public List<DeviceFieldConfig> getFields() {
+
+        return Collections.unmodifiableList(fields);
     }
 }

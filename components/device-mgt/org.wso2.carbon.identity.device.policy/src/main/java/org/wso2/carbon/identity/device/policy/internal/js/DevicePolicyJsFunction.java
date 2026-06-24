@@ -26,11 +26,10 @@ import org.wso2.carbon.identity.application.authentication.framework.context.Tra
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.device.policy.internal.component.DevicePolicyComponentServiceHolder;
 import org.wso2.carbon.identity.device.policy.internal.jwt.DeviceTokenExtractor;
+import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementClientException;
 import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementException;
 import org.wso2.carbon.identity.rule.evaluation.api.exception.RuleEvaluationException;
 
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.function.BiFunction;
 
@@ -43,7 +42,6 @@ import javax.servlet.http.HttpServletRequest;
 public class DevicePolicyJsFunction implements BiFunction<JsBaseAuthenticationContext, String, String> {
 
     private static final Log LOG = LogFactory.getLog(DevicePolicyJsFunction.class);
-    private static final String DEVICE_TOKEN_PARAM = "device_token";
     private static final String DEVICE_TOKEN_HEADER = "X-Device-Token";
 
     @Override
@@ -53,24 +51,23 @@ public class DevicePolicyJsFunction implements BiFunction<JsBaseAuthenticationCo
         try {
             String tenantDomain = context.getWrapped().getTenantDomain();
 
-            // Step 1 — try context queryParams (redirect flows: OAuth2, SAML, WS-Fed)
-            // device_token sent as query param in authorize request is permanently stored here.
-            String deviceToken = extractFromQueryParams(context.getWrapped().getQueryParams());
-
-            // Step 2 — fallback to X-Device-Token header (API authn / headless flow)
-            if (deviceToken == null || deviceToken.isEmpty()) {
-                TransientObjectWrapper<HttpServletRequest> requestWrapper =
-                        (TransientObjectWrapper<HttpServletRequest>) context.getWrapped()
-                                .getProperty(FrameworkConstants.RequestAttribute.HTTP_REQUEST);
-                if (requestWrapper != null && requestWrapper.getWrapped() != null) {
-                    deviceToken = requestWrapper.getWrapped().getHeader(DEVICE_TOKEN_HEADER);
-                }
+            // Resolve the device token from the X-Device-Token header on the current request — never
+            // from the URL. Works for both headless/API auth (the app calls the auth API with the
+            // header) and redirect flows (the app resumes /commonauth with the header during the
+            // device prompt step). Keeping it out of the URL avoids leakage via access logs, browser
+            // history and the Referer header.
+            String deviceToken = null;
+            TransientObjectWrapper<HttpServletRequest> requestWrapper =
+                    (TransientObjectWrapper<HttpServletRequest>) context.getWrapped()
+                            .getProperty(FrameworkConstants.RequestAttribute.HTTP_REQUEST);
+            if (requestWrapper != null && requestWrapper.getWrapped() != null) {
+                deviceToken = requestWrapper.getWrapped().getHeader(DEVICE_TOKEN_HEADER);
             }
 
             if (deviceToken == null || deviceToken.isEmpty()) {
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("No device token found for policy: " + policyName
-                            + ". Checked context queryParams and X-Device-Token header.");
+                            + ". Checked the X-Device-Token header.");
                 }
                 return policyName + ":no_device_token";
             }
@@ -83,6 +80,14 @@ public class DevicePolicyJsFunction implements BiFunction<JsBaseAuthenticationCo
 
             return holder.getDevicePolicyEvaluator().evaluate(policyName, deviceData, tenantDomain);
 
+        } catch (PolicyManagementClientException e) {
+            // Expected client-side rejection (invalid signature, expired/unregistered device,
+            // malformed token). Caused by client input, not a server fault — log at debug without a
+            // stack trace and treat the device as non-compliant.
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Device token rejected for policy " + policyName + ": " + e.getMessage());
+            }
+            return policyName + ":invalid_device_token";
         } catch (PolicyManagementException e) {
             LOG.error("Error while evaluating device policy: " + policyName, e);
             return policyName + ":policy_error";
@@ -92,20 +97,4 @@ public class DevicePolicyJsFunction implements BiFunction<JsBaseAuthenticationCo
         }
     }
 
-    private String extractFromQueryParams(String queryString) {
-
-        if (queryString == null || queryString.isEmpty()) {
-            return null;
-        }
-        for (String pair : queryString.split("&")) {
-            String[] kv = pair.split("=", 2);
-            if (kv.length == 2) {
-                String key = URLDecoder.decode(kv[0].trim(), StandardCharsets.UTF_8);
-                if (DEVICE_TOKEN_PARAM.equals(key)) {
-                    return URLDecoder.decode(kv[1].trim(), StandardCharsets.UTF_8);
-                }
-            }
-        }
-        return null;
-    }
 }

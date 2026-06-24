@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.device.policy.internal.component;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.osgi.framework.BundleContext;
@@ -30,10 +31,12 @@ import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.identity.application.authentication.framework.JsFunctionRegistry;
 import org.wso2.carbon.identity.client.attestation.mgt.services.ClientAttestationService;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.device.mgt.api.service.DeviceManagementService;
 import org.wso2.carbon.identity.device.policy.api.service.DeviceFieldMetadataService;
 import org.wso2.carbon.identity.device.policy.api.service.DevicePolicyEvaluator;
 import org.wso2.carbon.identity.device.policy.api.service.IntegrityDataEnricher;
+import org.wso2.carbon.identity.device.policy.internal.cleanup.DeviceTokenJtiCleanupService;
 import org.wso2.carbon.identity.device.policy.internal.config.DeviceFieldConfigLoader;
 import org.wso2.carbon.identity.device.policy.internal.config.DevicePolicyConfigException;
 import org.wso2.carbon.identity.device.policy.internal.config.OsVersionRegistry;
@@ -59,6 +62,13 @@ import org.wso2.carbon.identity.rule.evaluation.api.resolver.SymbolicValueResolv
 public class DevicePolicyServiceComponent {
 
     private static final Log LOG = LogFactory.getLog(DevicePolicyServiceComponent.class);
+    private static final String JTI_CLEANUP_ENABLE_PROPERTY =
+            "JDBCPersistenceManager.DeviceTokenJtiCleanUp.Enable";
+    private static final String JTI_CLEANUP_PERIOD_PROPERTY =
+            "JDBCPersistenceManager.DeviceTokenJtiCleanUp.CleanUpPeriod";
+    private static final long DEFAULT_JTI_CLEANUP_PERIOD_MINUTES = 15;
+
+    private DeviceTokenJtiCleanupService deviceTokenJtiCleanupService;
 
     @Activate
     protected void activate(ComponentContext context) {
@@ -99,6 +109,8 @@ public class DevicePolicyServiceComponent {
             resolverRegistry.register("macosOsVersion", osVersionResolver);
             resolverRegistry.register("windowsOsVersion", osVersionResolver);
 
+            startDeviceTokenJtiCleanup();
+
             LOG.debug("Device policy bundle activated.");
         } catch (Throwable e) {
             LOG.error("Error while initializing device policy service component.", e);
@@ -113,7 +125,38 @@ public class DevicePolicyServiceComponent {
         resolverRegistry.deregister("iosOsVersion");
         resolverRegistry.deregister("macosOsVersion");
         resolverRegistry.deregister("windowsOsVersion");
+        if (deviceTokenJtiCleanupService != null) {
+            deviceTokenJtiCleanupService.shutdown();
+        }
         LOG.debug("Device policy bundle deactivated.");
+    }
+
+    /**
+     * Starts the scheduled task that removes expired device token jti records from the replay store.
+     * Controlled by the {@code DeviceTokenJtiCleanUp} properties; enabled with a default period when unset.
+     */
+    private void startDeviceTokenJtiCleanup() {
+
+        boolean cleanupEnabled = true;
+        String cleanupEnabledValue = IdentityUtil.getProperty(JTI_CLEANUP_ENABLE_PROPERTY);
+        if (StringUtils.isNotBlank(cleanupEnabledValue)) {
+            cleanupEnabled = Boolean.parseBoolean(cleanupEnabledValue);
+        }
+        if (!cleanupEnabled) {
+            LOG.debug("Device token jti cleanup task is disabled.");
+            return;
+        }
+
+        long cleanupPeriod = DEFAULT_JTI_CLEANUP_PERIOD_MINUTES;
+        String cleanupPeriodValue = IdentityUtil.getProperty(JTI_CLEANUP_PERIOD_PROPERTY);
+        if (StringUtils.isNotBlank(cleanupPeriodValue) && StringUtils.isNumeric(cleanupPeriodValue)) {
+            cleanupPeriod = Long.parseLong(cleanupPeriodValue);
+        }
+        deviceTokenJtiCleanupService = new DeviceTokenJtiCleanupService(cleanupPeriod / 4, cleanupPeriod);
+        deviceTokenJtiCleanupService.activateCleanUp();
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Device token jti cleanup task enabled to run every " + cleanupPeriod + " minutes.");
+        }
     }
 
     @Reference(

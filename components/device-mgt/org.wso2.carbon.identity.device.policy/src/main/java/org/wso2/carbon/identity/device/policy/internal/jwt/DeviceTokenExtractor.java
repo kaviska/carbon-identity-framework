@@ -21,14 +21,18 @@ package org.wso2.carbon.identity.device.policy.internal.jwt;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.crypto.ECDSAVerifier;
 import com.nimbusds.jwt.JWT;
+import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.JWTParser;
 import com.nimbusds.jwt.SignedJWT;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.device.mgt.api.exception.DeviceMgtException;
 import org.wso2.carbon.identity.device.mgt.api.model.Device;
 import org.wso2.carbon.identity.device.policy.api.constant.DevicePolicyErrorMessage;
 import org.wso2.carbon.identity.device.policy.internal.component.DevicePolicyComponentServiceHolder;
+import org.wso2.carbon.identity.device.policy.internal.dao.DeviceTokenReplayDAO;
+import org.wso2.carbon.identity.device.policy.internal.dao.impl.DeviceTokenReplayDAOImpl;
 import org.wso2.carbon.identity.device.policy.internal.util.DevicePolicyExceptionHandler;
 import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementException;
 import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementServerException;
@@ -38,8 +42,10 @@ import java.security.NoSuchAlgorithmException;
 import java.security.interfaces.ECPublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
+import java.sql.Timestamp;
 import java.text.ParseException;
 import java.util.Base64;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -55,6 +61,11 @@ public class DeviceTokenExtractor {
     private static final Log LOG = LogFactory.getLog(DeviceTokenExtractor.class);
     private static final String DEVICE_TOKEN_HEADER = "X-Device-Token";
     private static final String DEVICE_ID_PARAM = "deviceId";
+    // A device token is accepted only within this window after its iat, and a small allowance is granted
+    // for the device clock running ahead of the server. The expiry stored in the replay store equals
+    // iat + this window, so a jti is retained for exactly as long as the token could still be replayed.
+    private static final long TOKEN_FRESHNESS_WINDOW_MILLIS = 5 * 60 * 1000L;
+    private static final long CLOCK_SKEW_MILLIS = 30 * 1000L;
 
     /**
      * Extracts verified device attributes from the X-Device-Token JWT in the request.
@@ -119,8 +130,13 @@ public class DeviceTokenExtractor {
                         DevicePolicyErrorMessage.ERROR_DEVICE_TOKEN_SIGNATURE_INVALID, deviceId);
             }
 
+            // Signature is valid, but a valid token can still be replayed. Enforce iat freshness and
+            // single-use of the jti before trusting the claims.
+            JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
+            verifyTokenFreshnessAndUniqueness(claimsSet, IdentityTenantUtil.getTenantId(tenantDomain));
+
             Map<String, Object> deviceData = new HashMap<>();
-            signedJWT.getJWTClaimsSet().getClaims().forEach((key, value) -> {
+            claimsSet.getClaims().forEach((key, value) -> {
                 if (value != null) {
                     deviceData.put(key, String.valueOf(value));
                 }
@@ -141,6 +157,50 @@ public class DeviceTokenExtractor {
             throw DevicePolicyExceptionHandler.handleServerException(
                     DevicePolicyErrorMessage.ERROR_DEVICE_LOOKUP_FAILED, e);
         }
+    }
+
+    /**
+     * Verifies that the device token is fresh and has not been replayed.
+     * The token must carry a jti and an iat claim. Tokens whose iat falls outside the freshness window,
+     * or whose jti has already been recorded, are rejected. Accepted jti values are persisted so the same
+     * token cannot be presented again.
+     *
+     * @param claimsSet Parsed JWT claims.
+     * @param tenantId  Tenant the device belongs to.
+     * @throws PolicyManagementException If a required claim is missing, the token is stale, or it is a replay.
+     */
+    private void verifyTokenFreshnessAndUniqueness(JWTClaimsSet claimsSet, int tenantId)
+            throws PolicyManagementException {
+
+        String jti = claimsSet.getJWTID();
+        if (jti == null || jti.trim().isEmpty()) {
+            throw DevicePolicyExceptionHandler.handleClientException(
+                    DevicePolicyErrorMessage.ERROR_DEVICE_TOKEN_MISSING_JTI);
+        }
+
+        Date issuedAt = claimsSet.getIssueTime();
+        if (issuedAt == null) {
+            throw DevicePolicyExceptionHandler.handleClientException(
+                    DevicePolicyErrorMessage.ERROR_DEVICE_TOKEN_MISSING_IAT);
+        }
+
+        long age = System.currentTimeMillis() - issuedAt.getTime();
+        // Reject tokens older than the freshness window, or issued in the future beyond the allowed skew.
+        if (age > TOKEN_FRESHNESS_WINDOW_MILLIS || age < -CLOCK_SKEW_MILLIS) {
+            throw DevicePolicyExceptionHandler.handleClientException(
+                    DevicePolicyErrorMessage.ERROR_DEVICE_TOKEN_EXPIRED,
+                    String.valueOf(TOKEN_FRESHNESS_WINDOW_MILLIS / 1000));
+        }
+
+        DeviceTokenReplayDAO replayDAO = new DeviceTokenReplayDAOImpl();
+        if (replayDAO.isTokenReplayed(jti, tenantId)) {
+            throw DevicePolicyExceptionHandler.handleClientException(
+                    DevicePolicyErrorMessage.ERROR_DEVICE_TOKEN_REPLAYED, jti);
+        }
+
+        Timestamp issuedAtTimestamp = new Timestamp(issuedAt.getTime());
+        Timestamp expiryTimestamp = new Timestamp(issuedAt.getTime() + TOKEN_FRESHNESS_WINDOW_MILLIS);
+        replayDAO.storeToken(jti, tenantId, issuedAtTimestamp, expiryTimestamp);
     }
 
     private ECPublicKey decodePublicKey(String base64PublicKey)

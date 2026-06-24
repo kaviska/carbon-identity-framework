@@ -34,6 +34,14 @@ public enum DevicePolicyErrorMessage {
             "No registered device found for deviceId: %s."),
     ERROR_DEVICE_TOKEN_SIGNATURE_INVALID("DPM-60011", "Device token signature invalid.",
             "JWT signature verification failed for deviceId: %s."),
+    ERROR_DEVICE_TOKEN_MISSING_JTI("DPM-60012", "Device token invalid.",
+            "jti claim is missing from the device token."),
+    ERROR_DEVICE_TOKEN_MISSING_IAT("DPM-60013", "Device token invalid.",
+            "iat claim is missing from the device token."),
+    ERROR_DEVICE_TOKEN_EXPIRED("DPM-60014", "Device token expired.",
+            "Device token is outside the allowed %s-second freshness window."),
+    ERROR_DEVICE_TOKEN_REPLAYED("DPM-60015", "Device token replayed.",
+            "Device token with jti %s has already been used."),
 
     // Server errors.
     ERROR_DEVICE_ECDSA_VERIFICATION_FAILED("DPM-65011", "Device token verification failed.",
@@ -41,7 +49,11 @@ public enum DevicePolicyErrorMessage {
     ERROR_DEVICE_LOOKUP_FAILED("DPM-65012", "Device lookup failed.",
             "Error retrieving device from registry."),
     ERROR_DEVICE_PUBLIC_KEY_DECODE_FAILED("DPM-65013", "Device public key invalid.",
-            "Failed to decode EC public key for the registered device.");
+            "Failed to decode EC public key for the registered device."),
+    ERROR_DEVICE_TOKEN_REPLAY_CHECK_FAILED("DPM-65014", "Device token replay check failed.",
+            "Error checking the device token jti against the replay store."),
+    ERROR_DEVICE_TOKEN_REPLAY_STORE_FAILED("DPM-65015", "Device token replay store failed.",
+            "Error persisting the device token jti to the replay store.");
 
     private final String code;
     private final String message;

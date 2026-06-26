@@ -51,10 +51,10 @@ public interface DeviceTokenReplayDAO {
             throws PolicyManagementServerException;
 
     /**
-     * Removes device token jti records whose expiry time has passed. Deletion is performed in chunks to
-     * avoid long-held table locks.
+     * Removes device token jti records whose expiry time has passed.
      *
      * @param cutoff The cut-off time; records with an EXPIRY_TIME older than this are removed.
+     * @throws PolicyManagementServerException If the expired records cannot be removed.
      */
-    void removeExpiredTokens(Timestamp cutoff);
+    void removeExpiredTokens(Timestamp cutoff) throws PolicyManagementServerException;
 }

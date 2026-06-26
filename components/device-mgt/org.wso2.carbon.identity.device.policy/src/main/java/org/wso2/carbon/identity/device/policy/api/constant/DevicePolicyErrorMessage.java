@@ -53,7 +53,9 @@ public enum DevicePolicyErrorMessage {
     ERROR_DEVICE_TOKEN_REPLAY_CHECK_FAILED("DPM-65014", "Device token replay check failed.",
             "Error checking the device token jti against the replay store."),
     ERROR_DEVICE_TOKEN_REPLAY_STORE_FAILED("DPM-65015", "Device token replay store failed.",
-            "Error persisting the device token jti to the replay store.");
+            "Error persisting the device token jti to the replay store."),
+    ERROR_DEVICE_TOKEN_REPLAY_CLEANUP_FAILED("DPM-65016", "Device token replay cleanup failed.",
+            "Error removing expired device token jti records from the replay store.");
 
     private final String code;
     private final String message;

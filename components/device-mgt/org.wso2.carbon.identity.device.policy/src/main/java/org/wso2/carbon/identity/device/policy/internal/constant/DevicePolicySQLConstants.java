@@ -54,26 +54,10 @@ public final class DevicePolicySQLConstants {
                         "(JTI, TENANT_ID, IAT, EXPIRY_TIME) " +
                         "VALUES (:JTI;, :TENANT_ID;, :IAT;, :EXPIRY_TIME;)";
 
-        // Dialect-specific chunked delete queries for the cleanup task. The single bind parameter is the
-        // cut-off timestamp; rows with EXPIRY_TIME older than it are removed. %d is the chunk (row) limit.
-        public static final String DELETE_EXPIRED_TOKENS_MYSQL =
-                "DELETE FROM IDN_DEVICE_TOKEN_JTI WHERE EXPIRY_TIME < ? LIMIT %d";
-
-        public static final String DELETE_EXPIRED_TOKENS_MSSQL =
-                "DELETE TOP (%d) FROM IDN_DEVICE_TOKEN_JTI WHERE EXPIRY_TIME < ?";
-
-        public static final String DELETE_EXPIRED_TOKENS_POSTGRESQL =
-                "DELETE FROM IDN_DEVICE_TOKEN_JTI WHERE CTID IN " +
-                        "(SELECT CTID FROM IDN_DEVICE_TOKEN_JTI WHERE EXPIRY_TIME < ? LIMIT %d)";
-
-        public static final String DELETE_EXPIRED_TOKENS_ORACLE =
-                "DELETE FROM IDN_DEVICE_TOKEN_JTI WHERE ROWID IN " +
-                        "(SELECT ROWID FROM IDN_DEVICE_TOKEN_JTI WHERE EXPIRY_TIME < ? AND ROWNUM <= %d)";
-
-        public static final String DELETE_EXPIRED_TOKENS_DB2 =
-                "DELETE FROM IDN_DEVICE_TOKEN_JTI WHERE (TENANT_ID, JTI) IN " +
-                        "(SELECT TENANT_ID, JTI FROM IDN_DEVICE_TOKEN_JTI WHERE EXPIRY_TIME < ? " +
-                        "FETCH FIRST %d ROWS ONLY)";
+        // Removes records whose expiry time has passed. The store only ever holds a few minutes of tokens,
+        // so a single standard DELETE (identical across all supported databases) is sufficient.
+        public static final String DELETE_EXPIRED_TOKENS =
+                "DELETE FROM IDN_DEVICE_TOKEN_JTI WHERE EXPIRY_TIME < :EXPIRY_TIME;";
 
         private Query() {
         }

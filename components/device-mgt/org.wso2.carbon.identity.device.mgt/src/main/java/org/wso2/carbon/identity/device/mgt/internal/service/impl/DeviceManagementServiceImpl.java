@@ -133,8 +133,6 @@ public class DeviceManagementServiceImpl implements DeviceManagementService {
             LOG.debug("Device registration verified (not yet persisted) for user: " + context.getUsername() +
                     " in tenant: " + tenantDomain);
         }
-        // userId is intentionally left unset here. The caller must stamp the real
-        // user UUID via persistDevice (inline) or the completion listener (registration).
         return new Device.Builder()
                 .id(registrationId)
                 .deviceName(deviceName)

@@ -51,11 +51,6 @@ public class DevicePolicyJsFunction implements BiFunction<JsBaseAuthenticationCo
         try {
             String tenantDomain = context.getWrapped().getTenantDomain();
 
-            // Resolve the device token from the X-Device-Token header on the current request — never
-            // from the URL. Works for both headless/API auth (the app calls the auth API with the
-            // header) and redirect flows (the app resumes /commonauth with the header during the
-            // device prompt step). Keeping it out of the URL avoids leakage via access logs, browser
-            // history and the Referer header.
             String deviceToken = null;
             TransientObjectWrapper<HttpServletRequest> requestWrapper =
                     (TransientObjectWrapper<HttpServletRequest>) context.getWrapped()
@@ -81,9 +76,6 @@ public class DevicePolicyJsFunction implements BiFunction<JsBaseAuthenticationCo
             return holder.getDevicePolicyEvaluator().evaluate(policyName, deviceData, tenantDomain);
 
         } catch (PolicyManagementClientException e) {
-            // Expected client-side rejection (invalid signature, expired/unregistered device,
-            // malformed token). Caused by client input, not a server fault — log at debug without a
-            // stack trace and treat the device as non-compliant.
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Device token rejected for policy " + policyName + ": " + e.getMessage());
             }

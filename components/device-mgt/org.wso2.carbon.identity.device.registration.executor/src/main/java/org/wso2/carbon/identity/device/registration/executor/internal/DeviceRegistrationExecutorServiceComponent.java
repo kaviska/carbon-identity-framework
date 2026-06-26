@@ -35,6 +35,7 @@ import org.wso2.carbon.identity.device.registration.executor.DeviceRegistrationE
 import org.wso2.carbon.identity.device.registration.executor.RegistrationFlowCompletionListener;
 import org.wso2.carbon.identity.flow.execution.engine.graph.Executor;
 import org.wso2.carbon.identity.flow.execution.engine.listener.FlowExecutionListener;
+import org.wso2.carbon.user.core.service.RealmService;
 
 /**
  * OSGi DS component for the device registration executor bundle.
@@ -135,5 +136,24 @@ public class DeviceRegistrationExecutorServiceComponent {
 
         LOG.debug("Unsetting IntegrityDataEnricher in the device registration executor.");
         DeviceRegistrationExecutorDataHolder.getInstance().setIntegrityDataEnricher(null);
+    }
+
+    @Reference(
+            name = "RealmService",
+            service = RealmService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetRealmService"
+    )
+    protected void setRealmService(RealmService realmService) {
+
+        LOG.debug("Setting RealmService in the device registration executor.");
+        DeviceRegistrationExecutorDataHolder.getInstance().setRealmService(realmService);
+    }
+
+    protected void unsetRealmService(RealmService realmService) {
+
+        LOG.debug("Unsetting RealmService in the device registration executor.");
+        DeviceRegistrationExecutorDataHolder.getInstance().setRealmService(null);
     }
 }

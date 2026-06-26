@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.device.registration.executor.internal;
 import org.wso2.carbon.identity.device.mgt.api.service.DeviceManagementService;
 import org.wso2.carbon.identity.device.policy.api.service.DevicePolicyEvaluator;
 import org.wso2.carbon.identity.device.policy.api.service.IntegrityDataEnricher;
+import org.wso2.carbon.user.core.service.RealmService;
 
 /**
  * Holds OSGi service references for the device registration executor bundle.
@@ -33,6 +34,7 @@ public class DeviceRegistrationExecutorDataHolder {
     private DeviceManagementService deviceManagementService;
     private DevicePolicyEvaluator devicePolicyEvaluator;
     private IntegrityDataEnricher integrityDataEnricher;
+    private RealmService realmService;
 
     private DeviceRegistrationExecutorDataHolder() {
     }
@@ -63,5 +65,13 @@ public class DeviceRegistrationExecutorDataHolder {
 
     public void setIntegrityDataEnricher(IntegrityDataEnricher integrityDataEnricher) {
         this.integrityDataEnricher = integrityDataEnricher;
+    }
+
+    public RealmService getRealmService() {
+        return realmService;
+    }
+
+    public void setRealmService(RealmService realmService) {
+        this.realmService = realmService;
     }
 }

@@ -41,6 +41,10 @@ import org.wso2.carbon.identity.flow.mgt.Constants.FlowTypes;
 import org.wso2.carbon.identity.flow.mgt.model.NodeConfig;
 import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementException;
 import org.wso2.carbon.identity.rule.evaluation.api.exception.RuleEvaluationException;
+import org.wso2.carbon.user.api.UserStoreException;
+import org.wso2.carbon.user.api.UserStoreManager;
+import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
+import org.wso2.carbon.user.core.service.RealmService;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -164,7 +168,6 @@ public class DeviceRegistrationExecutor implements Executor {
         DeviceManagementService service =
                 DeviceRegistrationExecutorDataHolder.getInstance().getDeviceManagementService();
         try {
-            // Use real UUID if already available (invite flow); fall back to username (self-registration).
             String userId = context.getFlowUser().getUserId();
             String userIdentifier = isNotBlank(userId) ? userId : context.getFlowUser().getUsername();
 
@@ -271,7 +274,20 @@ public class DeviceRegistrationExecutor implements Executor {
             }
 
             // Non-registration flow: the user already exists, so bind the real userId and persist now.
+            // Some flows (e.g. DEVICE_REGISTRATION) identify the user by username via UserResolveExecutor
+            // without setting a userId, so resolve it from the username when it is not already present.
             String userId = context.getFlowUser().getUserId();
+            if (isBlank(userId)) {
+                userId = resolveUserIdFromUsername(context);
+            }
+            if (isBlank(userId)) {
+                ExecutorResponse response = new ExecutorResponse();
+                response.setResult(STATUS_ERROR);
+                response.setErrorCode(ErrorMessage.ERROR_USER_NOT_IDENTIFIED.getCode());
+                response.setErrorMessage(ErrorMessage.ERROR_USER_NOT_IDENTIFIED.getMessage());
+                response.setErrorDescription(ErrorMessage.ERROR_USER_NOT_IDENTIFIED.getDescription());
+                return response;
+            }
             Device toPersist = new Device.Builder(verified).userId(userId).build();
             service.persistDevice(toPersist, context.getTenantDomain());
 
@@ -301,6 +317,23 @@ public class DeviceRegistrationExecutor implements Executor {
             response.setErrorMessage(e.getMessage());
             response.setErrorDescription(e.getDescription());
             return response;
+        }
+    }
+
+    private String resolveUserIdFromUsername(FlowExecutionContext context) {
+
+        String username = context.getFlowUser().getUsername();
+        if (isBlank(username)) {
+            return null;
+        }
+        try {
+            RealmService realmService = DeviceRegistrationExecutorDataHolder.getInstance().getRealmService();
+            int tenantId = realmService.getTenantManager().getTenantId(context.getTenantDomain());
+            UserStoreManager userStoreManager = realmService.getTenantUserRealm(tenantId).getUserStoreManager();
+            return ((AbstractUserStoreManager) userStoreManager).getUserIDFromUserName(username);
+        } catch (UserStoreException e) {
+            LOG.error("Error resolving userId from username for tenant: " + context.getTenantDomain(), e);
+            return null;
         }
     }
 

@@ -22,6 +22,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.device.policy.internal.dao.DeviceTokenReplayDAO;
 import org.wso2.carbon.identity.device.policy.internal.dao.impl.DeviceTokenReplayDAOImpl;
+import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementServerException;
 
 import java.sql.Timestamp;
 import java.util.concurrent.Executors;
@@ -82,7 +83,11 @@ public class DeviceTokenJtiCleanupService {
                 LOG.debug("Running the device token jti cleanup task.");
             }
             DeviceTokenReplayDAO replayDAO = new DeviceTokenReplayDAOImpl();
-            replayDAO.removeExpiredTokens(new Timestamp(System.currentTimeMillis()));
+            try {
+                replayDAO.removeExpiredTokens(new Timestamp(System.currentTimeMillis()));
+            } catch (PolicyManagementServerException e) {
+                LOG.error("Error while running the device token jti cleanup task.", e);
+            }
         }
     }
 }

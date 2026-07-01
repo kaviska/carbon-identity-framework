@@ -22,27 +22,24 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.graalvm.polyglot.HostAccess;
 import org.wso2.carbon.identity.application.authentication.framework.config.model.graph.js.base.JsBaseAuthenticationContext;
-import org.wso2.carbon.identity.application.authentication.framework.context.TransientObjectWrapper;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.device.policy.internal.component.DevicePolicyComponentServiceHolder;
-import org.wso2.carbon.identity.device.policy.internal.jwt.DeviceTokenExtractor;
-import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementClientException;
 import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementException;
 import org.wso2.carbon.identity.rule.evaluation.api.exception.RuleEvaluationException;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.function.BiFunction;
 
-import javax.servlet.http.HttpServletRequest;
-
 /**
  * JS function for device policy compliance check, registered as {@code isDevicePolicyCompliant}.
- * Device token is resolved from query params first (redirect flows), then X-Device-Token header (headless flows).
+ * The verified device payload is captured and stored on the authentication context at initiation
+ * (see {@code DeviceDataResolverImpl}); this function reads it from the context under
+ * {@link FrameworkConstants#DEVICE_DATA}.
  */
 public class DevicePolicyJsFunction implements BiFunction<JsBaseAuthenticationContext, String, String> {
 
     private static final Log LOG = LogFactory.getLog(DevicePolicyJsFunction.class);
-    private static final String DEVICE_TOKEN_HEADER = "X-Device-Token";
 
     @Override
     @HostAccess.Export
@@ -51,23 +48,15 @@ public class DevicePolicyJsFunction implements BiFunction<JsBaseAuthenticationCo
         try {
             String tenantDomain = context.getWrapped().getTenantDomain();
 
-            String deviceToken = null;
-            TransientObjectWrapper<HttpServletRequest> requestWrapper =
-                    (TransientObjectWrapper<HttpServletRequest>) context.getWrapped()
-                            .getProperty(FrameworkConstants.RequestAttribute.HTTP_REQUEST);
-            if (requestWrapper != null && requestWrapper.getWrapped() != null) {
-                deviceToken = requestWrapper.getWrapped().getHeader(DEVICE_TOKEN_HEADER);
-            }
-
-            if (deviceToken == null || deviceToken.isEmpty()) {
+            Object data = context.getWrapped().getProperty(FrameworkConstants.DEVICE_DATA);
+            if (!(data instanceof Map)) {
                 if (LOG.isDebugEnabled()) {
-                    LOG.debug("No device token found for policy: " + policyName
-                            + ". Checked the X-Device-Token header.");
+                    LOG.debug("No device data on the authentication context for policy: " + policyName);
                 }
-                return policyName + ":no_device_token";
+                return policyName + ":device token is missing or validation failed";
             }
-
-            Map<String, Object> deviceData = new DeviceTokenExtractor().extractFromToken(deviceToken, tenantDomain);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> deviceData = new HashMap<>((Map<String, Object>) data);
 
             String appId = context.getWrapped().getServiceProviderResourceId();
             DevicePolicyComponentServiceHolder holder = DevicePolicyComponentServiceHolder.getInstance();
@@ -75,11 +64,6 @@ public class DevicePolicyJsFunction implements BiFunction<JsBaseAuthenticationCo
 
             return holder.getDevicePolicyEvaluator().evaluate(policyName, deviceData, tenantDomain);
 
-        } catch (PolicyManagementClientException e) {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Device token rejected for policy " + policyName + ": " + e.getMessage());
-            }
-            return policyName + ":invalid_device_token";
         } catch (PolicyManagementException e) {
             LOG.error("Error while evaluating device policy: " + policyName, e);
             return policyName + ":policy_error";

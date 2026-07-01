@@ -30,6 +30,7 @@ import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.identity.application.authentication.framework.JsFunctionRegistry;
+import org.wso2.carbon.identity.application.authentication.framework.device.DeviceDataResolver;
 import org.wso2.carbon.identity.client.attestation.mgt.services.ClientAttestationService;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.device.mgt.api.service.DeviceManagementService;
@@ -41,6 +42,7 @@ import org.wso2.carbon.identity.device.policy.internal.config.DeviceFieldConfigL
 import org.wso2.carbon.identity.device.policy.internal.config.DevicePolicyConfigException;
 import org.wso2.carbon.identity.device.policy.internal.config.OsVersionRegistry;
 import org.wso2.carbon.identity.device.policy.internal.js.DevicePolicyJsFunction;
+import org.wso2.carbon.identity.device.policy.internal.resolver.DeviceDataResolverImpl;
 import org.wso2.carbon.identity.device.policy.internal.rule.DevicePolicyEvaluationDataProvider;
 import org.wso2.carbon.identity.device.policy.internal.service.impl.DeviceFieldMetadataServiceImpl;
 import org.wso2.carbon.identity.device.policy.internal.service.impl.DevicePolicyEvaluatorImpl;
@@ -92,6 +94,8 @@ public class DevicePolicyServiceComponent {
                     new DevicePolicyEvaluationDataProvider(), null);
             bundleCtx.registerService(DeviceFieldMetadataService.class.getName(),
                     new DeviceFieldMetadataServiceImpl(), null);
+            bundleCtx.registerService(DeviceDataResolver.class.getName(),
+                    new DeviceDataResolverImpl(), null);
 
             DevicePolicyComponentServiceHolder holder = DevicePolicyComponentServiceHolder.getInstance();
             holder.setDevicePolicyEvaluator(devicePolicyEvaluator);

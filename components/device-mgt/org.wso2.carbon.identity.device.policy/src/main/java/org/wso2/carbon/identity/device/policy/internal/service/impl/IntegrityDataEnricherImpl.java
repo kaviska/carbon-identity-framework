@@ -26,6 +26,7 @@ import org.wso2.carbon.identity.client.attestation.mgt.services.ClientAttestatio
 import org.wso2.carbon.identity.client.attestation.mgt.utils.Constants;
 import org.wso2.carbon.identity.device.policy.api.service.IntegrityDataEnricher;
 import org.wso2.carbon.identity.device.policy.internal.component.DevicePolicyComponentServiceHolder;
+import org.wso2.carbon.identity.device.policy.internal.util.DevicePolicyDiagnosticLogger;
 
 import java.util.List;
 import java.util.Map;
@@ -42,6 +43,8 @@ public class IntegrityDataEnricherImpl implements IntegrityDataEnricher {
     private static final String IOS_INTEGRITY_KEY = "iosIntegrity";
     private static final String INTEGRITY_FAILED = "INTEGRITY_FAILED";
 
+    private final DevicePolicyDiagnosticLogger diagnosticLogger = new DevicePolicyDiagnosticLogger();
+
     @Override
     public void enrich(Map<String, Object> deviceData, String appId, String tenantDomain) {
 
@@ -54,6 +57,7 @@ public class IntegrityDataEnricherImpl implements IntegrityDataEnricher {
                 .getInstance().getClientAttestationService();
 
         if (attestationService == null) {
+            diagnosticLogger.logIntegrityEnrichmentFailure(appId, "ClientAttestationService is not available.");
             if (LOG.isDebugEnabled()) {
                 LOG.debug("ClientAttestationService is not available. Skipping attestation enrichment.");
             }
@@ -74,6 +78,8 @@ public class IntegrityDataEnricherImpl implements IntegrityDataEnricher {
             }
 
         } catch (ClientAttestationMgtException e) {
+            diagnosticLogger.logIntegrityEnrichmentFailure(appId,
+                    "Attestation token verification failed.");
             LOG.error("Failed to verify attestation token for device policy enrichment "
                     + "in application: " + appId + ", tenant: " + tenantDomain, e);
             deviceData.put(ANDROID_INTEGRITY_KEY, INTEGRITY_FAILED);

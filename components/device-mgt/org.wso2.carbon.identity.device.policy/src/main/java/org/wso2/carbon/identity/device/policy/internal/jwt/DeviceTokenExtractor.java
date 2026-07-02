@@ -33,6 +33,7 @@ import org.wso2.carbon.identity.device.policy.api.constant.DevicePolicyErrorMess
 import org.wso2.carbon.identity.device.policy.internal.component.DevicePolicyComponentServiceHolder;
 import org.wso2.carbon.identity.device.policy.internal.dao.DeviceTokenReplayDAO;
 import org.wso2.carbon.identity.device.policy.internal.dao.impl.DeviceTokenReplayDAOImpl;
+import org.wso2.carbon.identity.device.policy.internal.util.DevicePolicyDiagnosticLogger;
 import org.wso2.carbon.identity.device.policy.internal.util.DevicePolicyExceptionHandler;
 import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementException;
 import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementServerException;
@@ -67,6 +68,8 @@ public class DeviceTokenExtractor {
     private static final long TOKEN_FRESHNESS_WINDOW_MILLIS = 5 * 60 * 1000L;
     private static final long CLOCK_SKEW_MILLIS = 30 * 1000L;
 
+    private final DevicePolicyDiagnosticLogger diagnosticLogger = new DevicePolicyDiagnosticLogger();
+
     /**
      * Extracts verified device attributes from the X-Device-Token JWT in the request.
      *
@@ -80,6 +83,7 @@ public class DeviceTokenExtractor {
 
         String token = request.getHeader(DEVICE_TOKEN_HEADER);
         if (token == null || token.trim().isEmpty()) {
+            diagnosticLogger.logTokenValidationFailure(null, "X-Device-Token header is missing.");
             throw DevicePolicyExceptionHandler.handleClientException(
                     DevicePolicyErrorMessage.ERROR_DEVICE_TOKEN_MISSING);
         }
@@ -101,6 +105,7 @@ public class DeviceTokenExtractor {
         try {
             JWT parsedJWT = JWTParser.parse(token);
             if (!(parsedJWT instanceof SignedJWT)) {
+                diagnosticLogger.logTokenValidationFailure(null, "Device token is not a signed JWT.");
                 throw DevicePolicyExceptionHandler.handleClientException(
                         DevicePolicyErrorMessage.ERROR_DEVICE_TOKEN_PARSE_FAILED);
             }
@@ -108,6 +113,7 @@ public class DeviceTokenExtractor {
 
             String deviceId = (String) signedJWT.getHeader().getCustomParam(DEVICE_ID_PARAM);
             if (deviceId == null || deviceId.trim().isEmpty()) {
+                diagnosticLogger.logTokenValidationFailure(null, "Device token header is missing the deviceId.");
                 throw DevicePolicyExceptionHandler.handleClientException(
                         DevicePolicyErrorMessage.ERROR_DEVICE_TOKEN_MISSING_DEVICE_ID);
             }
@@ -119,6 +125,7 @@ public class DeviceTokenExtractor {
                     .getDeviceById(deviceId, tenantDomain);
 
             if (device == null) {
+                diagnosticLogger.logTokenValidationFailure(deviceId, "Device is not registered.");
                 throw DevicePolicyExceptionHandler.handleClientException(
                         DevicePolicyErrorMessage.ERROR_DEVICE_NOT_REGISTERED, deviceId);
             }
@@ -126,6 +133,7 @@ public class DeviceTokenExtractor {
             ECPublicKey publicKey = decodePublicKey(device.getPublicKey());
 
             if (!signedJWT.verify(new ECDSAVerifier(publicKey))) {
+                diagnosticLogger.logTokenValidationFailure(deviceId, "Device token signature is invalid.");
                 throw DevicePolicyExceptionHandler.handleClientException(
                         DevicePolicyErrorMessage.ERROR_DEVICE_TOKEN_SIGNATURE_INVALID, deviceId);
             }
@@ -133,7 +141,7 @@ public class DeviceTokenExtractor {
             // Signature is valid, but a valid token can still be replayed. Enforce iat freshness and
             // single-use of the jti before trusting the claims.
             JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
-            verifyTokenFreshnessAndUniqueness(claimsSet, IdentityTenantUtil.getTenantId(tenantDomain));
+            verifyTokenFreshnessAndUniqueness(deviceId, claimsSet, IdentityTenantUtil.getTenantId(tenantDomain));
 
             Map<String, Object> deviceData = new HashMap<>();
             claimsSet.getClaims().forEach((key, value) -> {
@@ -142,18 +150,22 @@ public class DeviceTokenExtractor {
                 }
             });
 
+            diagnosticLogger.logTokenValidationSuccess(deviceId);
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Device token verified successfully for deviceId: " + deviceId);
             }
             return deviceData;
 
         } catch (ParseException e) {
+            diagnosticLogger.logTokenValidationFailure(null, "Device token could not be parsed.");
             throw DevicePolicyExceptionHandler.handleClientException(
                     DevicePolicyErrorMessage.ERROR_DEVICE_TOKEN_PARSE_FAILED, e);
         } catch (JOSEException e) {
+            diagnosticLogger.logTokenValidationFailure(null, "ECDSA verification of the device token failed.");
             throw DevicePolicyExceptionHandler.handleServerException(
                     DevicePolicyErrorMessage.ERROR_DEVICE_ECDSA_VERIFICATION_FAILED, e);
         } catch (DeviceMgtException e) {
+            diagnosticLogger.logTokenValidationFailure(null, "Device lookup failed during token validation.");
             throw DevicePolicyExceptionHandler.handleServerException(
                     DevicePolicyErrorMessage.ERROR_DEVICE_LOOKUP_FAILED, e);
         }
@@ -165,21 +177,24 @@ public class DeviceTokenExtractor {
      * or whose jti has already been recorded, are rejected. Accepted jti values are persisted so the same
      * token cannot be presented again.
      *
+     * @param deviceId  Device ID the token claimed, used for diagnostic correlation.
      * @param claimsSet Parsed JWT claims.
      * @param tenantId  Tenant the device belongs to.
      * @throws PolicyManagementException If a required claim is missing, the token is stale, or it is a replay.
      */
-    private void verifyTokenFreshnessAndUniqueness(JWTClaimsSet claimsSet, int tenantId)
+    private void verifyTokenFreshnessAndUniqueness(String deviceId, JWTClaimsSet claimsSet, int tenantId)
             throws PolicyManagementException {
 
         String jti = claimsSet.getJWTID();
         if (jti == null || jti.trim().isEmpty()) {
+            diagnosticLogger.logTokenValidationFailure(deviceId, "Device token is missing the jti claim.");
             throw DevicePolicyExceptionHandler.handleClientException(
                     DevicePolicyErrorMessage.ERROR_DEVICE_TOKEN_MISSING_JTI);
         }
 
         Date issuedAt = claimsSet.getIssueTime();
         if (issuedAt == null) {
+            diagnosticLogger.logTokenValidationFailure(deviceId, "Device token is missing the iat claim.");
             throw DevicePolicyExceptionHandler.handleClientException(
                     DevicePolicyErrorMessage.ERROR_DEVICE_TOKEN_MISSING_IAT);
         }
@@ -187,6 +202,8 @@ public class DeviceTokenExtractor {
         long age = System.currentTimeMillis() - issuedAt.getTime();
         // Reject tokens older than the freshness window, or issued in the future beyond the allowed skew.
         if (age > TOKEN_FRESHNESS_WINDOW_MILLIS || age < -CLOCK_SKEW_MILLIS) {
+            diagnosticLogger.logTokenValidationFailure(deviceId,
+                    "Device token iat is outside the accepted freshness window.");
             throw DevicePolicyExceptionHandler.handleClientException(
                     DevicePolicyErrorMessage.ERROR_DEVICE_TOKEN_EXPIRED,
                     String.valueOf(TOKEN_FRESHNESS_WINDOW_MILLIS / 1000));
@@ -194,6 +211,8 @@ public class DeviceTokenExtractor {
 
         DeviceTokenReplayDAO replayDAO = new DeviceTokenReplayDAOImpl();
         if (replayDAO.isTokenReplayed(jti, tenantId)) {
+            diagnosticLogger.logTokenValidationFailure(deviceId,
+                    "Device token jti has already been used (replay detected).");
             throw DevicePolicyExceptionHandler.handleClientException(
                     DevicePolicyErrorMessage.ERROR_DEVICE_TOKEN_REPLAYED, jti);
         }

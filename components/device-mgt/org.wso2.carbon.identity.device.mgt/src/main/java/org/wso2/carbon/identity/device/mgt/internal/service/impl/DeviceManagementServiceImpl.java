@@ -33,6 +33,7 @@ import org.wso2.carbon.identity.device.mgt.internal.cache.DeviceRegistrationCach
 import org.wso2.carbon.identity.device.mgt.internal.cache.DeviceRegistrationContext;
 import org.wso2.carbon.identity.device.mgt.internal.dao.DeviceManagementDAO;
 import org.wso2.carbon.identity.device.mgt.internal.dao.impl.DeviceManagementDAOImpl;
+import org.wso2.carbon.identity.device.mgt.internal.util.DeviceManagementAuditLogger;
 import org.wso2.carbon.identity.device.mgt.internal.util.DeviceManagementExceptionHandler;
 
 import java.security.InvalidKeyException;
@@ -58,6 +59,7 @@ public class DeviceManagementServiceImpl implements DeviceManagementService {
     private static final Log LOG = LogFactory.getLog(DeviceManagementServiceImpl.class);
     private static final DeviceManagementServiceImpl INSTANCE = new DeviceManagementServiceImpl();
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+    private static final DeviceManagementAuditLogger AUDIT_LOGGER = new DeviceManagementAuditLogger();
     private final DeviceManagementDAO deviceManagementDAO;
 
     private DeviceManagementServiceImpl() {
@@ -153,6 +155,8 @@ public class DeviceManagementServiceImpl implements DeviceManagementService {
         }
         deviceManagementDAO.registerDevice(device, IdentityTenantUtil.getTenantId(tenantDomain));
 
+        AUDIT_LOGGER.printAuditLog(DeviceManagementAuditLogger.Operation.REGISTER, device);
+
         if (LOG.isDebugEnabled()) {
             LOG.debug("Device persisted for user: " + device.getUserId() +
                     " in tenant: " + tenantDomain + " with device ID: " + device.getId());
@@ -203,8 +207,11 @@ public class DeviceManagementServiceImpl implements DeviceManagementService {
         validateRequiredField(deviceName, "deviceName");
         validateDeviceExists(deviceId, tenantDomain);
 
-        return deviceManagementDAO.updateDeviceName(
+        Device updated = deviceManagementDAO.updateDeviceName(
                 deviceId, deviceName, IdentityTenantUtil.getTenantId(tenantDomain));
+
+        AUDIT_LOGGER.printAuditLog(DeviceManagementAuditLogger.Operation.UPDATE, updated);
+        return updated;
     }
 
     @Override
@@ -216,6 +223,9 @@ public class DeviceManagementServiceImpl implements DeviceManagementService {
 
         deviceManagementDAO.deleteDevice(
                 deviceId, IdentityTenantUtil.getTenantId(tenantDomain));
+
+        AUDIT_LOGGER.printAuditLog(DeviceManagementAuditLogger.Operation.DELETE, deviceId);
+
         if (LOG.isDebugEnabled()) {
             LOG.debug("Device deleted with ID: " + deviceId + " in tenant: " + tenantDomain);
         }

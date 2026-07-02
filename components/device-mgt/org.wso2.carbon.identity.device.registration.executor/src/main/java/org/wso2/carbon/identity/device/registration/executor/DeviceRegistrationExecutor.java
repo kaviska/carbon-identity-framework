@@ -32,6 +32,7 @@ import org.wso2.carbon.identity.device.mgt.api.model.Device;
 import org.wso2.carbon.identity.device.mgt.api.model.DeviceRegistrationInitiation;
 import org.wso2.carbon.identity.device.mgt.api.service.DeviceManagementService;
 import org.wso2.carbon.identity.device.policy.api.service.DevicePolicyEvaluator;
+import org.wso2.carbon.identity.device.registration.executor.internal.DeviceRegistrationDiagnosticLogger;
 import org.wso2.carbon.identity.device.registration.executor.internal.DeviceRegistrationExecutorDataHolder;
 import org.wso2.carbon.identity.flow.execution.engine.exception.FlowEngineException;
 import org.wso2.carbon.identity.flow.execution.engine.graph.Executor;
@@ -80,6 +81,8 @@ import static org.wso2.carbon.identity.flow.execution.engine.Constants.USERNAME_
 public class DeviceRegistrationExecutor implements Executor {
 
     private static final Log LOG = LogFactory.getLog(DeviceRegistrationExecutor.class);
+
+    private final DeviceRegistrationDiagnosticLogger diagnosticLogger = new DeviceRegistrationDiagnosticLogger();
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final TypeReference<Map<String, Object>> MAP_TYPE_REFERENCE =
@@ -172,6 +175,8 @@ public class DeviceRegistrationExecutor implements Executor {
             String userIdentifier = isNotBlank(userId) ? userId : context.getFlowUser().getUsername();
 
             if (isBlank(userIdentifier)) {
+                diagnosticLogger.logRegistrationFailure("User could not be identified to initiate device "
+                        + "registration.");
                 ExecutorResponse response = new ExecutorResponse();
                 response.setResult(STATUS_ERROR);
                 response.setErrorCode(ErrorMessage.ERROR_USER_NOT_IDENTIFIED.getCode());
@@ -186,6 +191,7 @@ public class DeviceRegistrationExecutor implements Executor {
             DeviceRegistrationInitiation initiation =
                     service.initiateDeviceRegistration(userIdentifier, context.getTenantDomain());
 
+            diagnosticLogger.logRegistrationInitiated(initiation.getRegistrationId());
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Device registration initiated for user: " + LoggerUtils.getMaskedContent(userIdentifier)
                         + " registrationId: " + initiation.getRegistrationId());
@@ -216,6 +222,7 @@ public class DeviceRegistrationExecutor implements Executor {
             return response;
 
         } catch (DeviceMgtException e) {
+            diagnosticLogger.logRegistrationFailure("Error initiating device registration: " + e.getMessage());
             LOG.error("Error initiating device registration in tenant: "
                     + context.getTenantDomain(), e);
             ExecutorResponse response = new ExecutorResponse();
@@ -251,6 +258,8 @@ public class DeviceRegistrationExecutor implements Executor {
             String policyName = resolvePolicyName(context);
             if (policyName != null) {
                 if (isBlank(input.get(FIELD_DEVICE_DATA))) {
+                    diagnosticLogger.logRegistrationFailure("Device data is required for policy evaluation "
+                            + "but was not provided.");
                     ExecutorResponse response = new ExecutorResponse();
                     response.setResult(STATUS_USER_ERROR);
                     response.setErrorCode(ErrorMessage.ERROR_DEVICE_DATA_REQUIRED.getCode());
@@ -281,6 +290,8 @@ public class DeviceRegistrationExecutor implements Executor {
                 userId = resolveUserIdFromUsername(context);
             }
             if (isBlank(userId)) {
+                diagnosticLogger.logRegistrationFailure("User could not be identified to persist the "
+                        + "registered device.");
                 ExecutorResponse response = new ExecutorResponse();
                 response.setResult(STATUS_ERROR);
                 response.setErrorCode(ErrorMessage.ERROR_USER_NOT_IDENTIFIED.getCode());
@@ -291,6 +302,7 @@ public class DeviceRegistrationExecutor implements Executor {
             Device toPersist = new Device.Builder(verified).userId(userId).build();
             service.persistDevice(toPersist, context.getTenantDomain());
 
+            diagnosticLogger.logRegistrationCompleted(registrationId);
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Device registration completed for registrationId: " + registrationId);
             }
@@ -309,6 +321,7 @@ public class DeviceRegistrationExecutor implements Executor {
             response.setErrorDescription(e.getDescription());
             return response;
         } catch (DeviceMgtException e) {
+            diagnosticLogger.logRegistrationFailure("Error completing device registration: " + e.getMessage());
             LOG.error("Error completing device registration for registrationId: "
                     + registrationId, e);
             ExecutorResponse response = new ExecutorResponse();
@@ -376,12 +389,14 @@ public class DeviceRegistrationExecutor implements Executor {
             String failedFields = evaluator.evaluate(policyName, deviceData, context.getTenantDomain());
             if (failedFields == null) {
                 // Device is compliant.
+                diagnosticLogger.logPolicyEvaluation(policyName, true, null);
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Device passed policy: " + policyName);
                 }
                 return null;
             }
 
+            diagnosticLogger.logPolicyEvaluation(policyName, false, failedFields);
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Device failed policy: " + policyName + " fields: [" + failedFields + "]");
             }
@@ -395,6 +410,7 @@ public class DeviceRegistrationExecutor implements Executor {
             return response;
 
         } catch (PolicyManagementException | RuleEvaluationException e) {
+            diagnosticLogger.logRegistrationFailure("Policy evaluation failed for policy: " + policyName);
             LOG.error("Policy evaluation failed for policy: " + policyName, e);
             ExecutorResponse response = new ExecutorResponse();
             response.setResult(STATUS_ERROR);

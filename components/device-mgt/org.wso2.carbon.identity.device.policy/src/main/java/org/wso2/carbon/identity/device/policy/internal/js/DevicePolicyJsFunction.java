@@ -24,6 +24,7 @@ import org.graalvm.polyglot.HostAccess;
 import org.wso2.carbon.identity.application.authentication.framework.config.model.graph.js.base.JsBaseAuthenticationContext;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.device.policy.internal.component.DevicePolicyComponentServiceHolder;
+import org.wso2.carbon.identity.device.policy.internal.util.DevicePolicyDiagnosticLogger;
 import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementException;
 import org.wso2.carbon.identity.rule.evaluation.api.exception.RuleEvaluationException;
 
@@ -41,6 +42,8 @@ public class DevicePolicyJsFunction implements BiFunction<JsBaseAuthenticationCo
 
     private static final Log LOG = LogFactory.getLog(DevicePolicyJsFunction.class);
 
+    private final DevicePolicyDiagnosticLogger diagnosticLogger = new DevicePolicyDiagnosticLogger();
+
     @Override
     @HostAccess.Export
     public String apply(JsBaseAuthenticationContext context, String policyName) {
@@ -50,6 +53,7 @@ public class DevicePolicyJsFunction implements BiFunction<JsBaseAuthenticationCo
 
             Object data = context.getWrapped().getProperty(FrameworkConstants.DEVICE_DATA);
             if (!(data instanceof Map)) {
+                diagnosticLogger.logMissingDeviceData(policyName);
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("No device data on the authentication context for policy: " + policyName);
                 }

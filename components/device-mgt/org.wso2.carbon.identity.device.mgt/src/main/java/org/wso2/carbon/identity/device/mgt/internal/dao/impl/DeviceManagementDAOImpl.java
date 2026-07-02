@@ -21,8 +21,11 @@ package org.wso2.carbon.identity.device.mgt.internal.dao.impl;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.database.utils.jdbc.NamedJdbcTemplate;
+import org.wso2.carbon.database.utils.jdbc.NamedPreparedStatement;
+import org.wso2.carbon.database.utils.jdbc.exceptions.DataAccessException;
 import org.wso2.carbon.database.utils.jdbc.exceptions.TransactionException;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
+import org.wso2.carbon.identity.core.util.JdbcUtils;
 import org.wso2.carbon.identity.device.mgt.api.constant.ErrorMessage;
 import org.wso2.carbon.identity.device.mgt.api.exception.DeviceMgtException;
 import org.wso2.carbon.identity.device.mgt.api.model.Device;
@@ -30,6 +33,8 @@ import org.wso2.carbon.identity.device.mgt.internal.constant.DeviceMgtSQLConstan
 import org.wso2.carbon.identity.device.mgt.internal.dao.DeviceManagementDAO;
 import org.wso2.carbon.identity.device.mgt.internal.util.DeviceManagementExceptionHandler;
 
+import java.sql.SQLException;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -174,6 +179,119 @@ public class DeviceManagementDAOImpl implements DeviceManagementDAO {
         } catch (TransactionException e) {
             throw DeviceManagementExceptionHandler.handleServerException(
                     ErrorMessage.ERROR_WHILE_RETRIEVING_DEVICE, e);
+        }
+    }
+
+    @Override
+    public List<Device> getDevices(int tenantId, int offset, int limit) throws DeviceMgtException {
+
+        // FETCH NEXT 0 ROWS (MS SQL) is invalid and an empty page is meaningless, so short-circuit.
+        if (limit <= 0) {
+            return Collections.emptyList();
+        }
+        int safeOffset = Math.max(offset, 0);
+
+        NamedJdbcTemplate jdbcTemplate = new NamedJdbcTemplate(IdentityDatabaseUtil.getDataSource());
+        try {
+            PaginationStyle style = resolvePaginationStyle();
+            String query = resolvePaginatedQuery(style);
+            List<Device> devices = jdbcTemplate.<List<Device>, RuntimeException>withTransaction(
+                    template -> template.executeQuery(
+                            query,
+                            (resultSet, rowNumber) -> new Device.Builder()
+                                    .id(resultSet.getString(DeviceMgtSQLConstants.Column.ID))
+                                    .userId(resultSet.getString(DeviceMgtSQLConstants.Column.USER_ID))
+                                    .deviceName(resultSet.getString(DeviceMgtSQLConstants.Column.DEVICE_NAME))
+                                    .deviceModel(resultSet.getString(DeviceMgtSQLConstants.Column.DEVICE_MODEL))
+                                    .publicKey(resultSet.getString(DeviceMgtSQLConstants.Column.PUBLIC_KEY))
+                                    .status(resultSet.getString(DeviceMgtSQLConstants.Column.STATUS))
+                                    .registeredAt(resultSet.getTimestamp(DeviceMgtSQLConstants.Column.REGISTERED_AT))
+                                    .metadata(resultSet.getString(DeviceMgtSQLConstants.Column.METADATA))
+                                    .build(),
+                            preparedStatement -> {
+                                preparedStatement.setInt(DeviceMgtSQLConstants.Column.TENANT_ID, tenantId);
+                                bindPaginationParams(preparedStatement, style, safeOffset, limit);
+                            }));
+            return devices != null ? devices : Collections.emptyList();
+        } catch (TransactionException | DataAccessException e) {
+            throw DeviceManagementExceptionHandler.handleServerException(
+                    ErrorMessage.ERROR_WHILE_RETRIEVING_DEVICE, e);
+        }
+    }
+
+    @Override
+    public int getDeviceCount(int tenantId) throws DeviceMgtException {
+
+        NamedJdbcTemplate jdbcTemplate = new NamedJdbcTemplate(IdentityDatabaseUtil.getDataSource());
+        try {
+            Integer count = jdbcTemplate.<Integer, RuntimeException>withTransaction(
+                    template -> template.fetchSingleRecord(
+                            DeviceMgtSQLConstants.Query.GET_DEVICES_COUNT,
+                            (resultSet, rowNumber) -> resultSet.getInt(1),
+                            preparedStatement -> preparedStatement.setInt(
+                                    DeviceMgtSQLConstants.Column.TENANT_ID, tenantId)));
+            return count != null ? count : 0;
+        } catch (TransactionException e) {
+            throw DeviceManagementExceptionHandler.handleServerException(
+                    ErrorMessage.ERROR_WHILE_RETRIEVING_DEVICE, e);
+        }
+    }
+
+    /**
+     * Supported database-specific pagination dialects.
+     */
+    private enum PaginationStyle {
+        DEFAULT, MSSQL, ORACLE, DB2
+    }
+
+    private PaginationStyle resolvePaginationStyle() throws DataAccessException {
+
+        // H2, MySQL, MariaDB and PostgreSQL all accept the LIMIT ... OFFSET ... syntax (DEFAULT).
+        if (JdbcUtils.isOracleDB()) {
+            return PaginationStyle.ORACLE;
+        }
+        if (JdbcUtils.isDB2DB()) {
+            return PaginationStyle.DB2;
+        }
+        if (JdbcUtils.isMSSqlDB()) {
+            return PaginationStyle.MSSQL;
+        }
+        return PaginationStyle.DEFAULT;
+    }
+
+    private String resolvePaginatedQuery(PaginationStyle style) {
+
+        switch (style) {
+            case ORACLE:
+                return DeviceMgtSQLConstants.Query.GET_ALL_DEVICES_PAGINATED_ORACLE;
+            case DB2:
+                return DeviceMgtSQLConstants.Query.GET_ALL_DEVICES_PAGINATED_DB2;
+            case MSSQL:
+                return DeviceMgtSQLConstants.Query.GET_ALL_DEVICES_PAGINATED_MSSQL;
+            default:
+                return DeviceMgtSQLConstants.Query.GET_ALL_DEVICES_PAGINATED;
+        }
+    }
+
+    private void bindPaginationParams(NamedPreparedStatement preparedStatement, PaginationStyle style,
+                                      int offset, int limit) throws SQLException {
+
+        switch (style) {
+            case ORACLE:
+                preparedStatement.setInt(DeviceMgtSQLConstants.Column.UPPER_BOUND, offset + limit);
+                preparedStatement.setInt(DeviceMgtSQLConstants.Column.OFFSET, offset);
+                break;
+            case DB2:
+                preparedStatement.setInt(DeviceMgtSQLConstants.Column.LOWER_BOUND, offset + 1);
+                preparedStatement.setInt(DeviceMgtSQLConstants.Column.UPPER_BOUND, offset + limit);
+                break;
+            case MSSQL:
+                preparedStatement.setInt(DeviceMgtSQLConstants.Column.OFFSET, offset);
+                preparedStatement.setInt(DeviceMgtSQLConstants.Column.LIMIT, limit);
+                break;
+            default:
+                preparedStatement.setInt(DeviceMgtSQLConstants.Column.LIMIT, limit);
+                preparedStatement.setInt(DeviceMgtSQLConstants.Column.OFFSET, offset);
         }
     }
 

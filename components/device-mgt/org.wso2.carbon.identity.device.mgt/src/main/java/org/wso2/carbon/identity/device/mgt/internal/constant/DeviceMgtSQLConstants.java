@@ -42,6 +42,11 @@ public final class DeviceMgtSQLConstants {
         public static final String METADATA = "METADATA";
         public static final String TENANT_ID = "TENANT_ID";
 
+        public static final String LIMIT = "LIMIT";
+        public static final String OFFSET = "OFFSET";
+        public static final String LOWER_BOUND = "LOWER_BOUND";
+        public static final String UPPER_BOUND = "UPPER_BOUND";
+
         private Column() {
         }
     }
@@ -88,6 +93,52 @@ public final class DeviceMgtSQLConstants {
                         "FROM IDN_DEVICE D " +
                         "INNER JOIN IDN_USER_DEVICE UD ON D.ID = UD.DEVICE_ID AND D.TENANT_ID = UD.TENANT_ID " +
                         "WHERE D.TENANT_ID = :TENANT_ID; ORDER BY D.REGISTERED_AT DESC";
+
+        // Paginated tenant-wide device listing. Pagination syntax differs per database, so a variant
+        // is selected at runtime based on the detected database type.
+
+        // Default: H2, MySQL, MariaDB, PostgreSQL.
+        public static final String GET_ALL_DEVICES_PAGINATED =
+                "SELECT D.ID, UD.USER_ID, D.DEVICE_NAME, D.DEVICE_MODEL, D.PUBLIC_KEY, D.STATUS, " +
+                        "D.REGISTERED_AT, D.METADATA, D.TENANT_ID " +
+                        "FROM IDN_DEVICE D " +
+                        "INNER JOIN IDN_USER_DEVICE UD ON D.ID = UD.DEVICE_ID AND D.TENANT_ID = UD.TENANT_ID " +
+                        "WHERE D.TENANT_ID = :TENANT_ID; ORDER BY D.REGISTERED_AT DESC " +
+                        "LIMIT :LIMIT; OFFSET :OFFSET;";
+
+        // MS SQL Server.
+        public static final String GET_ALL_DEVICES_PAGINATED_MSSQL =
+                "SELECT D.ID, UD.USER_ID, D.DEVICE_NAME, D.DEVICE_MODEL, D.PUBLIC_KEY, D.STATUS, " +
+                        "D.REGISTERED_AT, D.METADATA, D.TENANT_ID " +
+                        "FROM IDN_DEVICE D " +
+                        "INNER JOIN IDN_USER_DEVICE UD ON D.ID = UD.DEVICE_ID AND D.TENANT_ID = UD.TENANT_ID " +
+                        "WHERE D.TENANT_ID = :TENANT_ID; ORDER BY D.REGISTERED_AT DESC " +
+                        "OFFSET :OFFSET; ROWS FETCH NEXT :LIMIT; ROWS ONLY";
+
+        // Oracle.
+        public static final String GET_ALL_DEVICES_PAGINATED_ORACLE =
+                "SELECT ID, USER_ID, DEVICE_NAME, DEVICE_MODEL, PUBLIC_KEY, STATUS, REGISTERED_AT, " +
+                        "METADATA, TENANT_ID FROM (SELECT ID, USER_ID, DEVICE_NAME, DEVICE_MODEL, PUBLIC_KEY, " +
+                        "STATUS, REGISTERED_AT, METADATA, TENANT_ID, rownum AS rnum FROM " +
+                        "(SELECT D.ID, UD.USER_ID, D.DEVICE_NAME, D.DEVICE_MODEL, D.PUBLIC_KEY, D.STATUS, " +
+                        "D.REGISTERED_AT, D.METADATA, D.TENANT_ID FROM IDN_DEVICE D " +
+                        "INNER JOIN IDN_USER_DEVICE UD ON D.ID = UD.DEVICE_ID AND D.TENANT_ID = UD.TENANT_ID " +
+                        "WHERE D.TENANT_ID = :TENANT_ID; ORDER BY D.REGISTERED_AT DESC) " +
+                        "WHERE rownum <= :UPPER_BOUND;) WHERE rnum > :OFFSET;";
+
+        // DB2.
+        public static final String GET_ALL_DEVICES_PAGINATED_DB2 =
+                "SELECT ID, USER_ID, DEVICE_NAME, DEVICE_MODEL, PUBLIC_KEY, STATUS, REGISTERED_AT, " +
+                        "METADATA, TENANT_ID FROM (SELECT ROW_NUMBER() OVER(ORDER BY D.REGISTERED_AT DESC) AS rn, " +
+                        "D.ID, UD.USER_ID, D.DEVICE_NAME, D.DEVICE_MODEL, D.PUBLIC_KEY, D.STATUS, " +
+                        "D.REGISTERED_AT, D.METADATA, D.TENANT_ID FROM IDN_DEVICE D " +
+                        "INNER JOIN IDN_USER_DEVICE UD ON D.ID = UD.DEVICE_ID AND D.TENANT_ID = UD.TENANT_ID " +
+                        "WHERE D.TENANT_ID = :TENANT_ID;) WHERE rn BETWEEN :LOWER_BOUND; AND :UPPER_BOUND;";
+
+        public static final String GET_DEVICES_COUNT =
+                "SELECT COUNT(*) FROM IDN_DEVICE D " +
+                        "INNER JOIN IDN_USER_DEVICE UD ON D.ID = UD.DEVICE_ID AND D.TENANT_ID = UD.TENANT_ID " +
+                        "WHERE D.TENANT_ID = :TENANT_ID;";
 
         public static final String DELETE_USER_DEVICE =
                 "DELETE FROM IDN_USER_DEVICE " +

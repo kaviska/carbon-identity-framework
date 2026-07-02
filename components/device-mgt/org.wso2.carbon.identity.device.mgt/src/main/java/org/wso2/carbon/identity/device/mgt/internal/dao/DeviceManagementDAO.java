@@ -72,6 +72,28 @@ public interface DeviceManagementDAO {
             throws DeviceMgtException;
 
     /**
+     * Finds a page of devices registered in the tenant, ordered by registration time (newest first).
+     *
+     * @param tenantId Tenant identifier.
+     * @param offset   Number of records to skip.
+     * @param limit    Maximum number of records to return.
+     * @return Page of devices in the tenant.
+     * @throws DeviceMgtException If retrieval fails.
+     */
+    List<Device> getDevices(int tenantId, int offset, int limit)
+            throws DeviceMgtException;
+
+    /**
+     * Counts all devices registered in the tenant.
+     *
+     * @param tenantId Tenant identifier.
+     * @return Total number of devices in the tenant.
+     * @throws DeviceMgtException If the count fails.
+     */
+    int getDeviceCount(int tenantId)
+            throws DeviceMgtException;
+
+    /**
      * Updates the name of a device.
      *
      * @param deviceId Device identifier.

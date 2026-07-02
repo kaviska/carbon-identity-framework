@@ -89,6 +89,26 @@ public interface DeviceManagementService {
             throws DeviceMgtException;
 
     /**
+     * Retrieves a page of devices registered in the tenant, ordered by registration time (newest first).
+     *
+     * @param tenantDomain Tenant domain.
+     * @param offset       Number of records to skip.
+     * @param limit        Maximum number of records to return.
+     * @return Page of Device objects. Empty list if none found.
+     */
+    List<Device> getDevices(String tenantDomain, int offset, int limit)
+            throws DeviceMgtException;
+
+    /**
+     * Counts all devices registered in the tenant.
+     *
+     * @param tenantDomain Tenant domain.
+     * @return Total number of devices in the tenant.
+     */
+    int getDeviceCount(String tenantDomain)
+            throws DeviceMgtException;
+
+    /**
      * Updates the display name of a device.
      *
      * @param deviceId     UUID of the device.

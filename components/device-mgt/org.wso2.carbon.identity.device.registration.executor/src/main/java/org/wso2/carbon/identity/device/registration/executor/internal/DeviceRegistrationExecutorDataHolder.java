@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.device.registration.executor.internal;
 
 import org.wso2.carbon.identity.device.mgt.api.service.DeviceManagementService;
 import org.wso2.carbon.identity.device.policy.api.service.DevicePolicyEvaluator;
+import org.wso2.carbon.identity.device.policy.api.service.DeviceTokenVerifier;
 import org.wso2.carbon.identity.device.policy.api.service.IntegrityDataEnricher;
 import org.wso2.carbon.user.core.service.RealmService;
 
@@ -33,6 +34,7 @@ public class DeviceRegistrationExecutorDataHolder {
 
     private DeviceManagementService deviceManagementService;
     private DevicePolicyEvaluator devicePolicyEvaluator;
+    private DeviceTokenVerifier deviceTokenVerifier;
     private IntegrityDataEnricher integrityDataEnricher;
     private RealmService realmService;
 
@@ -57,6 +59,14 @@ public class DeviceRegistrationExecutorDataHolder {
 
     public void setDevicePolicyEvaluator(DevicePolicyEvaluator devicePolicyEvaluator) {
         this.devicePolicyEvaluator = devicePolicyEvaluator;
+    }
+
+    public DeviceTokenVerifier getDeviceTokenVerifier() {
+        return deviceTokenVerifier;
+    }
+
+    public void setDeviceTokenVerifier(DeviceTokenVerifier deviceTokenVerifier) {
+        this.deviceTokenVerifier = deviceTokenVerifier;
     }
 
     public IntegrityDataEnricher getIntegrityDataEnricher() {

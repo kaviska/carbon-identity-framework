@@ -30,6 +30,7 @@ import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.identity.device.mgt.api.service.DeviceManagementService;
 import org.wso2.carbon.identity.device.policy.api.service.DevicePolicyEvaluator;
+import org.wso2.carbon.identity.device.policy.api.service.DeviceTokenVerifier;
 import org.wso2.carbon.identity.device.policy.api.service.IntegrityDataEnricher;
 import org.wso2.carbon.identity.device.registration.executor.DeviceRegistrationExecutor;
 import org.wso2.carbon.identity.device.registration.executor.RegistrationFlowCompletionListener;
@@ -116,6 +117,25 @@ public class DeviceRegistrationExecutorServiceComponent {
 
         LOG.debug("Unsetting DevicePolicyEvaluator in the device registration executor.");
         DeviceRegistrationExecutorDataHolder.getInstance().setDevicePolicyEvaluator(null);
+    }
+
+    @Reference(
+            name = "DeviceTokenVerifier",
+            service = DeviceTokenVerifier.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetDeviceTokenVerifier"
+    )
+    protected void setDeviceTokenVerifier(DeviceTokenVerifier deviceTokenVerifier) {
+
+        LOG.debug("Setting DeviceTokenVerifier in the device registration executor.");
+        DeviceRegistrationExecutorDataHolder.getInstance().setDeviceTokenVerifier(deviceTokenVerifier);
+    }
+
+    protected void unsetDeviceTokenVerifier(DeviceTokenVerifier deviceTokenVerifier) {
+
+        LOG.debug("Unsetting DeviceTokenVerifier in the device registration executor.");
+        DeviceRegistrationExecutorDataHolder.getInstance().setDeviceTokenVerifier(null);
     }
 
     @Reference(

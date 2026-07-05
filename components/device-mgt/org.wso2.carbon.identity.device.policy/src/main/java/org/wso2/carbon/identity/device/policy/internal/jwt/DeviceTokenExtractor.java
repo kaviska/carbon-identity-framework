@@ -103,13 +103,7 @@ public class DeviceTokenExtractor {
             throws PolicyManagementException {
 
         try {
-            JWT parsedJWT = JWTParser.parse(token);
-            if (!(parsedJWT instanceof SignedJWT)) {
-                diagnosticLogger.logTokenValidationFailure(null, "Device token is not a signed JWT.");
-                throw DevicePolicyExceptionHandler.handleClientException(
-                        DevicePolicyErrorMessage.ERROR_DEVICE_TOKEN_PARSE_FAILED);
-            }
-            SignedJWT signedJWT = (SignedJWT) parsedJWT;
+            SignedJWT signedJWT = parseSignedJWT(token);
 
             String deviceId = (String) signedJWT.getHeader().getCustomParam(DEVICE_ID_PARAM);
             if (deviceId == null || deviceId.trim().isEmpty()) {
@@ -131,30 +125,7 @@ public class DeviceTokenExtractor {
             }
 
             ECPublicKey publicKey = decodePublicKey(device.getPublicKey());
-
-            if (!signedJWT.verify(new ECDSAVerifier(publicKey))) {
-                diagnosticLogger.logTokenValidationFailure(deviceId, "Device token signature is invalid.");
-                throw DevicePolicyExceptionHandler.handleClientException(
-                        DevicePolicyErrorMessage.ERROR_DEVICE_TOKEN_SIGNATURE_INVALID, deviceId);
-            }
-
-            // Signature is valid, but a valid token can still be replayed. Enforce iat freshness and
-            // single-use of the jti before trusting the claims.
-            JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
-            verifyTokenFreshnessAndUniqueness(deviceId, claimsSet, IdentityTenantUtil.getTenantId(tenantDomain));
-
-            Map<String, Object> deviceData = new HashMap<>();
-            claimsSet.getClaims().forEach((key, value) -> {
-                if (value != null) {
-                    deviceData.put(key, String.valueOf(value));
-                }
-            });
-
-            diagnosticLogger.logTokenValidationSuccess(deviceId);
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Device token verified successfully for deviceId: " + deviceId);
-            }
-            return deviceData;
+            return verifyAndExtract(signedJWT, publicKey, deviceId, tenantDomain);
 
         } catch (ParseException e) {
             diagnosticLogger.logTokenValidationFailure(null, "Device token could not be parsed.");
@@ -169,6 +140,91 @@ public class DeviceTokenExtractor {
             throw DevicePolicyExceptionHandler.handleServerException(
                     DevicePolicyErrorMessage.ERROR_DEVICE_LOOKUP_FAILED, e);
         }
+    }
+
+    /**
+     * Extracts verified device attributes from a JWT signed with a caller-supplied public key.
+     * Unlike {@link #extractFromToken(String, String)}, this does not look the device up in the registry;
+     * the key is supplied by the caller (e.g. the registration executor, which has just established trust
+     * in the key via the challenge signature). Signature, {@code iat} freshness and {@code jti} single-use
+     * are still enforced before the claims are trusted.
+     *
+     * @param token           Raw JWT string to parse and verify.
+     * @param base64PublicKey Base64-encoded X.509 EC public key to verify the signature against.
+     * @param correlationId   Identifier used only for diagnostic correlation (e.g. the registrationId).
+     * @param tenantDomain    Tenant domain used for replay-store scoping.
+     * @return Map of device field names to their values from verified JWT claims.
+     * @throws PolicyManagementException If the token is invalid, stale, or replayed.
+     */
+    public Map<String, Object> extractWithPublicKey(String token, String base64PublicKey,
+            String correlationId, String tenantDomain) throws PolicyManagementException {
+
+        try {
+            SignedJWT signedJWT = parseSignedJWT(token);
+            ECPublicKey publicKey = decodePublicKey(base64PublicKey);
+            return verifyAndExtract(signedJWT, publicKey, correlationId, tenantDomain);
+
+        } catch (ParseException e) {
+            diagnosticLogger.logTokenValidationFailure(correlationId, "Device token could not be parsed.");
+            throw DevicePolicyExceptionHandler.handleClientException(
+                    DevicePolicyErrorMessage.ERROR_DEVICE_TOKEN_PARSE_FAILED, e);
+        } catch (JOSEException e) {
+            diagnosticLogger.logTokenValidationFailure(correlationId,
+                    "ECDSA verification of the device token failed.");
+            throw DevicePolicyExceptionHandler.handleServerException(
+                    DevicePolicyErrorMessage.ERROR_DEVICE_ECDSA_VERIFICATION_FAILED, e);
+        }
+    }
+
+    private SignedJWT parseSignedJWT(String token) throws PolicyManagementException, ParseException {
+
+        JWT parsedJWT = JWTParser.parse(token);
+        if (!(parsedJWT instanceof SignedJWT)) {
+            diagnosticLogger.logTokenValidationFailure(null, "Device token is not a signed JWT.");
+            throw DevicePolicyExceptionHandler.handleClientException(
+                    DevicePolicyErrorMessage.ERROR_DEVICE_TOKEN_PARSE_FAILED);
+        }
+        return (SignedJWT) parsedJWT;
+    }
+
+    /**
+     * Verifies the JWT signature against the given key, enforces freshness and replay protection, and
+     * returns the claims as a device data map. Shared by both the DB-lookup and the caller-supplied-key
+     * entry points.
+     *
+     * @param signedJWT     Parsed signed JWT.
+     * @param publicKey     EC public key to verify the signature against.
+     * @param correlationId Identifier (deviceId or registrationId) used only for diagnostic correlation.
+     * @param tenantDomain  Tenant domain used for replay-store scoping.
+     * @return Map of device field names to their values from verified JWT claims.
+     */
+    private Map<String, Object> verifyAndExtract(SignedJWT signedJWT, ECPublicKey publicKey,
+            String correlationId, String tenantDomain)
+            throws PolicyManagementException, JOSEException, ParseException {
+
+        if (!signedJWT.verify(new ECDSAVerifier(publicKey))) {
+            diagnosticLogger.logTokenValidationFailure(correlationId, "Device token signature is invalid.");
+            throw DevicePolicyExceptionHandler.handleClientException(
+                    DevicePolicyErrorMessage.ERROR_DEVICE_TOKEN_SIGNATURE_INVALID, correlationId);
+        }
+
+        // Signature is valid, but a valid token can still be replayed. Enforce iat freshness and
+        // single-use of the jti before trusting the claims.
+        JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
+        verifyTokenFreshnessAndUniqueness(correlationId, claimsSet, IdentityTenantUtil.getTenantId(tenantDomain));
+
+        Map<String, Object> deviceData = new HashMap<>();
+        claimsSet.getClaims().forEach((key, value) -> {
+            if (value != null) {
+                deviceData.put(key, String.valueOf(value));
+            }
+        });
+
+        diagnosticLogger.logTokenValidationSuccess(correlationId);
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Device token verified successfully for: " + correlationId);
+        }
+        return deviceData;
     }
 
     /**

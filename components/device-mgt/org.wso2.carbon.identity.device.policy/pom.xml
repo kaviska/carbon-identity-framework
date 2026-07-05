@@ -230,6 +230,8 @@
                             version="${carbon.identity.package.import.version.range}",
                             org.wso2.carbon.identity.client.attestation.mgt.exceptions;
                             version="${carbon.identity.package.import.version.range}",
+                            org.wso2.carbon.identity.client.attestation.mgt.utils;
+                            version="${carbon.identity.package.import.version.range}",
                             javax.servlet.http,
                             com.fasterxml.jackson.core.type,
                             com.fasterxml.jackson.databind

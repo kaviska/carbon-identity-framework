@@ -18,9 +18,6 @@
 
 package org.wso2.carbon.identity.device.registration.executor;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
@@ -40,6 +37,7 @@ import org.wso2.carbon.identity.flow.execution.engine.model.ExecutorResponse;
 import org.wso2.carbon.identity.flow.execution.engine.model.FlowExecutionContext;
 import org.wso2.carbon.identity.flow.mgt.Constants.FlowTypes;
 import org.wso2.carbon.identity.flow.mgt.model.NodeConfig;
+import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementClientException;
 import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementException;
 import org.wso2.carbon.identity.rule.evaluation.api.exception.RuleEvaluationException;
 import org.wso2.carbon.user.api.UserStoreException;
@@ -83,10 +81,6 @@ public class DeviceRegistrationExecutor implements Executor {
     private static final Log LOG = LogFactory.getLog(DeviceRegistrationExecutor.class);
 
     private final DeviceRegistrationDiagnosticLogger diagnosticLogger = new DeviceRegistrationDiagnosticLogger();
-
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-    private static final TypeReference<Map<String, Object>> MAP_TYPE_REFERENCE =
-            new TypeReference<Map<String, Object>>() { };
 
     private static final String CTX_REGISTRATION_ID = "device.registration.id";
 
@@ -267,7 +261,7 @@ public class DeviceRegistrationExecutor implements Executor {
                     response.setErrorDescription(ErrorMessage.ERROR_DEVICE_DATA_REQUIRED.getDescription());
                     return response;
                 }
-                ExecutorResponse policyResult = evaluatePolicy(policyName, context);
+                ExecutorResponse policyResult = evaluatePolicy(policyName, registrationId, context);
                 if (policyResult != null) {
                     return policyResult;
                 }
@@ -358,29 +352,40 @@ public class DeviceRegistrationExecutor implements Executor {
         return isNotBlank(deviceModel) ? base + "'s " + deviceModel : base + "'s Device";
     }
 
-    private Map<String, Object> parseDeviceData(Map<String, String> input) {
-
-        Map<String, Object> deviceData = new HashMap<>();
-        if (input == null) {
-            return deviceData;
-        }
-        String json = input.get(FIELD_DEVICE_DATA);
-        if (isBlank(json)) {
-            return deviceData;
-        }
-        try {
-            deviceData.putAll(OBJECT_MAPPER.readValue(json, MAP_TYPE_REFERENCE));
-        } catch (JsonProcessingException e) {
-            LOG.error("Failed to parse deviceData JSON submitted by SDK.", e);
-        }
-        return deviceData;
-    }
-
-    private ExecutorResponse evaluatePolicy(String policyName, FlowExecutionContext context) {
+    private ExecutorResponse evaluatePolicy(String policyName, String registrationId, FlowExecutionContext context) {
 
         DeviceRegistrationExecutorDataHolder holder = DeviceRegistrationExecutorDataHolder.getInstance();
         DevicePolicyEvaluator evaluator = holder.getDevicePolicyEvaluator();
-        Map<String, Object> deviceData = parseDeviceData(context.getUserInputData());
+
+        // The device data is a JWT signed with the same key that was just verified against the challenge,
+        // so its claims can be trusted after signature, freshness and replay verification. The challenge
+        // check (already passed above) binds this request to the registration, so no extra token binding
+        // is needed here; registrationId is passed only for diagnostic correlation.
+        Map<String, Object> deviceData;
+        try {
+            deviceData = holder.getDeviceTokenVerifier().verifyWithPublicKey(
+                    context.getUserInputData().get(FIELD_DEVICE_DATA),
+                    context.getUserInputData().get(FIELD_PUBLIC_KEY),
+                    registrationId,
+                    context.getTenantDomain());
+        } catch (PolicyManagementClientException e) {
+            diagnosticLogger.logRegistrationFailure("Device data token verification failed: " + e.getMessage());
+            ExecutorResponse response = new ExecutorResponse();
+            response.setResult(STATUS_USER_ERROR);
+            response.setErrorCode(e.getErrorCode());
+            response.setErrorMessage(e.getMessage());
+            response.setErrorDescription(e.getDescription());
+            return response;
+        } catch (PolicyManagementException e) {
+            diagnosticLogger.logRegistrationFailure("Device data token verification failed: " + e.getMessage());
+            LOG.error("Device data token verification failed during registration.", e);
+            ExecutorResponse response = new ExecutorResponse();
+            response.setResult(STATUS_ERROR);
+            response.setErrorCode(e.getErrorCode());
+            response.setErrorMessage(e.getMessage());
+            response.setErrorDescription(e.getDescription());
+            return response;
+        }
 
         holder.getIntegrityDataEnricher().enrich(deviceData, context.getApplicationId(),
                 context.getTenantDomain());

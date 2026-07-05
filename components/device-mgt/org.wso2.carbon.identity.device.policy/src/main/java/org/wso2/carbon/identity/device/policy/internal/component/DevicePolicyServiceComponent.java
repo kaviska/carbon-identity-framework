@@ -36,6 +36,7 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.device.mgt.api.service.DeviceManagementService;
 import org.wso2.carbon.identity.device.policy.api.service.DeviceFieldMetadataService;
 import org.wso2.carbon.identity.device.policy.api.service.DevicePolicyEvaluator;
+import org.wso2.carbon.identity.device.policy.api.service.DeviceTokenVerifier;
 import org.wso2.carbon.identity.device.policy.api.service.IntegrityDataEnricher;
 import org.wso2.carbon.identity.device.policy.internal.cleanup.DeviceTokenJtiCleanupService;
 import org.wso2.carbon.identity.device.policy.internal.config.DeviceFieldConfigLoader;
@@ -46,6 +47,7 @@ import org.wso2.carbon.identity.device.policy.internal.resolver.DeviceDataResolv
 import org.wso2.carbon.identity.device.policy.internal.rule.DevicePolicyEvaluationDataProvider;
 import org.wso2.carbon.identity.device.policy.internal.service.impl.DeviceFieldMetadataServiceImpl;
 import org.wso2.carbon.identity.device.policy.internal.service.impl.DevicePolicyEvaluatorImpl;
+import org.wso2.carbon.identity.device.policy.internal.service.impl.DeviceTokenVerifierImpl;
 import org.wso2.carbon.identity.device.policy.internal.service.impl.IntegrityDataEnricherImpl;
 import org.wso2.carbon.identity.policy.management.api.service.PolicyEvaluationService;
 import org.wso2.carbon.identity.policy.management.api.service.PolicyManagementService;
@@ -96,6 +98,8 @@ public class DevicePolicyServiceComponent {
                     new DeviceFieldMetadataServiceImpl(), null);
             bundleCtx.registerService(DeviceDataResolver.class.getName(),
                     new DeviceDataResolverImpl(), null);
+            bundleCtx.registerService(DeviceTokenVerifier.class.getName(),
+                    new DeviceTokenVerifierImpl(), null);
 
             DevicePolicyComponentServiceHolder holder = DevicePolicyComponentServiceHolder.getInstance();
             holder.setDevicePolicyEvaluator(devicePolicyEvaluator);

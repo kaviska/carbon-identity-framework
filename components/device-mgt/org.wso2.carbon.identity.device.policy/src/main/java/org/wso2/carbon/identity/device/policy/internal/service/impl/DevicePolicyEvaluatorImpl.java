@@ -24,14 +24,16 @@ import org.wso2.carbon.identity.device.policy.api.service.DevicePolicyEvaluator;
 import org.wso2.carbon.identity.device.policy.internal.component.DevicePolicyComponentServiceHolder;
 import org.wso2.carbon.identity.device.policy.internal.config.DeviceFieldConfig;
 import org.wso2.carbon.identity.device.policy.internal.config.DeviceFieldConfigLoader;
+import org.wso2.carbon.identity.policy.evaluation.api.exception.PolicyEvaluationException;
+import org.wso2.carbon.identity.policy.evaluation.api.model.PolicyEvaluationResult;
 import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementException;
 import org.wso2.carbon.identity.policy.management.api.model.Policy;
 import org.wso2.carbon.identity.policy.management.api.model.PolicyResource;
 import org.wso2.carbon.identity.policy.management.api.model.ResourceType;
+import org.wso2.carbon.identity.policy.management.api.model.RulePolicyResource;
 import org.wso2.carbon.identity.rule.evaluation.api.exception.RuleEvaluationException;
 import org.wso2.carbon.identity.rule.evaluation.api.model.FlowContext;
 import org.wso2.carbon.identity.rule.evaluation.api.model.FlowType;
-import org.wso2.carbon.identity.rule.evaluation.api.model.RuleEvaluationResult;
 import org.wso2.carbon.identity.rule.management.api.model.Expression;
 
 import java.util.List;
@@ -48,7 +50,7 @@ public class DevicePolicyEvaluatorImpl implements DevicePolicyEvaluator {
 
     @Override
     public String evaluate(String policyName, Map<String, Object> deviceData, String tenantDomain)
-            throws PolicyManagementException, RuleEvaluationException {
+            throws PolicyManagementException, RuleEvaluationException, PolicyEvaluationException {
 
         String platform = (String) deviceData.get(DEVICE_PLATFORM_FIELD);
 
@@ -61,7 +63,7 @@ public class DevicePolicyEvaluatorImpl implements DevicePolicyEvaluator {
         }
 
         FlowContext flowContext = new FlowContext(FlowType.DEVICE_POLICY, deviceData);
-        RuleEvaluationResult result = DevicePolicyComponentServiceHolder.getInstance()
+        PolicyEvaluationResult result = DevicePolicyComponentServiceHolder.getInstance()
                 .getPolicyEvaluationService()
                 .evaluate(policyName, platform != null ? platform : "", flowContext, tenantDomain);
 
@@ -72,8 +74,12 @@ public class DevicePolicyEvaluatorImpl implements DevicePolicyEvaluator {
             return policyName + ":policy_not_found";
         }
 
-        if (!result.isRuleSatisfied()) {
-            return String.join(", ", result.getFailedFields());
+        if (!result.isSatisfied()) {
+            List<String> failedFields = result.getOutcomes().stream()
+                    .filter(outcome -> !outcome.isSatisfied())
+                    .flatMap(outcome -> outcome.getFailedFields().stream())
+                    .collect(Collectors.toList());
+            return String.join(", ", failedFields);
         }
         return null;
     }
@@ -106,10 +112,14 @@ public class DevicePolicyEvaluatorImpl implements DevicePolicyEvaluator {
                         && platform.equalsIgnoreCase(r.getTarget()))
                 .findFirst()
                 .orElse(null);
-        if (resource == null || resource.getRule() == null) {
+        if (!(resource instanceof RulePolicyResource)) {
             return null;
         }
-        List<String> missing = resource.getRule().getExpressions().stream()
+        RulePolicyResource ruleResource = (RulePolicyResource) resource;
+        if (ruleResource.getRule() == null) {
+            return null;
+        }
+        List<String> missing = ruleResource.getRule().getExpressions().stream()
                 .map(Expression::getField)
                 .distinct()
                 .filter(field -> {

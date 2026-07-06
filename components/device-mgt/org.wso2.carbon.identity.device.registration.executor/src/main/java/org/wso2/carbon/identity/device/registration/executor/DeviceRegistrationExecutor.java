@@ -37,6 +37,7 @@ import org.wso2.carbon.identity.flow.execution.engine.model.ExecutorResponse;
 import org.wso2.carbon.identity.flow.execution.engine.model.FlowExecutionContext;
 import org.wso2.carbon.identity.flow.mgt.Constants.FlowTypes;
 import org.wso2.carbon.identity.flow.mgt.model.NodeConfig;
+import org.wso2.carbon.identity.policy.evaluation.api.exception.PolicyEvaluationException;
 import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementClientException;
 import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementException;
 import org.wso2.carbon.identity.rule.evaluation.api.exception.RuleEvaluationException;
@@ -414,7 +415,7 @@ public class DeviceRegistrationExecutor implements Executor {
                     policyName, failedFields));
             return response;
 
-        } catch (PolicyManagementException | RuleEvaluationException e) {
+        } catch (PolicyManagementException | RuleEvaluationException | PolicyEvaluationException e) {
             diagnosticLogger.logRegistrationFailure("Policy evaluation failed for policy: " + policyName);
             LOG.error("Policy evaluation failed for policy: " + policyName, e);
             ExecutorResponse response = new ExecutorResponse();

@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.device.policy.api.service;
 
+import org.wso2.carbon.identity.policy.evaluation.api.exception.PolicyEvaluationException;
 import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementException;
 import org.wso2.carbon.identity.rule.evaluation.api.exception.RuleEvaluationException;
 
@@ -40,9 +41,10 @@ public interface DevicePolicyEvaluator {
      * @return {@code null} if the device is compliant, or a failure reason string if not.
      * @throws PolicyManagementException If the policy cannot be retrieved.
      * @throws RuleEvaluationException   If rule evaluation fails.
+     * @throws PolicyEvaluationException If policy evaluation fails.
      */
     String evaluate(String policyName, Map<String, Object> deviceData, String tenantDomain)
-            throws PolicyManagementException, RuleEvaluationException;
+            throws PolicyManagementException, RuleEvaluationException, PolicyEvaluationException;
 
     /**
      * Returns the list of device field names the evaluator recognises.

@@ -93,6 +93,14 @@
             <scope>provided</scope>
         </dependency>
 
+        <!-- Policy evaluation - PolicyEvaluationService -->
+        <dependency>
+            <groupId>org.wso2.carbon.identity.framework</groupId>
+            <artifactId>org.wso2.carbon.identity.policy.evaluation</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
         <!-- Device management - DeviceManagementService, RegisteredDevice -->
         <dependency>
             <groupId>org.wso2.carbon.identity.framework</groupId>
@@ -194,6 +202,10 @@
                             org.wso2.carbon.identity.policy.management.api.model;
                             version="${carbon.identity.package.import.version.range}",
                             org.wso2.carbon.identity.policy.management.api.service;
+                            version="${carbon.identity.package.import.version.range}",
+                            org.wso2.carbon.identity.policy.evaluation.api.service;
+                            version="${carbon.identity.package.import.version.range}",
+                            org.wso2.carbon.identity.policy.evaluation.api.exception;
                             version="${carbon.identity.package.import.version.range}",
                             org.wso2.carbon.identity.device.mgt.api.exception;
                             version="${carbon.identity.package.import.version.range}",

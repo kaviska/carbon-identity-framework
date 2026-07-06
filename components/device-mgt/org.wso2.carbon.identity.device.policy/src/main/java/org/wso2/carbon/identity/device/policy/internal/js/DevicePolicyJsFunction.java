@@ -25,6 +25,7 @@ import org.wso2.carbon.identity.application.authentication.framework.config.mode
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.device.policy.internal.component.DevicePolicyComponentServiceHolder;
 import org.wso2.carbon.identity.device.policy.internal.util.DevicePolicyDiagnosticLogger;
+import org.wso2.carbon.identity.policy.evaluation.api.exception.PolicyEvaluationException;
 import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementException;
 import org.wso2.carbon.identity.rule.evaluation.api.exception.RuleEvaluationException;
 
@@ -73,6 +74,9 @@ public class DevicePolicyJsFunction implements BiFunction<JsBaseAuthenticationCo
             return policyName + ":policy_error";
         } catch (RuleEvaluationException e) {
             LOG.error("Rule evaluation failed for device policy: " + policyName, e);
+            return policyName + ":evaluation_error";
+        } catch (PolicyEvaluationException e) {
+            LOG.error("Policy evaluation failed for device policy: " + policyName, e);
             return policyName + ":evaluation_error";
         }
     }

@@ -49,7 +49,7 @@ import org.wso2.carbon.identity.device.policy.internal.service.impl.DeviceFieldM
 import org.wso2.carbon.identity.device.policy.internal.service.impl.DevicePolicyEvaluatorImpl;
 import org.wso2.carbon.identity.device.policy.internal.service.impl.DeviceTokenVerifierImpl;
 import org.wso2.carbon.identity.device.policy.internal.service.impl.IntegrityDataEnricherImpl;
-import org.wso2.carbon.identity.policy.management.api.service.PolicyEvaluationService;
+import org.wso2.carbon.identity.policy.evaluation.api.service.PolicyEvaluationService;
 import org.wso2.carbon.identity.policy.management.api.service.PolicyManagementService;
 import org.wso2.carbon.identity.rule.evaluation.api.provider.RuleEvaluationDataProvider;
 import org.wso2.carbon.identity.rule.evaluation.api.resolver.SymbolicValueResolverRegistry;

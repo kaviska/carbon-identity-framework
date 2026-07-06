@@ -862,9 +862,6 @@ public class DefaultRequestCoordinator extends AbstractRequestCoordinator implem
 
     /**
      * Invokes the registered device data resolvers on the initiation request and stores the first
-     * resolved payload on the authentication context under {@link FrameworkConstants#DEVICE_DATA}.
-     * This is best effort: if no resolver is registered or resolution fails, the authentication flow
-     * proceeds unaffected.
      *
      * @param request The initiation request carrying the device token.
      * @param context The authentication context being initialized.

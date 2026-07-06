@@ -102,6 +102,14 @@ public class AndroidAttestationValidator implements ClientAttestationValidator {
 
         if (decodeIntegrityTokenResponse != null) {
 
+            // Log the full, raw response returned by the Google Play Integrity API for this token.
+            // This includes requestDetails, appIntegrity, deviceIntegrity, accountDetails and
+            // testingDetails, and is the authoritative record of what Google decided for the token.
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Google Play Integrity API decoded response for application: " + applicationResourceId
+                        + " in tenant: " + tenantDomain + " : " + decodeIntegrityTokenResponse.toString());
+            }
+
             validateIntegrityResponse(decodeIntegrityTokenResponse, clientAttestationContext);
         } else {
             throw new ClientAttestationMgtException("Unable to validate attestation, cause " +

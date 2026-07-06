@@ -25,10 +25,6 @@ import javax.servlet.http.HttpServletRequest;
 
 /**
  * SPI for resolving verified device data from the initiation request of an authentication flow.
- * Implementations read a device token (from a header or query parameter), validate it, and return
- * the verified payload. They are registered as OSGi services and invoked once by the framework when
- * the authentication context is created, so the resolved payload is available throughout the flow
- * regardless of the inbound protocol or whether the flow is redirect based or app native.
  */
 public interface DeviceDataResolver {
 

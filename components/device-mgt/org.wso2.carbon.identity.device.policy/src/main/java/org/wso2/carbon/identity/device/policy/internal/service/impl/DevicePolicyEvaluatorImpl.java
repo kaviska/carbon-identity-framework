@@ -62,10 +62,20 @@ public class DevicePolicyEvaluatorImpl implements DevicePolicyEvaluator {
             return missingFields;
         }
 
+        String policyId = DevicePolicyComponentServiceHolder.getInstance()
+                .getPolicyManagementService()
+                .getPolicyIdByName(policyName, tenantDomain);
+        if (policyId == null) {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Policy not found: " + policyName + " for tenant: " + tenantDomain);
+            }
+            return policyName + ":policy_not_found";
+        }
+
         FlowContext flowContext = new FlowContext(FlowType.DEVICE_POLICY, deviceData);
         PolicyEvaluationResult result = DevicePolicyComponentServiceHolder.getInstance()
                 .getPolicyEvaluationService()
-                .evaluate(policyName, platform != null ? platform : "", flowContext, tenantDomain);
+                .evaluate(policyId, platform != null ? platform : "", flowContext, tenantDomain);
 
         if (result == null) {
             if (LOG.isDebugEnabled()) {

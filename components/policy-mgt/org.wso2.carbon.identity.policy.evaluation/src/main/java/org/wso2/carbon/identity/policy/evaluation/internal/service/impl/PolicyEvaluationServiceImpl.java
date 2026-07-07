@@ -44,7 +44,7 @@ public class PolicyEvaluationServiceImpl implements PolicyEvaluationService {
     private static final Log LOG = LogFactory.getLog(PolicyEvaluationServiceImpl.class);
 
     @Override
-    public PolicyEvaluationResult evaluate(String policyName, String ruleSelector,
+    public PolicyEvaluationResult evaluate(String policyId, String target,
                                            FlowContext flowContext, String tenantDomain)
             throws PolicyEvaluationException {
 
@@ -52,33 +52,39 @@ public class PolicyEvaluationServiceImpl implements PolicyEvaluationService {
         try {
             policy = PolicyEvaluationComponentServiceHolder.getInstance()
                     .getPolicyManagementService()
-                    .getPolicyByName(policyName, tenantDomain);
+                    .getPolicyById(policyId, tenantDomain);
         } catch (PolicyManagementException e) {
             throw new PolicyEvaluationException(
-                    "Error retrieving policy '" + policyName + "' for evaluation.", e);
+                    "Error retrieving policy with ID '" + policyId + "' for evaluation.", e);
         }
 
         if (policy == null) {
             if (LOG.isDebugEnabled()) {
-                LOG.debug("Policy not found: " + policyName + " for tenant: " + tenantDomain);
+                LOG.debug("Policy not found with ID: " + policyId + " for tenant: " + tenantDomain);
             }
             return null;
         }
+        return evaluate(policy, target, flowContext, tenantDomain);
+    }
 
-        if (ruleSelector == null) {
+    private PolicyEvaluationResult evaluate(Policy policy, String target,
+                                            FlowContext flowContext, String tenantDomain)
+            throws PolicyEvaluationException {
+
+        if (target == null) {
             if (LOG.isDebugEnabled()) {
-                LOG.debug("Rule selector is null for policy '" + policyName + "' — treating as compliant.");
+                LOG.debug("Target is null for policy '" + policy.getName() + "' — treating as compliant.");
             }
             return new PolicyEvaluationResult(true, Collections.emptyList());
         }
 
         List<PolicyResource> matchingResources = policy.getResources().stream()
-                .filter(r -> r.getTarget() != null && ruleSelector.equalsIgnoreCase(r.getTarget()))
+                .filter(r -> r.getTarget() != null && target.equalsIgnoreCase(r.getTarget()))
                 .collect(Collectors.toList());
 
         if (matchingResources.isEmpty()) {
             if (LOG.isDebugEnabled()) {
-                LOG.debug("No resources for selector '" + ruleSelector + "' in policy '" + policyName
+                LOG.debug("No resources for target '" + target + "' in policy '" + policy.getName()
                         + "' — treating as compliant.");
             }
             return new PolicyEvaluationResult(true, Collections.emptyList());

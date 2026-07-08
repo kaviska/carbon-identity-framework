@@ -30,6 +30,7 @@ import org.wso2.carbon.identity.rule.management.api.model.Value;
 import org.wso2.carbon.identity.rule.management.internal.component.RuleManagementComponentServiceHolder;
 import org.wso2.carbon.identity.rule.metadata.api.exception.RuleMetadataException;
 import org.wso2.carbon.identity.rule.metadata.api.model.FieldDefinition;
+import org.wso2.carbon.identity.rule.metadata.api.model.OptionsInputValue;
 
 import java.util.List;
 import java.util.Map;
@@ -240,7 +241,7 @@ public class RuleBuilder {
             return value;
         }
 
-        if (!isValidOptionsInputValue(fieldDefinition, rawValue)) {
+        if (!isValidOptionsInputValue(fieldDefinition, rawValue, value.getType())) {
             return value;
         }
 
@@ -306,20 +307,39 @@ public class RuleBuilder {
         return true;
     }
 
-    private boolean isValidOptionsInputValue(FieldDefinition fieldDefinition, String fieldValue) {
+    private boolean isValidOptionsInputValue(FieldDefinition fieldDefinition, String fieldValue,
+                                             Value.Type valueType) {
 
-        // LIST type carries a comma-separated multi-value — individual items validated at evaluation time.
+        // Only fields backed by a fixed set of options need membership validation.
+        if (!(fieldDefinition.getValue() instanceof OptionsInputValue)) {
+            return true;
+        }
+
+        OptionsInputValue optionsInputValue = (OptionsInputValue) fieldDefinition.getValue();
+
+        // The 'in' operator packs multiple comma-separated values into a single LIST string; validate each
+        // item individually. A single-value operator has exactly one item to validate.
+        String[] items = valueType == Value.Type.LIST ? fieldValue.split(",") : new String[] {fieldValue};
+
+        for (String item : items) {
+            String token = item.trim();
+            if (optionsInputValue.getValues().stream()
+                    .noneMatch(optionsValue -> optionsValue.getName().equals(token))) {
+                setValidationError(
+                        "Value " + token + " is not supported for field " + fieldDefinition.getField().getName());
+                return false;
+            }
+        }
         return true;
     }
 
-    private Value validateNumberValue(String rawValue) {
+    private Value validateNumberValue(String rawValue) throws RuleManagementClientException {
 
         try {
             Double.parseDouble(rawValue);
             return new Value(Value.Type.NUMBER, rawValue);
         } catch (NumberFormatException e) {
-            // Non-numeric token (e.g. LATEST_ANDROID) — stored as RAW and resolved at evaluation time.
-            return new Value(Value.Type.RAW, rawValue);
+            throw new RuleManagementClientException("Value " + rawValue + " is not a valid NUMBER.");
         }
     }
 

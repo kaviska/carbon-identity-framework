@@ -229,6 +229,14 @@ public class CacheBackedPolicyManagementDAO implements PolicyManagementDAO {
     @Override
     public String getPolicyIdByName(String policyName, int tenantId) throws PolicyManagementException {
 
+        PolicyCacheEntry cacheEntry = policyCache.getValueFromCache(
+                PolicyCacheKey.forName(policyName), tenantId);
+        if (cacheEntry != null) {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Policy cache hit for name: " + policyName + " while resolving policy ID.");
+            }
+            return cacheEntry.getPolicy().getId();
+        }
         return policyManagementDAO.getPolicyIdByName(policyName, tenantId);
     }
 }

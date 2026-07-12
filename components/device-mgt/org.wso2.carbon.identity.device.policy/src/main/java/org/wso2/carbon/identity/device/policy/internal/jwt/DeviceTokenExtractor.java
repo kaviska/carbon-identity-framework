@@ -114,14 +114,17 @@ public class DeviceTokenExtractor {
             // Strip any stray leading/trailing quotes or backslashes introduced by JWT serialisation bugs.
             deviceId = deviceId.replaceAll("[\"\\\\]+$", "").replaceAll("^[\"\\\\]+", "").trim();
 
+            // Only an ACTIVE device may be trusted for authentication — a deactivated (revoked)
+            // device must fail here even though its record still exists.
             Device device = DevicePolicyComponentServiceHolder.getInstance()
                     .getDeviceManagementService()
-                    .getDeviceById(deviceId, tenantDomain);
+                    .getActiveDeviceById(deviceId, tenantDomain);
 
             if (device == null) {
-                diagnosticLogger.logTokenValidationFailure(deviceId, "Device is not registered.");
+                diagnosticLogger.logTokenValidationFailure(deviceId,
+                        "Device is not registered or is not active.");
                 throw DevicePolicyExceptionHandler.handleClientException(
-                        DevicePolicyErrorMessage.ERROR_DEVICE_NOT_REGISTERED, deviceId);
+                        DevicePolicyErrorMessage.ERROR_DEVICE_NOT_ACTIVE, deviceId);
             }
 
             ECPublicKey publicKey = decodePublicKey(device.getPublicKey());

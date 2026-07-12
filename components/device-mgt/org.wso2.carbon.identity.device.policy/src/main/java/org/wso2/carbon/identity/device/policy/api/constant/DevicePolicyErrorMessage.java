@@ -42,6 +42,8 @@ public enum DevicePolicyErrorMessage {
             "Device token is outside the allowed %s-second freshness window."),
     ERROR_DEVICE_TOKEN_REPLAYED("DPM-60015", "Device token replayed.",
             "Device token with jti %s has already been used."),
+    ERROR_DEVICE_NOT_ACTIVE("DPM-60016", "Device not active.",
+            "The device with id: %s is not active and cannot be used for authentication."),
 
     // Server errors.
     ERROR_DEVICE_ECDSA_VERIFICATION_FAILED("DPM-65011", "Device token verification failed.",

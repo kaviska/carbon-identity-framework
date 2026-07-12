@@ -41,7 +41,7 @@
     <modules>
         <module>org.wso2.carbon.identity.device.mgt</module>
         <module>org.wso2.carbon.identity.device.policy</module>
-        <module>org.wso2.carbon.identity.device.registration.executor</module>
+        <module>org.wso2.carbon.identity.device.registration</module>
     </modules>
 
     <dependencyManagement>

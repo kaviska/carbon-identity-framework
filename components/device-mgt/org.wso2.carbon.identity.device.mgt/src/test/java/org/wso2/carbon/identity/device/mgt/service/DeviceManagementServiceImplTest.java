@@ -23,22 +23,20 @@ import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.device.mgt.api.constant.ErrorMessage;
 import org.wso2.carbon.identity.device.mgt.api.exception.DeviceMgtException;
 import org.wso2.carbon.identity.device.mgt.api.model.Device;
-import org.wso2.carbon.identity.device.mgt.api.model.DeviceRegistrationInitiation;
 import org.wso2.carbon.identity.device.mgt.internal.dao.DeviceManagementDAO;
 import org.wso2.carbon.identity.device.mgt.internal.service.impl.DeviceManagementServiceImpl;
 
 import java.lang.reflect.Field;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.Signature;
-import java.util.Base64;
-import java.util.UUID;
+import java.sql.Timestamp;
+import java.time.Instant;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -60,18 +58,25 @@ public class DeviceManagementServiceImplTest {
     private DeviceManagementServiceImpl service;
     private DeviceManagementDAO dao;
     private MockedStatic<IdentityTenantUtil> identityTenantUtilMocked;
+    private Field daoField;
+    private DeviceManagementDAO originalDao;
 
     @BeforeClass
-    public void setUpClass() {
+    public void setUpClass() throws Exception {
 
         service = DeviceManagementServiceImpl.getInstance();
         identityTenantUtilMocked = mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(TENANT_DOMAIN)).thenReturn(TENANT_ID);
+
+        daoField = DeviceManagementServiceImpl.class.getDeclaredField("deviceManagementDAO");
+        daoField.setAccessible(true);
+        originalDao = (DeviceManagementDAO) daoField.get(service);
     }
 
     @AfterClass
-    public void tearDownClass() {
+    public void tearDownClass() throws Exception {
 
+        daoField.set(service, originalDao);
         identityTenantUtilMocked.close();
     }
 
@@ -79,187 +84,90 @@ public class DeviceManagementServiceImplTest {
     public void setUp() throws Exception {
 
         dao = mock(DeviceManagementDAO.class);
-        Field f = DeviceManagementServiceImpl.class.getDeclaredField("deviceManagementDAO");
-        f.setAccessible(true);
-        f.set(service, dao);
+        daoField.set(service, dao);
     }
 
     @Test
-    public void testInitiateReturnsRegistrationIdAndChallenge() throws DeviceMgtException {
+    public void testPersistDeviceDelegatesToDao() throws Exception {
 
-        DeviceRegistrationInitiation result = service.initiateDeviceRegistration(TEST_USERNAME, TENANT_DOMAIN);
+        Device device = buildDevice("d1", "alice@example.com");
+        when(dao.registerDevice(any(), eq(TENANT_ID))).thenReturn(device);
 
-        Assert.assertNotNull(result);
-        Assert.assertNotNull(result.getRegistrationId());
-        Assert.assertFalse(result.getRegistrationId().isBlank());
-        Assert.assertNotNull(result.getChallenge());
-        Assert.assertFalse(result.getChallenge().isBlank());
-    }
-
-    @Test
-    public void testInitiateGeneratesUniqueChallenges() throws DeviceMgtException {
-
-        DeviceRegistrationInitiation r1 = service.initiateDeviceRegistration(TEST_USERNAME, TENANT_DOMAIN);
-        DeviceRegistrationInitiation r2 = service.initiateDeviceRegistration(TEST_USERNAME, TENANT_DOMAIN);
-
-        Assert.assertNotEquals(r1.getChallenge(), r2.getChallenge());
-    }
-
-    @Test
-    public void testInitiateWithBlankUsernameThrows() {
-
-        try {
-            service.initiateDeviceRegistration("  ", TENANT_DOMAIN);
-            Assert.fail("Expected DeviceMgtClientException");
-        } catch (DeviceMgtException ex) {
-            Assert.assertEquals(ex.getErrorCode(), ErrorMessage.ERROR_INVALID_DEVICE_FIELD.getCode());
-        }
-    }
-
-    @Test
-    public void testInitiateWithBlankTenantDomainThrows() {
-
-        try {
-            service.initiateDeviceRegistration(TEST_USERNAME, "");
-            Assert.fail("Expected DeviceMgtClientException");
-        } catch (DeviceMgtException ex) {
-            Assert.assertEquals(ex.getErrorCode(), ErrorMessage.ERROR_INVALID_DEVICE_FIELD.getCode());
-        }
-    }
-
-    @Test
-    public void testVerifyWithValidSignatureSucceeds() throws Exception {
-
-        KeyPair kp = generateEcKeyPair();
-        DeviceRegistrationInitiation initiation = service.initiateDeviceRegistration(TEST_USERNAME, TENANT_DOMAIN);
-        String sig = signChallengeB64(kp, initiation.getChallenge());
-
-        Device result = service.verifyDeviceRegistration(
-                initiation.getRegistrationId(), publicKeyB64(kp), sig,
-                "Alice's iPhone", null, null, TENANT_DOMAIN);
-
-        Assert.assertNotNull(result);
-        Assert.assertEquals(result.getPublicKey(), publicKeyB64(kp));
-        Assert.assertEquals(result.getUserId(), TEST_USERNAME);
-    }
-
-    @Test
-    public void testVerifyWithInvalidSignatureThrows() throws Exception {
-
-        KeyPair kp1 = generateEcKeyPair();
-        KeyPair kp2 = generateEcKeyPair();
-        DeviceRegistrationInitiation initiation = service.initiateDeviceRegistration(TEST_USERNAME, TENANT_DOMAIN);
-        String sigFromWrongKey = signChallengeB64(kp2, initiation.getChallenge());
-
-        try {
-            service.verifyDeviceRegistration(
-                    initiation.getRegistrationId(), publicKeyB64(kp1), sigFromWrongKey,
-                    "Alice's iPhone", null, null, TENANT_DOMAIN);
-            Assert.fail("Expected DeviceMgtClientException");
-        } catch (DeviceMgtException ex) {
-            Assert.assertEquals(ex.getErrorCode(), ErrorMessage.ERROR_INVALID_DEVICE_SIGNATURE.getCode());
-        }
-    }
-
-    @Test
-    public void testVerifyWithMissingRegistrationContextThrows() throws Exception {
-
-        KeyPair kp = generateEcKeyPair();
-
-        try {
-            service.verifyDeviceRegistration(
-                    UUID.randomUUID().toString(), publicKeyB64(kp), "fakeSig",
-                    "Device", null, null, TENANT_DOMAIN);
-            Assert.fail("Expected DeviceMgtClientException");
-        } catch (DeviceMgtException ex) {
-            Assert.assertEquals(ex.getErrorCode(), ErrorMessage.ERROR_REGISTRATION_CONTEXT_NOT_FOUND.getCode());
-        }
-    }
-
-    @Test
-    public void testVerifyWithMalformedPublicKeyThrows() throws Exception {
-
-        DeviceRegistrationInitiation initiation = service.initiateDeviceRegistration(TEST_USERNAME, TENANT_DOMAIN);
-        String badKey = Base64.getEncoder().encodeToString(new byte[]{1, 2, 3, 4, 5});
-        String fakeSig = Base64.getEncoder().encodeToString(new byte[]{0, 0, 0, 0});
-
-        try {
-            service.verifyDeviceRegistration(
-                    initiation.getRegistrationId(), badKey, fakeSig,
-                    "Device", null, null, TENANT_DOMAIN);
-            Assert.fail("Expected DeviceMgtServerException");
-        } catch (DeviceMgtException ex) {
-            Assert.assertEquals(ex.getErrorCode(), ErrorMessage.ERROR_WHILE_VERIFYING_SIGNATURE.getCode());
-        }
-    }
-
-    @Test
-    public void testVerifyWithBlankRequiredFieldThrows() {
-
-        try {
-            service.verifyDeviceRegistration(
-                    UUID.randomUUID().toString(), "", "sig",
-                    "Device", null, null, TENANT_DOMAIN);
-            Assert.fail("Expected DeviceMgtClientException for blank publicKey");
-        } catch (DeviceMgtException ex) {
-            Assert.assertEquals(ex.getErrorCode(), ErrorMessage.ERROR_INVALID_DEVICE_FIELD.getCode());
-        }
-
-        try {
-            service.verifyDeviceRegistration(
-                    UUID.randomUUID().toString(), "pk", "  ",
-                    "Device", null, null, TENANT_DOMAIN);
-            Assert.fail("Expected DeviceMgtClientException for blank signature");
-        } catch (DeviceMgtException ex) {
-            Assert.assertEquals(ex.getErrorCode(), ErrorMessage.ERROR_INVALID_DEVICE_FIELD.getCode());
-        }
-
-        try {
-            service.verifyDeviceRegistration(
-                    UUID.randomUUID().toString(), "pk", "sig",
-                    "", null, null, TENANT_DOMAIN);
-            Assert.fail("Expected DeviceMgtClientException for blank deviceName");
-        } catch (DeviceMgtException ex) {
-            Assert.assertEquals(ex.getErrorCode(), ErrorMessage.ERROR_INVALID_DEVICE_FIELD.getCode());
-        }
-    }
-
-    @Test
-    public void testVerifyConsumesContext() throws Exception {
-
-        KeyPair kp = generateEcKeyPair();
-        DeviceRegistrationInitiation initiation = service.initiateDeviceRegistration(TEST_USERNAME, TENANT_DOMAIN);
-        String sig = signChallengeB64(kp, initiation.getChallenge());
-
-        service.verifyDeviceRegistration(
-                initiation.getRegistrationId(), publicKeyB64(kp), sig,
-                "Device", null, null, TENANT_DOMAIN);
-
-        try {
-            service.verifyDeviceRegistration(
-                    initiation.getRegistrationId(), publicKeyB64(kp), sig,
-                    "Device", null, null, TENANT_DOMAIN);
-            Assert.fail("Expected context-not-found after context was consumed");
-        } catch (DeviceMgtException ex) {
-            Assert.assertEquals(ex.getErrorCode(), ErrorMessage.ERROR_REGISTRATION_CONTEXT_NOT_FOUND.getCode());
-        }
-    }
-
-    @Test
-    public void testCompleteVerifiesAndPersists() throws Exception {
-
-        KeyPair kp = generateEcKeyPair();
-        DeviceRegistrationInitiation initiation = service.initiateDeviceRegistration(TEST_USERNAME, TENANT_DOMAIN);
-        String sig = signChallengeB64(kp, initiation.getChallenge());
-
-        Device verified = service.verifyDeviceRegistration(
-                initiation.getRegistrationId(), publicKeyB64(kp), sig,
-                "Alice's iPhone", "iPhone 15", null, TENANT_DOMAIN);
-
-        when(dao.registerDevice(any(), eq(TENANT_ID))).thenReturn(verified);
-        service.persistDevice(verified, TENANT_DOMAIN);
+        service.persistDevice(device, TENANT_DOMAIN);
 
         verify(dao).registerDevice(any(), eq(TENANT_ID));
+    }
+
+    @Test
+    public void testPersistDeviceWithoutUserIdThrows() {
+
+        Device device = buildDevice("d1", null);
+
+        try {
+            service.persistDevice(device, TENANT_DOMAIN);
+            Assert.fail("Expected DeviceMgtServerException");
+        } catch (DeviceMgtException ex) {
+            Assert.assertEquals(ex.getErrorCode(), ErrorMessage.ERROR_USER_ID_REQUIRED.getCode());
+        }
+    }
+
+    @Test
+    public void testPersistNullDeviceThrows() {
+
+        assertPersistFailsWithFieldRequired(null);
+    }
+
+    @DataProvider(name = "incompleteDevices")
+    public Object[][] incompleteDevices() {
+
+        return new Object[][]{
+                {"id", completeDeviceBuilder().id(null).build()},
+                {"deviceName", completeDeviceBuilder().deviceName(null).build()},
+                {"publicKey", completeDeviceBuilder().publicKey(null).build()},
+                {"status", completeDeviceBuilder().status(null).build()},
+                {"registeredAt", completeDeviceBuilder().registeredAt(null).build()},
+        };
+    }
+
+    @Test(dataProvider = "incompleteDevices")
+    public void testPersistDeviceWithMissingRequiredFieldThrows(String fieldName, Device device) {
+
+        // A required field left unset must surface as a coded error, not as a DB constraint
+        // violation or an NPE raised inside the DAO.
+        assertPersistFailsWithFieldRequired(device);
+    }
+
+    @Test
+    public void testPersistDeviceWithoutOptionalFieldsSucceeds() throws Exception {
+
+        // Device model and metadata are nullable in the schema, so they must not be validated.
+        Device device = completeDeviceBuilder().deviceModel(null).metadata(null).build();
+
+        service.persistDevice(device, TENANT_DOMAIN);
+
+        verify(dao).registerDevice(any(), eq(TENANT_ID));
+    }
+
+    private void assertPersistFailsWithFieldRequired(Device device) {
+
+        try {
+            service.persistDevice(device, TENANT_DOMAIN);
+            Assert.fail("Expected DeviceMgtServerException");
+        } catch (DeviceMgtException ex) {
+            Assert.assertEquals(ex.getErrorCode(), ErrorMessage.ERROR_DEVICE_FIELD_REQUIRED.getCode());
+        }
+    }
+
+    private static Device.Builder completeDeviceBuilder() {
+
+        return new Device.Builder()
+                .id("d1")
+                .userId("alice@example.com")
+                .deviceName("Alice's iPhone")
+                .deviceModel("iPhone 15")
+                .publicKey("dummy-public-key")
+                .status(Device.Status.ACTIVE)
+                .registeredAt(Timestamp.from(Instant.now()));
     }
 
     @Test
@@ -278,6 +186,51 @@ public class DeviceManagementServiceImplTest {
 
         try {
             service.getDeviceById("", TENANT_DOMAIN);
+            Assert.fail("Expected DeviceMgtClientException");
+        } catch (DeviceMgtException ex) {
+            Assert.assertEquals(ex.getErrorCode(), ErrorMessage.ERROR_INVALID_DEVICE_FIELD.getCode());
+        }
+    }
+
+    @Test
+    public void testGetActiveDeviceByIdReturnsDeviceWhenActive() throws Exception {
+
+        Device active = buildDevice("d1", "alice@example.com", Device.Status.ACTIVE);
+        when(dao.getDeviceById("d1", TENANT_ID)).thenReturn(active);
+
+        Device result = service.getActiveDeviceById("d1", TENANT_DOMAIN);
+
+        Assert.assertEquals(result, active);
+    }
+
+    @Test
+    public void testGetActiveDeviceByIdReturnsNullWhenInactive() throws Exception {
+
+        // The security-critical case: a deactivated (revoked) device must not be returned,
+        // even though the record still exists and getDeviceById would return it.
+        Device inactive = buildDevice("d1", "alice@example.com", Device.Status.INACTIVE);
+        when(dao.getDeviceById("d1", TENANT_ID)).thenReturn(inactive);
+
+        Device result = service.getActiveDeviceById("d1", TENANT_DOMAIN);
+
+        Assert.assertNull(result);
+    }
+
+    @Test
+    public void testGetActiveDeviceByIdReturnsNullWhenDeviceDoesNotExist() throws Exception {
+
+        when(dao.getDeviceById("unknown", TENANT_ID)).thenReturn(null);
+
+        Device result = service.getActiveDeviceById("unknown", TENANT_DOMAIN);
+
+        Assert.assertNull(result);
+    }
+
+    @Test
+    public void testGetActiveDeviceByIdWithBlankIdThrows() {
+
+        try {
+            service.getActiveDeviceById("", TENANT_DOMAIN);
             Assert.fail("Expected DeviceMgtClientException");
         } catch (DeviceMgtException ex) {
             Assert.assertEquals(ex.getErrorCode(), ErrorMessage.ERROR_INVALID_DEVICE_FIELD.getCode());
@@ -316,6 +269,21 @@ public class DeviceManagementServiceImplTest {
     }
 
     @Test
+    public void testUpdateDeviceNameWhenDaoReturnsNullAfterRefetchThrowsNotNPE() throws Exception {
+
+        Device existing = mock(Device.class);
+        when(dao.getDeviceById("d1", TENANT_ID)).thenReturn(existing);
+        when(dao.updateDeviceName("d1", "New Name", TENANT_ID)).thenReturn(null);
+
+        try {
+            service.updateDeviceName("d1", "New Name", TENANT_DOMAIN);
+            Assert.fail("Expected DeviceMgtClientException");
+        } catch (DeviceMgtException ex) {
+            Assert.assertEquals(ex.getErrorCode(), ErrorMessage.ERROR_DEVICE_NOT_FOUND.getCode());
+        }
+    }
+
+    @Test
     public void testDeleteDeviceWhenDeviceMissingThrows() throws Exception {
 
         when(dao.getDeviceById("d1", TENANT_ID)).thenReturn(null);
@@ -350,23 +318,135 @@ public class DeviceManagementServiceImplTest {
         }
     }
 
-    private static KeyPair generateEcKeyPair() throws Exception {
+    @Test
+    public void testGetDevicesPassesValidLimitThrough() throws Exception {
 
-        KeyPairGenerator kpg = KeyPairGenerator.getInstance("EC");
-        kpg.initialize(256);
-        return kpg.generateKeyPair();
+        service.getDevices(TENANT_DOMAIN, 5, 20);
+
+        verify(dao).getDevices(TENANT_ID, 5, 20);
     }
 
-    private static String publicKeyB64(KeyPair kp) {
+    @Test
+    public void testGetDevicesCapsLimitAtMaximumItemsPerPage() throws Exception {
 
-        return Base64.getEncoder().encodeToString(kp.getPublic().getEncoded());
+        int maximumItemsPerPage = IdentityUtil.getMaximumItemPerPage();
+
+        service.getDevices(TENANT_DOMAIN, 0, maximumItemsPerPage + 5000);
+
+        // The oversized page size must be capped, so the DAO never sees the caller's value.
+        verify(dao).getDevices(TENANT_ID, 0, maximumItemsPerPage);
     }
 
-    private static String signChallengeB64(KeyPair kp, String challengeB64Url) throws Exception {
+    @Test
+    public void testGetDevicesWithNegativeLimitThrows() {
 
-        Signature sig = Signature.getInstance("SHA256withECDSA");
-        sig.initSign(kp.getPrivate());
-        sig.update(Base64.getUrlDecoder().decode(challengeB64Url));
-        return Base64.getEncoder().encodeToString(sig.sign());
+        try {
+            service.getDevices(TENANT_DOMAIN, 0, -1);
+            Assert.fail("Expected DeviceMgtClientException");
+        } catch (DeviceMgtException ex) {
+            Assert.assertEquals(ex.getErrorCode(), ErrorMessage.ERROR_INVALID_DEVICE_FIELD.getCode());
+        }
+    }
+
+    @Test
+    public void testDeactivateDeviceDelegatesToDao() throws Exception {
+
+        Device existing = mock(Device.class);
+        Device deactivated = buildDevice("d1", "alice@example.com", Device.Status.INACTIVE);
+        when(dao.getDeviceById("d1", TENANT_ID)).thenReturn(existing);
+        when(dao.changeDeviceStatus("d1", Device.Status.INACTIVE, TENANT_ID)).thenReturn(deactivated);
+
+        Device result = service.deactivateDevice("d1", TENANT_DOMAIN);
+
+        Assert.assertEquals(result.getStatus(), Device.Status.INACTIVE);
+        verify(dao).changeDeviceStatus("d1", Device.Status.INACTIVE, TENANT_ID);
+    }
+
+    @Test
+    public void testActivateDeviceDelegatesToDao() throws Exception {
+
+        Device existing = mock(Device.class);
+        Device activated = buildDevice("d1", "alice@example.com", Device.Status.ACTIVE);
+        when(dao.getDeviceById("d1", TENANT_ID)).thenReturn(existing);
+        when(dao.changeDeviceStatus("d1", Device.Status.ACTIVE, TENANT_ID)).thenReturn(activated);
+
+        Device result = service.activateDevice("d1", TENANT_DOMAIN);
+
+        Assert.assertEquals(result.getStatus(), Device.Status.ACTIVE);
+        verify(dao).changeDeviceStatus("d1", Device.Status.ACTIVE, TENANT_ID);
+    }
+
+    @Test
+    public void testDeactivateDeviceWhenDeviceMissingThrows() throws Exception {
+
+        when(dao.getDeviceById("unknown", TENANT_ID)).thenReturn(null);
+
+        try {
+            service.deactivateDevice("unknown", TENANT_DOMAIN);
+            Assert.fail("Expected DeviceMgtClientException");
+        } catch (DeviceMgtException ex) {
+            Assert.assertEquals(ex.getErrorCode(), ErrorMessage.ERROR_DEVICE_NOT_FOUND.getCode());
+        }
+    }
+
+    @Test
+    public void testActivateDeviceWhenDeviceMissingThrows() throws Exception {
+
+        when(dao.getDeviceById("unknown", TENANT_ID)).thenReturn(null);
+
+        try {
+            service.activateDevice("unknown", TENANT_DOMAIN);
+            Assert.fail("Expected DeviceMgtClientException");
+        } catch (DeviceMgtException ex) {
+            Assert.assertEquals(ex.getErrorCode(), ErrorMessage.ERROR_DEVICE_NOT_FOUND.getCode());
+        }
+    }
+
+    @Test
+    public void testDeactivateDeviceWhenDaoReturnsNullAfterRefetchThrowsNotNPE() throws Exception {
+
+        Device existing = mock(Device.class);
+        when(dao.getDeviceById("d1", TENANT_ID)).thenReturn(existing);
+        when(dao.changeDeviceStatus("d1", Device.Status.INACTIVE, TENANT_ID)).thenReturn(null);
+
+        try {
+            service.deactivateDevice("d1", TENANT_DOMAIN);
+            Assert.fail("Expected DeviceMgtClientException");
+        } catch (DeviceMgtException ex) {
+            Assert.assertEquals(ex.getErrorCode(), ErrorMessage.ERROR_DEVICE_NOT_FOUND.getCode());
+        }
+    }
+
+    @Test
+    public void testActivateDeviceWhenDaoReturnsNullAfterRefetchThrowsNotNPE() throws Exception {
+
+        Device existing = mock(Device.class);
+        when(dao.getDeviceById("d1", TENANT_ID)).thenReturn(existing);
+        when(dao.changeDeviceStatus("d1", Device.Status.ACTIVE, TENANT_ID)).thenReturn(null);
+
+        try {
+            service.activateDevice("d1", TENANT_DOMAIN);
+            Assert.fail("Expected DeviceMgtClientException");
+        } catch (DeviceMgtException ex) {
+            Assert.assertEquals(ex.getErrorCode(), ErrorMessage.ERROR_DEVICE_NOT_FOUND.getCode());
+        }
+    }
+
+    private static Device buildDevice(String id, String userId) {
+
+        return buildDevice(id, userId, Device.Status.ACTIVE);
+    }
+
+    private static Device buildDevice(String id, String userId, Device.Status status) {
+
+        return new Device.Builder()
+                .id(id)
+                .userId(userId)
+                .deviceName("Alice's iPhone")
+                .deviceModel("iPhone 15")
+                .publicKey("dummy-public-key")
+                .status(status)
+                .registeredAt(Timestamp.from(Instant.now()))
+                .build();
     }
 }

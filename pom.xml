@@ -401,7 +401,7 @@
             </dependency>
             <dependency>
                 <groupId>org.wso2.carbon.identity.framework</groupId>
-                <artifactId>org.wso2.carbon.identity.device.registration.executor</artifactId>
+                <artifactId>org.wso2.carbon.identity.device.registration</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

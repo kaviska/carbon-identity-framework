@@ -43,7 +43,7 @@
         </dependency>
         <dependency>
             <groupId>org.wso2.carbon.identity.framework</groupId>
-            <artifactId>org.wso2.carbon.identity.device.registration.executor</artifactId>
+            <artifactId>org.wso2.carbon.identity.device.registration</artifactId>
         </dependency>
     </dependencies>
 
@@ -76,7 +76,7 @@
                                     org.wso2.carbon.identity.framework:org.wso2.carbon.identity.device.policy
                                 </bundleDef>
                                 <bundleDef>
-                                    org.wso2.carbon.identity.framework:org.wso2.carbon.identity.device.registration.executor
+                                    org.wso2.carbon.identity.framework:org.wso2.carbon.identity.device.registration
                                 </bundleDef>
                             </bundles>
                         </configuration>

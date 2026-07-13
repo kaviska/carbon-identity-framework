@@ -163,6 +163,8 @@
                             org.wso2.carbon.identity.device.registration.executor;
                             version="${carbon.identity.package.export.version}",
                             org.wso2.carbon.identity.device.registration.listener;
+                            version="${carbon.identity.package.export.version}",
+                            org.wso2.carbon.identity.device.registration.model;
                             version="${carbon.identity.package.export.version}"
                         </Export-Package>
                         <Import-Package>

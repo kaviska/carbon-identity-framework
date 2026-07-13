@@ -23,10 +23,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.device.mgt.api.exception.DeviceMgtException;
-import org.wso2.carbon.identity.device.mgt.api.model.Device;
 import org.wso2.carbon.identity.device.mgt.api.service.DeviceManagementService;
 import org.wso2.carbon.identity.device.registration.internal.component.DeviceRegistrationComponentServiceHolder;
 import org.wso2.carbon.identity.device.registration.internal.constant.DeviceRegistrationConstants;
+import org.wso2.carbon.identity.device.registration.model.VerifiedDevice;
 import org.wso2.carbon.identity.flow.execution.engine.exception.FlowEngineException;
 import org.wso2.carbon.identity.flow.execution.engine.listener.AbstractFlowExecutionListener;
 import org.wso2.carbon.identity.flow.execution.engine.model.FlowExecutionContext;
@@ -79,7 +79,7 @@ public class RegistrationFlowCompletionListener extends AbstractFlowExecutionLis
             return true;
         }
 
-        Device pending = (Device) deviceObj;
+        VerifiedDevice pending = (VerifiedDevice) deviceObj;
         String userId = context.getFlowUser().getUserId();
 
         if (StringUtils.isBlank(userId)) {
@@ -89,12 +89,10 @@ public class RegistrationFlowCompletionListener extends AbstractFlowExecutionLis
             return true;
         }
 
-        Device deviceWithUserId = new Device.Builder(pending).userId(userId).build();
-
         DeviceManagementService service =
                 DeviceRegistrationComponentServiceHolder.getInstance().getDeviceManagementService();
         try {
-            service.persistDevice(deviceWithUserId, context.getTenantDomain());
+            service.persistDevice(pending.bindTo(userId), context.getTenantDomain());
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Device persisted for userId: " + userId
                         + " deviceId: " + pending.getId()

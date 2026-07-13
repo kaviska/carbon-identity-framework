@@ -39,8 +39,10 @@ import org.wso2.carbon.identity.device.policy.api.service.IntegrityDataEnricher;
 import org.wso2.carbon.identity.device.registration.internal.component.DeviceRegistrationComponentServiceHolder;
 import org.wso2.carbon.identity.device.registration.internal.constant.DeviceRegistrationConstants;
 import org.wso2.carbon.identity.device.registration.internal.constant.ErrorMessage;
+import org.wso2.carbon.identity.device.registration.internal.handler.DeviceRegistrationHandler;
 import org.wso2.carbon.identity.device.registration.internal.model.DeviceRegistrationChallenge;
 import org.wso2.carbon.identity.device.registration.internal.util.DeviceRegistrationExceptionHandler;
+import org.wso2.carbon.identity.device.registration.model.VerifiedDevice;
 import org.wso2.carbon.identity.flow.execution.engine.model.ExecutorResponse;
 import org.wso2.carbon.identity.flow.execution.engine.model.FlowExecutionContext;
 import org.wso2.carbon.identity.flow.execution.engine.model.FlowUser;
@@ -316,7 +318,7 @@ public class DeviceRegistrationExecutorTest {
         context.setUserInputData(completionInput());
 
         FlowExecutionContext afterInitiation = runInitiation(context);
-        Device verified = buildDevice(null);
+        VerifiedDevice verified = buildVerifiedDevice();
 
         ExecutorResponse response;
         try (MockedStatic<DeviceRegistrationHandler> mocked = mockVerifySuccess(verified)) {
@@ -339,7 +341,7 @@ public class DeviceRegistrationExecutorTest {
         context.setUserInputData(completionInput());
 
         FlowExecutionContext afterInitiation = runInitiation(context);
-        Device verified = buildDevice(null);
+        VerifiedDevice verified = buildVerifiedDevice();
 
         ExecutorResponse response;
         try (MockedStatic<DeviceRegistrationHandler> mocked = mockVerifySuccess(verified)) {
@@ -408,7 +410,7 @@ public class DeviceRegistrationExecutorTest {
         context.setUserInputData(input);
 
         FlowExecutionContext afterInitiation = runInitiation(context);
-        Device verified = buildDevice(null);
+        VerifiedDevice verified = buildVerifiedDevice();
 
         ExecutorResponse response;
         try (MockedStatic<DeviceRegistrationHandler> mocked = mockVerifySuccess(verified)) {
@@ -431,7 +433,7 @@ public class DeviceRegistrationExecutorTest {
         context.setUserInputData(input);
 
         FlowExecutionContext afterInitiation = runInitiation(context);
-        Device verified = buildDevice(null);
+        VerifiedDevice verified = buildVerifiedDevice();
 
         when(deviceTokenVerifier.verifyWithPublicKey(any(), any(), any(), any())).thenReturn(new HashMap<>());
         when(devicePolicyEvaluator.evaluate(eq("strictPolicy"), any(), eq(TENANT_DOMAIN)))
@@ -458,7 +460,7 @@ public class DeviceRegistrationExecutorTest {
         context.setUserInputData(input);
 
         FlowExecutionContext afterInitiation = runInitiation(context);
-        Device verified = buildDevice(null);
+        VerifiedDevice verified = buildVerifiedDevice();
 
         when(deviceTokenVerifier.verifyWithPublicKey(any(), any(), any(), any())).thenReturn(new HashMap<>());
         when(devicePolicyEvaluator.evaluate(eq("strictPolicy"), any(), eq(TENANT_DOMAIN)))
@@ -483,7 +485,7 @@ public class DeviceRegistrationExecutorTest {
         context.setUserInputData(completionInput());
         FlowExecutionContext afterInitiation = runInitiation(context);
 
-        Device verified = buildDevice(null);
+        VerifiedDevice verified = buildVerifiedDevice();
         ExecutorResponse completionResponse;
         try (MockedStatic<DeviceRegistrationHandler> mocked = mockVerifySuccess(verified)) {
             completionResponse = executor.execute(afterInitiation);
@@ -526,7 +528,7 @@ public class DeviceRegistrationExecutorTest {
         context.setUserInputData(completionInput());
         FlowExecutionContext afterInitiation = runInitiation(context);
 
-        Device verified = buildDevice(null);
+        VerifiedDevice verified = buildVerifiedDevice();
         ExecutorResponse completionResponse;
         try (MockedStatic<DeviceRegistrationHandler> mocked = mockVerifySuccess(verified)) {
             completionResponse = executor.execute(afterInitiation);
@@ -567,14 +569,12 @@ public class DeviceRegistrationExecutorTest {
         return input;
     }
 
-    private Device buildDevice(String userId) {
+    private VerifiedDevice buildVerifiedDevice() {
 
-        return new Device.Builder()
+        return new VerifiedDevice.Builder()
                 .id(REGISTRATION_ID)
-                .userId(userId)
                 .deviceName("Alice's Device")
                 .publicKey("base64PublicKey")
-                .status(Device.Status.ACTIVE)
                 .registeredAt(Timestamp.from(Instant.now()))
                 .build();
     }
@@ -587,7 +587,7 @@ public class DeviceRegistrationExecutorTest {
         return mocked;
     }
 
-    private MockedStatic<DeviceRegistrationHandler> mockVerifySuccess(Device device) {
+    private MockedStatic<DeviceRegistrationHandler> mockVerifySuccess(VerifiedDevice device) {
 
         MockedStatic<DeviceRegistrationHandler> mocked = mockStatic(DeviceRegistrationHandler.class);
         mocked.when(() -> DeviceRegistrationHandler.verify(any(), any(), any(), any(), any(), any(), any()))

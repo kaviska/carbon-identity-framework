@@ -16,13 +16,12 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.device.registration.executor;
+package org.wso2.carbon.identity.device.registration.internal.handler;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.device.mgt.api.exception.DeviceMgtClientException;
 import org.wso2.carbon.identity.device.mgt.api.exception.DeviceMgtException;
-import org.wso2.carbon.identity.device.mgt.api.model.Device;
 import org.wso2.carbon.identity.device.registration.internal.cache.DeviceRegistrationCache;
 import org.wso2.carbon.identity.device.registration.internal.cache.DeviceRegistrationCacheEntry;
 import org.wso2.carbon.identity.device.registration.internal.cache.DeviceRegistrationCacheKey;
@@ -31,6 +30,7 @@ import org.wso2.carbon.identity.device.registration.internal.model.DeviceRegistr
 import org.wso2.carbon.identity.device.registration.internal.model.DeviceRegistrationContext;
 import org.wso2.carbon.identity.device.registration.internal.util.DeviceRegistrationExceptionHandler;
 import org.wso2.carbon.identity.device.registration.internal.util.DeviceSignatureVerifier;
+import org.wso2.carbon.identity.device.registration.model.VerifiedDevice;
 
 import java.security.SecureRandom;
 import java.sql.Timestamp;
@@ -42,7 +42,7 @@ import static org.wso2.carbon.identity.device.mgt.api.constant.ErrorMessage.ERRO
 
 /**
  * Implements the two-phase device registration challenge-response protocol, internal to the
- * device.registration bundle. {@link org.wso2.carbon.identity.device.registration.DeviceRegistrationExecutor}
+ * device.registration bundle. {@link org.wso2.carbon.identity.device.registration.executor.DeviceRegistrationExecutor}
  * is the sole consumer.
  */
 public class DeviceRegistrationHandler {
@@ -105,10 +105,11 @@ public class DeviceRegistrationHandler {
      * @param deviceModel    Hardware model string (nullable).
      * @param metadata       Optional JSON string for extensible attributes (nullable).
      * @param tenantDomain   Tenant domain.
-     * @return A Device whose userId is unset — caller must set the real userId before persisting.
+     * @return A verified device that is not yet bound to a user. The caller must call
+     *         {@link VerifiedDevice#bindTo(String)} before it can be persisted.
      * @throws DeviceMgtException If the registration context is missing or the signature is invalid.
      */
-    public static Device verify(
+    public static VerifiedDevice verify(
             String registrationId,
             String publicKey,
             String signature,
@@ -140,7 +141,7 @@ public class DeviceRegistrationHandler {
             LOG.debug("Device registration verified (not yet persisted) for user: " + context.getUsername() +
                     " in tenant: " + tenantDomain);
         }
-        return new Device.Builder()
+        return new VerifiedDevice.Builder()
                 .id(registrationId)
                 .deviceName(deviceName)
                 .deviceModel(deviceModel)

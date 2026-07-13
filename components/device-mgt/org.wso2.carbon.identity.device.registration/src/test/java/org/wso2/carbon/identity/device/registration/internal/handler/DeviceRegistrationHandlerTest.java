@@ -16,7 +16,7 @@
 * under the License.
 */
 
-package org.wso2.carbon.identity.device.registration.executor;
+package org.wso2.carbon.identity.device.registration.internal.handler;
 
 import org.mockito.MockedStatic;
 import org.testng.Assert;
@@ -27,8 +27,8 @@ import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.device.mgt.api.constant.ErrorMessage;
 import org.wso2.carbon.identity.device.mgt.api.exception.DeviceMgtException;
-import org.wso2.carbon.identity.device.mgt.api.model.Device;
 import org.wso2.carbon.identity.device.registration.internal.model.DeviceRegistrationChallenge;
+import org.wso2.carbon.identity.device.registration.model.VerifiedDevice;
 
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -115,15 +115,15 @@ public class DeviceRegistrationHandlerTest {
         DeviceRegistrationChallenge initiation = DeviceRegistrationHandler.initiate(TEST_USERNAME, TENANT_DOMAIN);
         String sig = signChallengeB64(kp, initiation.getChallenge());
 
-        Device result = DeviceRegistrationHandler.verify(
+        VerifiedDevice result = DeviceRegistrationHandler.verify(
                 initiation.getRegistrationId(), publicKeyB64(kp), sig,
                 "Alice's iPhone", null, null, TENANT_DOMAIN);
 
         Assert.assertNotNull(result);
         Assert.assertEquals(result.getPublicKey(), publicKeyB64(kp));
-        // userId is deliberately left unset by verify(); the caller must bind the real,
-        // provisioned userId (from UserProvisioningExecutor) before persisting.
-        Assert.assertNull(result.getUserId());
+        // verify() returns a device that is not yet bound to a user. The caller must bind the real,
+        // provisioned userId (from UserProvisioningExecutor) via bindTo() before it can be persisted.
+        Assert.assertEquals(result.bindTo("user-123").getUserId(), "user-123");
     }
 
     @Test

@@ -24,14 +24,15 @@ import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.device.mgt.api.exception.DeviceMgtClientException;
 import org.wso2.carbon.identity.device.mgt.api.exception.DeviceMgtException;
-import org.wso2.carbon.identity.device.mgt.api.model.Device;
 import org.wso2.carbon.identity.device.mgt.api.service.DeviceManagementService;
 import org.wso2.carbon.identity.device.policy.api.service.DevicePolicyEvaluator;
 import org.wso2.carbon.identity.device.registration.internal.component.DeviceRegistrationComponentServiceHolder;
 import org.wso2.carbon.identity.device.registration.internal.constant.DeviceRegistrationConstants;
 import org.wso2.carbon.identity.device.registration.internal.constant.ErrorMessage;
+import org.wso2.carbon.identity.device.registration.internal.handler.DeviceRegistrationHandler;
 import org.wso2.carbon.identity.device.registration.internal.model.DeviceRegistrationChallenge;
 import org.wso2.carbon.identity.device.registration.internal.util.DeviceRegistrationDiagnosticLogger;
+import org.wso2.carbon.identity.device.registration.model.VerifiedDevice;
 import org.wso2.carbon.identity.flow.execution.engine.exception.FlowEngineException;
 import org.wso2.carbon.identity.flow.execution.engine.graph.Executor;
 import org.wso2.carbon.identity.flow.execution.engine.model.ExecutorResponse;
@@ -239,7 +240,7 @@ public class DeviceRegistrationExecutor implements Executor {
             String deviceName = buildDeviceName(context, deviceModel);
 
             // Step 1: Verify signature and clear registration cache entry.
-            Device verified = DeviceRegistrationHandler.verify(
+            VerifiedDevice verified = DeviceRegistrationHandler.verify(
                     registrationId,
                     input.get(FIELD_PUBLIC_KEY),
                     input.get(FIELD_SIGNATURE),
@@ -293,8 +294,7 @@ public class DeviceRegistrationExecutor implements Executor {
                 response.setErrorDescription(ErrorMessage.ERROR_USER_NOT_IDENTIFIED.getDescription());
                 return response;
             }
-            Device toPersist = new Device.Builder(verified).userId(userId).build();
-            service.persistDevice(toPersist, context.getTenantDomain());
+            service.persistDevice(verified.bindTo(userId), context.getTenantDomain());
 
             diagnosticLogger.logRegistrationCompleted(registrationId);
             if (LOG.isDebugEnabled()) {
@@ -303,7 +303,7 @@ public class DeviceRegistrationExecutor implements Executor {
             // Record the device ID so rollback() can delete it if a subsequent executor fails.
             ExecutorResponse response = new ExecutorResponse(STATUS_COMPLETE);
             Map<String, Object> ctxProps = new HashMap<>();
-            ctxProps.put(CTX_PERSISTED_DEVICE_ID, toPersist.getId());
+            ctxProps.put(CTX_PERSISTED_DEVICE_ID, verified.getId());
             response.setContextProperty(ctxProps);
             return response;
 

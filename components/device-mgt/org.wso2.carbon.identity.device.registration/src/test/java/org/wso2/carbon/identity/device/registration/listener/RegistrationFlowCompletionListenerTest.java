@@ -33,6 +33,7 @@ import org.wso2.carbon.identity.device.mgt.api.model.Device;
 import org.wso2.carbon.identity.device.mgt.api.service.DeviceManagementService;
 import org.wso2.carbon.identity.device.registration.internal.component.DeviceRegistrationComponentServiceHolder;
 import org.wso2.carbon.identity.device.registration.internal.constant.DeviceRegistrationConstants;
+import org.wso2.carbon.identity.device.registration.model.VerifiedDevice;
 import org.wso2.carbon.identity.flow.execution.engine.model.FlowExecutionContext;
 import org.wso2.carbon.identity.flow.execution.engine.model.FlowExecutionStep;
 import org.wso2.carbon.identity.flow.execution.engine.model.FlowUser;
@@ -236,13 +237,12 @@ public class RegistrationFlowCompletionListenerTest {
         return step;
     }
 
-    private Device pendingDevice() {
+    private VerifiedDevice pendingDevice() {
 
-        return new Device.Builder()
+        return new VerifiedDevice.Builder()
                 .id(DEVICE_ID)
                 .deviceName("Alice's Device")
                 .publicKey("base64PublicKey")
-                .status(Device.Status.ACTIVE)
                 .registeredAt(Timestamp.from(Instant.now()))
                 .build();
     }

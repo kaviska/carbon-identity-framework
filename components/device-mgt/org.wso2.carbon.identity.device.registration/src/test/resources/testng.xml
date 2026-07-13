@@ -3,7 +3,7 @@
 <suite name="Device_Registration_Test_Suite">
     <test name="Device_Registration_Handler_Tests">
         <classes>
-            <class name="org.wso2.carbon.identity.device.registration.executor.DeviceRegistrationHandlerTest"/>
+            <class name="org.wso2.carbon.identity.device.registration.internal.handler.DeviceRegistrationHandlerTest"/>
         </classes>
     </test>
     <test name="Device_Registration_Executor_Tests">

@@ -24,7 +24,6 @@ import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.device.mgt.api.exception.DeviceMgtClientException;
 import org.wso2.carbon.identity.device.mgt.api.exception.DeviceMgtException;
-import org.wso2.carbon.identity.device.mgt.api.service.DeviceManagementService;
 import org.wso2.carbon.identity.device.policy.api.service.DevicePolicyEvaluator;
 import org.wso2.carbon.identity.device.registration.internal.component.DeviceRegistrationComponentServiceHolder;
 import org.wso2.carbon.identity.device.registration.internal.constant.DeviceRegistrationConstants;
@@ -37,16 +36,11 @@ import org.wso2.carbon.identity.flow.execution.engine.exception.FlowEngineExcept
 import org.wso2.carbon.identity.flow.execution.engine.graph.Executor;
 import org.wso2.carbon.identity.flow.execution.engine.model.ExecutorResponse;
 import org.wso2.carbon.identity.flow.execution.engine.model.FlowExecutionContext;
-import org.wso2.carbon.identity.flow.mgt.Constants.FlowTypes;
 import org.wso2.carbon.identity.flow.mgt.model.NodeConfig;
 import org.wso2.carbon.identity.policy.evaluation.api.exception.PolicyEvaluationException;
 import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementClientException;
 import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementException;
 import org.wso2.carbon.identity.rule.evaluation.api.exception.RuleEvaluationException;
-import org.wso2.carbon.user.api.UserStoreException;
-import org.wso2.carbon.user.api.UserStoreManager;
-import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
-import org.wso2.carbon.user.core.service.RealmService;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -74,10 +68,11 @@ import static org.wso2.carbon.identity.flow.execution.engine.Constants.USERNAME_
  *
  *   Phase 2 — second call, registrationId present in context:
  *     Verifies the ECDSA signature. If an optional policyName is configured in executor
- *     metadata, evaluates device compliance before persisting. In REGISTRATION flows the
- *     verified device is stored in context for RegistrationFlowCompletionListener to persist
- *     after UserProvisioningExecutor assigns the real userId. In other flows it is persisted
- *     immediately.
+ *     metadata, evaluates device compliance before persisting. The verified device is always
+ *     stored in context for RegistrationFlowCompletionListener to persist once the whole flow
+ *     reaches STATUS_COMPLETE — regardless of flow type — so a userId is guaranteed to be
+ *     available on FlowUser and a later step failing never leaves a device that needs rolling
+ *     back.
  */
 public class DeviceRegistrationExecutor implements Executor {
 
@@ -98,9 +93,6 @@ public class DeviceRegistrationExecutor implements Executor {
 
     private static final String META_POLICY_NAME = "policyName";
 
-    // Written to context after persistDevice() so rollback() can delete the record if a later executor fails.
-    private static final String CTX_PERSISTED_DEVICE_ID = "device.persisted.id";
-
     @Override
     public String getName() {
         return DeviceRegistrationConstants.EXECUTOR_NAME;
@@ -120,28 +112,10 @@ public class DeviceRegistrationExecutor implements Executor {
     @Override
     public ExecutorResponse rollback(FlowExecutionContext context) throws FlowEngineException {
 
-        String persistedDeviceId = (String) context.getProperty(CTX_PERSISTED_DEVICE_ID);
-        if (persistedDeviceId != null) {
-            DeviceManagementService service =
-                    DeviceRegistrationComponentServiceHolder.getInstance().getDeviceManagementService();
-            try {
-                service.deleteDevice(persistedDeviceId, context.getTenantDomain());
-                if (LOG.isDebugEnabled()) {
-                    LOG.debug("Rolled back persisted device: " + persistedDeviceId
-                            + " for tenant: " + context.getTenantDomain());
-                }
-            } catch (DeviceMgtException e) {
-                LOG.error("Failed to rollback persisted device: " + persistedDeviceId
-                        + " in tenant: " + context.getTenantDomain(), e);
-                ExecutorResponse response = new ExecutorResponse(STATUS_ERROR);
-                response.setErrorCode(e.getErrorCode());
-                response.setErrorMessage(e.getMessage());
-                response.setErrorDescription(e.getDescription());
-                return response;
-            }
-        }
-        // Challenge cache entry expires automatically via TTL; nothing else to undo.
-        return new ExecutorResponse(STATUS_COMPLETE);
+        // Nothing to compensate: this executor never persists a device itself. Persistence is
+        // always deferred to RegistrationFlowCompletionListener, which only runs once the whole
+        // flow reaches STATUS_COMPLETE — so if a later step fails, nothing has been written yet.
+        return null;
     }
 
     @Override
@@ -232,8 +206,6 @@ public class DeviceRegistrationExecutor implements Executor {
     private ExecutorResponse completeRegistration(FlowExecutionContext context,
             String registrationId) {
 
-        DeviceManagementService service =
-                DeviceRegistrationComponentServiceHolder.getInstance().getDeviceManagementService();
         try {
             Map<String, String> input = context.getUserInputData();
             String deviceModel = input.get(FIELD_DEVICE_MODEL);
@@ -268,42 +240,17 @@ public class DeviceRegistrationExecutor implements Executor {
                 }
             }
 
-            if (FlowTypes.REGISTRATION.getType().equals(context.getFlowType())) {
-                ExecutorResponse response = new ExecutorResponse();
-                response.setResult(STATUS_COMPLETE);
-                Map<String, Object> ctxProps = new HashMap<>();
-                ctxProps.put(DeviceRegistrationConstants.CTX_DEVICE_REGISTRATION, verified);
-                response.setContextProperty(ctxProps);
-                return response;
-            }
-
-            // Non-registration flow: the user already exists, so bind the real userId and persist now.
-            // Some flows (e.g. DEVICE_REGISTRATION) identify the user by username via UserResolveExecutor
-            // without setting a userId, so resolve it from the username when it is not already present.
-            String userId = context.getFlowUser().getUserId();
-            if (isBlank(userId)) {
-                userId = resolveUserIdFromUsername(context);
-            }
-            if (isBlank(userId)) {
-                diagnosticLogger.logRegistrationFailure("User could not be identified to persist the "
-                        + "registered device.");
-                ExecutorResponse response = new ExecutorResponse();
-                response.setResult(STATUS_ERROR);
-                response.setErrorCode(ErrorMessage.ERROR_USER_NOT_IDENTIFIED.getCode());
-                response.setErrorMessage(ErrorMessage.ERROR_USER_NOT_IDENTIFIED.getMessage());
-                response.setErrorDescription(ErrorMessage.ERROR_USER_NOT_IDENTIFIED.getDescription());
-                return response;
-            }
-            service.persistDevice(verified.bindTo(userId), context.getTenantDomain());
-
-            diagnosticLogger.logRegistrationCompleted(registrationId);
+            // Persistence is always deferred to RegistrationFlowCompletionListener, which runs once
+            // the whole flow reaches STATUS_COMPLETE, regardless of flow type. By then a userId is
+            // guaranteed to be available on FlowUser, and nothing needs to be rolled back if a
+            // later step in the flow fails, since nothing has been written to the database yet.
             if (LOG.isDebugEnabled()) {
-                LOG.debug("Device registration completed for registrationId: " + registrationId);
+                LOG.debug("Device registration verified for registrationId: " + registrationId);
             }
-            // Record the device ID so rollback() can delete it if a subsequent executor fails.
-            ExecutorResponse response = new ExecutorResponse(STATUS_COMPLETE);
+            ExecutorResponse response = new ExecutorResponse();
+            response.setResult(STATUS_COMPLETE);
             Map<String, Object> ctxProps = new HashMap<>();
-            ctxProps.put(CTX_PERSISTED_DEVICE_ID, verified.getId());
+            ctxProps.put(DeviceRegistrationConstants.CTX_DEVICE_REGISTRATION, verified);
             response.setContextProperty(ctxProps);
             return response;
 
@@ -324,23 +271,6 @@ public class DeviceRegistrationExecutor implements Executor {
             response.setErrorMessage(e.getMessage());
             response.setErrorDescription(e.getDescription());
             return response;
-        }
-    }
-
-    private String resolveUserIdFromUsername(FlowExecutionContext context) {
-
-        String username = context.getFlowUser().getUsername();
-        if (isBlank(username)) {
-            return null;
-        }
-        try {
-            RealmService realmService = DeviceRegistrationComponentServiceHolder.getInstance().getRealmService();
-            int tenantId = realmService.getTenantManager().getTenantId(context.getTenantDomain());
-            UserStoreManager userStoreManager = realmService.getTenantUserRealm(tenantId).getUserStoreManager();
-            return ((AbstractUserStoreManager) userStoreManager).getUserIDFromUserName(username);
-        } catch (UserStoreException e) {
-            LOG.error("Error resolving userId from username for tenant: " + context.getTenantDomain(), e);
-            return null;
         }
     }
 

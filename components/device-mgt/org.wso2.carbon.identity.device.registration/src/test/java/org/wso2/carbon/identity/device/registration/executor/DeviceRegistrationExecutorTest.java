@@ -31,7 +31,6 @@ import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.device.mgt.api.exception.DeviceMgtException;
-import org.wso2.carbon.identity.device.mgt.api.model.Device;
 import org.wso2.carbon.identity.device.mgt.api.service.DeviceManagementService;
 import org.wso2.carbon.identity.device.policy.api.service.DevicePolicyEvaluator;
 import org.wso2.carbon.identity.device.policy.api.service.DeviceTokenVerifier;
@@ -51,7 +50,6 @@ import org.wso2.carbon.identity.flow.mgt.model.ExecutorDTO;
 import org.wso2.carbon.identity.flow.mgt.model.GraphConfig;
 import org.wso2.carbon.identity.flow.mgt.model.NodeConfig;
 import org.wso2.carbon.identity.policy.evaluation.api.exception.PolicyEvaluationException;
-import org.wso2.carbon.user.core.service.RealmService;
 
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -61,17 +59,16 @@ import java.util.Map;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 import static org.wso2.carbon.identity.flow.execution.engine.Constants.ExecutorStatus.STATUS_CLIENT_INPUT_REQUIRED;
 import static org.wso2.carbon.identity.flow.execution.engine.Constants.ExecutorStatus.STATUS_COMPLETE;
@@ -113,14 +110,10 @@ public class DeviceRegistrationExecutorTest {
     @Mock
     private IntegrityDataEnricher integrityDataEnricher;
 
-    @Mock
-    private RealmService realmService;
-
     private DeviceManagementService originalDeviceManagementService;
     private DevicePolicyEvaluator originalDevicePolicyEvaluator;
     private DeviceTokenVerifier originalDeviceTokenVerifier;
     private IntegrityDataEnricher originalIntegrityDataEnricher;
-    private RealmService originalRealmService;
     private MockedStatic<IdentityTenantUtil> identityTenantUtilMocked;
     private MockedStatic<LoggerUtils> loggerUtilsMocked;
 
@@ -147,13 +140,11 @@ public class DeviceRegistrationExecutorTest {
         originalDevicePolicyEvaluator = holder.getDevicePolicyEvaluator();
         originalDeviceTokenVerifier = holder.getDeviceTokenVerifier();
         originalIntegrityDataEnricher = holder.getIntegrityDataEnricher();
-        originalRealmService = holder.getRealmService();
 
         holder.setDeviceManagementService(deviceManagementService);
         holder.setDevicePolicyEvaluator(devicePolicyEvaluator);
         holder.setDeviceTokenVerifier(deviceTokenVerifier);
         holder.setIntegrityDataEnricher(integrityDataEnricher);
-        holder.setRealmService(realmService);
     }
 
     @AfterClass
@@ -164,7 +155,6 @@ public class DeviceRegistrationExecutorTest {
         holder.setDevicePolicyEvaluator(originalDevicePolicyEvaluator);
         holder.setDeviceTokenVerifier(originalDeviceTokenVerifier);
         holder.setIntegrityDataEnricher(originalIntegrityDataEnricher);
-        holder.setRealmService(originalRealmService);
 
         identityTenantUtilMocked.close();
         loggerUtilsMocked.close();
@@ -177,8 +167,7 @@ public class DeviceRegistrationExecutorTest {
     @BeforeMethod
     public void setUp() {
 
-        reset(deviceManagementService, devicePolicyEvaluator, deviceTokenVerifier, integrityDataEnricher,
-                realmService);
+        reset(deviceManagementService, devicePolicyEvaluator, deviceTokenVerifier, integrityDataEnricher);
         // The executor's diagnostic logger (and FlowUser's own claim-resolution fallback) reads the
         // tenant domain off the thread-local carbon context, not off FlowExecutionContext — seed it
         // here so those calls resolve instead of failing with "Invalid tenant domain null".
@@ -332,12 +321,13 @@ public class DeviceRegistrationExecutorTest {
     }
 
     @Test
-    public void testExecuteCompletionValidSignatureNonRegistrationFlowPersistsDeviceImmediately()
+    public void testExecuteCompletionValidSignatureNonRegistrationFlowAlsoDefersToListener()
             throws Exception {
 
         FlowExecutionContext context = newContext();
         context.getFlowUser().setUserId(USER_ID);
-        // No flow type set — takes the "persist immediately" branch, not the REGISTRATION defer branch.
+        // No flow type set — persistence must defer to RegistrationFlowCompletionListener
+        // regardless of flow type, exactly like the REGISTRATION flow above.
         context.setUserInputData(completionInput());
 
         FlowExecutionContext afterInitiation = runInitiation(context);
@@ -349,9 +339,9 @@ public class DeviceRegistrationExecutorTest {
         }
 
         assertEquals(response.getResult(), STATUS_COMPLETE);
-        verify(deviceManagementService, times(1)).persistDevice(any(Device.class), eq(TENANT_DOMAIN));
-        assertNotNull(response.getContextProperties());
-        assertEquals(response.getContextProperties().size(), 1);
+        assertEquals(response.getContextProperties()
+                .get(DeviceRegistrationConstants.CTX_DEVICE_REGISTRATION), verified);
+        verify(deviceManagementService, never()).persistDevice(any(), any());
     }
 
     @Test
@@ -478,7 +468,7 @@ public class DeviceRegistrationExecutorTest {
     // ----- rollback() -----
 
     @Test
-    public void testRollbackWithPersistedDeviceIdCallsDeleteDevice() throws Exception {
+    public void testRollbackIsAlwaysNoOp() throws Exception {
 
         FlowExecutionContext context = newContext();
         context.getFlowUser().setUserId(USER_ID);
@@ -486,60 +476,14 @@ public class DeviceRegistrationExecutorTest {
         FlowExecutionContext afterInitiation = runInitiation(context);
 
         VerifiedDevice verified = buildVerifiedDevice();
-        ExecutorResponse completionResponse;
         try (MockedStatic<DeviceRegistrationHandler> mocked = mockVerifySuccess(verified)) {
-            completionResponse = executor.execute(afterInitiation);
+            executor.execute(afterInitiation);
         }
-        afterInitiation.addProperties(completionResponse.getContextProperties());
 
-        ExecutorResponse rollbackResponse = executor.rollback(afterInitiation);
-
-        assertEquals(rollbackResponse.getResult(), STATUS_COMPLETE);
-        verify(deviceManagementService, times(1)).deleteDevice(any(), eq(TENANT_DOMAIN));
-    }
-
-    @Test
-    public void testRollbackWithNoPersistedDeviceIdIsNoOp() throws Exception {
-
-        FlowExecutionContext context = newContext();
-
-        ExecutorResponse response = executor.rollback(context);
-
-        assertEquals(response.getResult(), STATUS_COMPLETE);
+        // The executor never persists a device itself, so there is nothing for rollback() to
+        // compensate for — it must be a pure no-op regardless of what ran before it.
+        assertNull(executor.rollback(afterInitiation));
         verify(deviceManagementService, never()).deleteDevice(any(), any());
-    }
-
-    /**
-     * Pins the current behaviour of {@link DeviceRegistrationExecutor#rollback} when
-     * {@code DeviceManagementService.deleteDevice} throws: the catch block builds
-     * {@code new ExecutorResponse(STATUS_ERROR)} (the single-arg constructor) and then calls
-     * {@code setErrorCode}/{@code setErrorMessage}/{@code setErrorDescription} on it. That
-     * constructor leaves {@code ExecutorResponse.errorObject} {@code null} (only the no-arg
-     * constructor initializes it — see {@code ExecutorResponse.java}), so those setters NPE.
-     * This is a genuine bug, not intended behaviour — see the test report for details; not fixed
-     * here since this task is test-only.
-     */
-    @Test(expectedExceptions = NullPointerException.class)
-    public void testRollbackWhenDeleteDeviceThrowsCurrentlyThrowsNpeInsteadOfHandlingGracefully()
-            throws Exception {
-
-        FlowExecutionContext context = newContext();
-        context.getFlowUser().setUserId(USER_ID);
-        context.setUserInputData(completionInput());
-        FlowExecutionContext afterInitiation = runInitiation(context);
-
-        VerifiedDevice verified = buildVerifiedDevice();
-        ExecutorResponse completionResponse;
-        try (MockedStatic<DeviceRegistrationHandler> mocked = mockVerifySuccess(verified)) {
-            completionResponse = executor.execute(afterInitiation);
-        }
-        afterInitiation.addProperties(completionResponse.getContextProperties());
-
-        DeviceMgtException deleteFailure = DeviceRegistrationExceptionHandler.handleServerException(
-                ErrorMessage.ERROR_WHILE_VERIFYING_SIGNATURE, "rollback delete failed");
-        doThrow(deleteFailure).when(deviceManagementService).deleteDevice(any(), any());
-
-        executor.rollback(afterInitiation);
     }
 
     // ----- helpers -----

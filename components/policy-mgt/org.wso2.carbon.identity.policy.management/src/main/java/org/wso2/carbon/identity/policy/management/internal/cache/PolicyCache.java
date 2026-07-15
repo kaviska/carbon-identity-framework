@@ -23,13 +23,17 @@ import org.wso2.carbon.utils.CarbonUtils;
 
 /**
  * Cache for Policy Management, keyed by policy ID.
- * This is the canonical cache: the full Policy object is stored here and only here.
+ * The full Policy object is stored here and only here.
  */
-public class PolicyCache extends BaseCache<PolicyCacheKey, PolicyCacheEntry> {
+public final class PolicyCache extends BaseCache<PolicyCacheKey, PolicyCacheEntry> {
 
+    /** Cache name used as the Hazelcast map name. */
     private static final String CACHE_NAME = "PolicyCache";
+
+    /** Singleton instance. */
     private static final PolicyCache INSTANCE = new PolicyCache();
 
+    /** Private constructor to enforce singleton. */
     private PolicyCache() {
 
         super(CACHE_NAME);

@@ -23,8 +23,9 @@ import org.wso2.carbon.identity.policy.management.api.model.PolicyResource;
 import org.wso2.carbon.identity.policy.management.api.model.ResourceType;
 
 /**
- * Internal contract for managing a specific {@link ResourceType} of policy resource in its backing
- * service. Implementations are registered in the component holder and dispatched to by {@link ResourceType}.
+ * Internal contract for managing a specific {@link ResourceType} of policy
+ * resource in its backing service. Implementations are registered in the
+ * component holder and dispatched to by {@link ResourceType}.
  */
 public interface PolicyResourceManager {
 
@@ -43,7 +44,8 @@ public interface PolicyResourceManager {
      * @return A new resource referencing the created backing entity's ID.
      * @throws PolicyManagementException If creation fails.
      */
-    PolicyResource create(PolicyResource resource, String tenantDomain) throws PolicyManagementException;
+    PolicyResource create(PolicyResource resource, String tenantDomain)
+            throws PolicyManagementException;
 
     /**
      * Hydrates the resource with its backing entity's full payload.
@@ -53,12 +55,13 @@ public interface PolicyResourceManager {
      * @return A new, hydrated resource.
      * @throws PolicyManagementException If hydration fails.
      */
-    PolicyResource hydrate(PolicyResource resource, String tenantDomain) throws PolicyManagementException;
+    PolicyResource hydrate(PolicyResource resource, String tenantDomain)
+            throws PolicyManagementException;
 
     /**
-     * Deletes the resource's backing entity from its owning service. Best-effort: used both for
-     * routine deletion and for saga compensation, so implementations must not throw and should
-     * instead log any failure.
+     * Deletes the resource's backing entity from its owning service.
+     * Best-effort: used for routine deletion and saga compensation;
+     * implementations must not throw and should log any failure.
      *
      * @param resource     Resource to delete.
      * @param tenantDomain Tenant domain.

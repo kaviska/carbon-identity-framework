@@ -22,13 +22,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.device.mgt.api.exception.DeviceMgtClientException;
 import org.wso2.carbon.identity.device.mgt.api.exception.DeviceMgtException;
-import org.wso2.carbon.identity.device.registration.internal.cache.DeviceRegistrationCache;
-import org.wso2.carbon.identity.device.registration.internal.cache.DeviceRegistrationCacheEntry;
-import org.wso2.carbon.identity.device.registration.internal.cache.DeviceRegistrationCacheKey;
-import org.wso2.carbon.identity.device.registration.internal.constant.ErrorMessage;
 import org.wso2.carbon.identity.device.registration.internal.model.DeviceRegistrationChallenge;
-import org.wso2.carbon.identity.device.registration.internal.model.DeviceRegistrationContext;
-import org.wso2.carbon.identity.device.registration.internal.util.DeviceRegistrationExceptionHandler;
 import org.wso2.carbon.identity.device.registration.internal.util.DeviceSignatureVerifier;
 import org.wso2.carbon.identity.device.registration.model.VerifiedDevice;
 
@@ -56,9 +50,10 @@ public class DeviceRegistrationHandler {
 
     /**
      * Phase 1 of the two-phase registration protocol.
-     * Generates a cryptographically random challenge and stores it in the distributed cache
-     * keyed by the returned registrationId. The client SDK must sign the challenge with its
-     * private key and return the signature in Phase 2.
+     * Generates a cryptographically random challenge. The caller is responsible for carrying the
+     * returned registrationId and challenge through to Phase 2 (typically via the flow context).
+     * The client SDK must sign the challenge with its private key and return the signature in
+     * Phase 2.
      *
      * @param username     Username of the registering user.
      * @param tenantDomain Tenant domain.
@@ -77,11 +72,6 @@ public class DeviceRegistrationHandler {
         String challenge = Base64.getUrlEncoder().withoutPadding().encodeToString(challengeBytes);
 
         String registrationId = UUID.randomUUID().toString();
-        DeviceRegistrationContext context = new DeviceRegistrationContext(username, challenge, tenantDomain);
-        DeviceRegistrationCacheKey cacheKey = new DeviceRegistrationCacheKey(registrationId);
-        DeviceRegistrationCacheEntry cacheEntry = new DeviceRegistrationCacheEntry(context);
-
-        DeviceRegistrationCache.getInstance().addToCache(cacheKey, cacheEntry, tenantDomain);
 
         if (LOG.isDebugEnabled()) {
             LOG.debug("Device registration initiated for user: " + username +
@@ -99,47 +89,37 @@ public class DeviceRegistrationHandler {
      * has run.
      *
      * @param registrationId Opaque token returned by {@link #initiate(String, String)}.
+     * @param challenge      Challenge returned by {@link #initiate(String, String)}. The caller is
+     *                       responsible for the challenge's single-use property: it must be
+     *                       discarded once this call succeeds.
      * @param publicKey      Base64-encoded EC public key (X.509/SubjectPublicKeyInfo DER).
      * @param signature      Base64-encoded ECDSA signature over the challenge bytes.
      * @param deviceName     Human-readable name for the device.
      * @param deviceModel    Hardware model string (nullable).
      * @param metadata       Optional JSON string for extensible attributes (nullable).
-     * @param tenantDomain   Tenant domain.
      * @return A verified device that is not yet bound to a user. The caller must call
      *         {@link VerifiedDevice#bindTo(String)} before it can be persisted.
-     * @throws DeviceMgtException If the registration context is missing or the signature is invalid.
+     * @throws DeviceMgtException If the signature is invalid.
      */
     public static VerifiedDevice verify(
             String registrationId,
+            String challenge,
             String publicKey,
             String signature,
             String deviceName,
             String deviceModel,
-            String metadata,
-            String tenantDomain) throws DeviceMgtException {
+            String metadata) throws DeviceMgtException {
 
         validateRequiredField(registrationId, "registrationId");
+        validateRequiredField(challenge, "challenge");
         validateRequiredField(publicKey, "publicKey");
         validateRequiredField(signature, "signature");
         validateRequiredField(deviceName, "deviceName");
 
-        DeviceRegistrationCacheKey cacheKey = new DeviceRegistrationCacheKey(registrationId);
-        DeviceRegistrationCacheEntry cacheEntry =
-                DeviceRegistrationCache.getInstance().getValueFromCache(cacheKey, tenantDomain);
-
-        if (cacheEntry == null) {
-            throw DeviceRegistrationExceptionHandler.handleClientException(
-                    ErrorMessage.ERROR_REGISTRATION_CONTEXT_NOT_FOUND, registrationId);
-        }
-
-        DeviceRegistrationContext context = cacheEntry.getContext();
-        DeviceSignatureVerifier.verify(registrationId, context.getChallenge(), publicKey, signature);
-
-        DeviceRegistrationCache.getInstance().clearCacheEntry(cacheKey, tenantDomain);
+        DeviceSignatureVerifier.verify(registrationId, challenge, publicKey, signature);
 
         if (LOG.isDebugEnabled()) {
-            LOG.debug("Device registration verified (not yet persisted) for user: " + context.getUsername() +
-                    " in tenant: " + tenantDomain);
+            LOG.debug("Device registration verified (not yet persisted) for registrationId: " + registrationId);
         }
         return new VerifiedDevice.Builder()
                 .id(registrationId)

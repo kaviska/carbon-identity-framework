@@ -213,7 +213,10 @@ public class DeviceRegistrationExecutorTest {
         assertEquals(response.getAdditionalInfo().get("registrationId"), REGISTRATION_ID);
         assertEquals(response.getAdditionalInfo().get("challenge"), CHALLENGE);
         assertNotNull(response.getContextProperties());
-        assertEquals(response.getContextProperties().size(), 1);
+        // registrationId and the challenge itself — the challenge now rides in the flow context
+        // rather than a server-side cache, so completeRegistration() can read it back later.
+        assertEquals(response.getContextProperties().size(), 2);
+        assertTrue(response.getContextProperties().containsValue(CHALLENGE));
     }
 
     @Test
@@ -345,25 +348,52 @@ public class DeviceRegistrationExecutorTest {
     }
 
     @Test
-    public void testExecuteCompletionUnknownRegistrationIdReturnsContextNotFoundError() throws Exception {
+    public void testExecuteCompletionMissingChallengeReturnsContextNotFoundError() throws Exception {
 
         FlowExecutionContext context = newContext();
         context.getFlowUser().setUserId(USER_ID);
         context.setUserInputData(completionInput());
 
         FlowExecutionContext afterInitiation = runInitiation(context);
+        // Simulate the challenge being absent from context (e.g. an incomplete/corrupted context)
+        // without hardcoding the executor's private context-property key — drop whichever
+        // property holds the challenge value that runInitiation() populated.
+        afterInitiation.getProperties().values().removeIf(CHALLENGE::equals);
 
-        DeviceMgtException notFound = DeviceRegistrationExceptionHandler.handleClientException(
-                ErrorMessage.ERROR_REGISTRATION_CONTEXT_NOT_FOUND, REGISTRATION_ID);
-
-        ExecutorResponse response;
-        try (MockedStatic<DeviceRegistrationHandler> mocked = mockVerifyThrows(notFound)) {
-            response = executor.execute(afterInitiation);
-        }
+        // DeviceRegistrationHandler.verify() must never be called when the challenge is missing —
+        // left unmocked here, so if the executor called the real implementation it would attempt
+        // real crypto validation and fail with a different error code, not this one.
+        ExecutorResponse response = executor.execute(afterInitiation);
 
         assertEquals(response.getResult(), STATUS_USER_ERROR);
         assertEquals(response.getErrorCode(), ErrorMessage.ERROR_REGISTRATION_CONTEXT_NOT_FOUND.getCode());
         verify(deviceManagementService, never()).persistDevice(any(), any());
+    }
+
+    @Test
+    public void testExecuteCompletionSecondCallWithSameRegistrationIdFailsAfterChallengeConsumed()
+            throws Exception {
+
+        FlowExecutionContext context = newContext();
+        context.getFlowUser().setUserId(USER_ID);
+        context.setUserInputData(completionInput());
+        FlowExecutionContext afterInitiation = runInitiation(context);
+
+        VerifiedDevice verified = buildVerifiedDevice();
+        ExecutorResponse firstResponse;
+        try (MockedStatic<DeviceRegistrationHandler> mocked = mockVerifySuccess(verified)) {
+            firstResponse = executor.execute(afterInitiation);
+        }
+        assertEquals(firstResponse.getResult(), STATUS_COMPLETE);
+        afterInitiation.addProperties(firstResponse.getContextProperties());
+
+        // The challenge was consumed by the first, successful call. A second completion attempt
+        // with the same registrationId must fail rather than silently re-verify — left unmocked,
+        // so this also proves DeviceRegistrationHandler.verify() is not reached a second time.
+        ExecutorResponse secondResponse = executor.execute(afterInitiation);
+
+        assertEquals(secondResponse.getResult(), STATUS_USER_ERROR);
+        assertEquals(secondResponse.getErrorCode(), ErrorMessage.ERROR_REGISTRATION_CONTEXT_NOT_FOUND.getCode());
     }
 
     @Test

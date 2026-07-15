@@ -116,8 +116,8 @@ public class DeviceRegistrationHandlerTest {
         String sig = signChallengeB64(kp, initiation.getChallenge());
 
         VerifiedDevice result = DeviceRegistrationHandler.verify(
-                initiation.getRegistrationId(), publicKeyB64(kp), sig,
-                "Alice's iPhone", null, null, TENANT_DOMAIN);
+                initiation.getRegistrationId(), initiation.getChallenge(), publicKeyB64(kp), sig,
+                "Alice's iPhone", null, null);
 
         Assert.assertNotNull(result);
         Assert.assertEquals(result.getPublicKey(), publicKeyB64(kp));
@@ -136,8 +136,8 @@ public class DeviceRegistrationHandlerTest {
 
         try {
             DeviceRegistrationHandler.verify(
-                    initiation.getRegistrationId(), publicKeyB64(kp), tamperedSig,
-                    "Alice's iPhone", null, null, TENANT_DOMAIN);
+                    initiation.getRegistrationId(), initiation.getChallenge(), publicKeyB64(kp), tamperedSig,
+                    "Alice's iPhone", null, null);
             Assert.fail("Expected DeviceMgtClientException");
         } catch (DeviceMgtException ex) {
             Assert.assertEquals(ex.getErrorCode(), "DR-60002");
@@ -154,8 +154,8 @@ public class DeviceRegistrationHandlerTest {
 
         try {
             DeviceRegistrationHandler.verify(
-                    initiation.getRegistrationId(), publicKeyB64(kp1), sigFromWrongKey,
-                    "Alice's iPhone", null, null, TENANT_DOMAIN);
+                    initiation.getRegistrationId(), initiation.getChallenge(), publicKeyB64(kp1), sigFromWrongKey,
+                    "Alice's iPhone", null, null);
             Assert.fail("Expected DeviceMgtClientException");
         } catch (DeviceMgtException ex) {
             Assert.assertEquals(ex.getErrorCode(), "DR-60002");
@@ -169,8 +169,8 @@ public class DeviceRegistrationHandlerTest {
 
         try {
             DeviceRegistrationHandler.verify(
-                    initiation.getRegistrationId(), "not-valid-base64!!", "also-not-valid-base64!!",
-                    "Device", null, null, TENANT_DOMAIN);
+                    initiation.getRegistrationId(), initiation.getChallenge(), "not-valid-base64!!",
+                    "also-not-valid-base64!!", "Device", null, null);
             Assert.fail("Expected DeviceMgtClientException for malformed base64 input");
         } catch (DeviceMgtException ex) {
             Assert.assertEquals(ex.getErrorCode(), "DR-60002");
@@ -187,48 +187,11 @@ public class DeviceRegistrationHandlerTest {
 
         try {
             DeviceRegistrationHandler.verify(
-                    initiation.getRegistrationId(), badKey, fakeSig,
-                    "Device", null, null, TENANT_DOMAIN);
+                    initiation.getRegistrationId(), initiation.getChallenge(), badKey, fakeSig,
+                    "Device", null, null);
             Assert.fail("Expected DeviceMgtServerException");
         } catch (DeviceMgtException ex) {
             Assert.assertEquals(ex.getErrorCode(), "DR-65001");
-        }
-    }
-
-    @Test
-    public void testVerifyWithUnknownRegistrationIdThrows() throws Exception {
-
-        KeyPair kp = generateEcKeyPair();
-
-        try {
-            DeviceRegistrationHandler.verify(
-                    UUID.randomUUID().toString(), publicKeyB64(kp), "fakeSig",
-                    "Device", null, null, TENANT_DOMAIN);
-            Assert.fail("Expected DeviceMgtClientException");
-        } catch (DeviceMgtException ex) {
-            Assert.assertEquals(ex.getErrorCode(), "DR-60001");
-        }
-    }
-
-    @Test
-    public void testVerifyConsumesContext() throws Exception {
-
-        KeyPair kp = generateEcKeyPair();
-        DeviceRegistrationChallenge initiation = DeviceRegistrationHandler.initiate(TEST_USERNAME, TENANT_DOMAIN);
-        String sig = signChallengeB64(kp, initiation.getChallenge());
-
-        DeviceRegistrationHandler.verify(
-                initiation.getRegistrationId(), publicKeyB64(kp), sig,
-                "Device", null, null, TENANT_DOMAIN);
-
-        // A second verify with the same (now expired/consumed) registrationId must fail.
-        try {
-            DeviceRegistrationHandler.verify(
-                    initiation.getRegistrationId(), publicKeyB64(kp), sig,
-                    "Device", null, null, TENANT_DOMAIN);
-            Assert.fail("Expected context-not-found after context was consumed");
-        } catch (DeviceMgtException ex) {
-            Assert.assertEquals(ex.getErrorCode(), "DR-60001");
         }
     }
 
@@ -237,8 +200,8 @@ public class DeviceRegistrationHandlerTest {
 
         try {
             DeviceRegistrationHandler.verify(
-                    UUID.randomUUID().toString(), "", "sig",
-                    "Device", null, null, TENANT_DOMAIN);
+                    UUID.randomUUID().toString(), "challenge", "", "sig",
+                    "Device", null, null);
             Assert.fail("Expected DeviceMgtClientException for blank publicKey");
         } catch (DeviceMgtException ex) {
             Assert.assertEquals(ex.getErrorCode(), ErrorMessage.ERROR_INVALID_DEVICE_FIELD.getCode());
@@ -246,8 +209,8 @@ public class DeviceRegistrationHandlerTest {
 
         try {
             DeviceRegistrationHandler.verify(
-                    UUID.randomUUID().toString(), "pk", "  ",
-                    "Device", null, null, TENANT_DOMAIN);
+                    UUID.randomUUID().toString(), "challenge", "pk", "  ",
+                    "Device", null, null);
             Assert.fail("Expected DeviceMgtClientException for blank signature");
         } catch (DeviceMgtException ex) {
             Assert.assertEquals(ex.getErrorCode(), ErrorMessage.ERROR_INVALID_DEVICE_FIELD.getCode());
@@ -255,9 +218,18 @@ public class DeviceRegistrationHandlerTest {
 
         try {
             DeviceRegistrationHandler.verify(
-                    UUID.randomUUID().toString(), "pk", "sig",
-                    "", null, null, TENANT_DOMAIN);
+                    UUID.randomUUID().toString(), "challenge", "pk", "sig",
+                    "", null, null);
             Assert.fail("Expected DeviceMgtClientException for blank deviceName");
+        } catch (DeviceMgtException ex) {
+            Assert.assertEquals(ex.getErrorCode(), ErrorMessage.ERROR_INVALID_DEVICE_FIELD.getCode());
+        }
+
+        try {
+            DeviceRegistrationHandler.verify(
+                    UUID.randomUUID().toString(), "  ", "pk", "sig",
+                    "Device", null, null);
+            Assert.fail("Expected DeviceMgtClientException for blank challenge");
         } catch (DeviceMgtException ex) {
             Assert.assertEquals(ex.getErrorCode(), ErrorMessage.ERROR_INVALID_DEVICE_FIELD.getCode());
         }

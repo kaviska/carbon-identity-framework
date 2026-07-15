@@ -81,6 +81,9 @@ public class DeviceRegistrationExecutor implements Executor {
     private final DeviceRegistrationDiagnosticLogger diagnosticLogger = new DeviceRegistrationDiagnosticLogger();
 
     private static final String CTX_REGISTRATION_ID = "device.registration.id";
+    // Carries the Phase 1 challenge through to Phase 2 via the flow context. Cleared from context
+    // as soon as it is successfully verified in completeRegistration(), so it can only be used once.
+    private static final String CTX_CHALLENGE = "device.registration.challenge";
 
     private static final String PROP_REGISTRATION_ID = "registrationId";
     private static final String PROP_CHALLENGE = "challenge";
@@ -172,6 +175,7 @@ public class DeviceRegistrationExecutor implements Executor {
 
             Map<String, Object> contextProperties = new HashMap<>();
             contextProperties.put(CTX_REGISTRATION_ID, initiation.getRegistrationId());
+            contextProperties.put(CTX_CHALLENGE, initiation.getChallenge());
 
             List<String> requiredFields = new ArrayList<>(
                     Arrays.asList(FIELD_PUBLIC_KEY, FIELD_SIGNATURE));
@@ -207,19 +211,37 @@ public class DeviceRegistrationExecutor implements Executor {
             String registrationId) {
 
         try {
+            String challenge = (String) context.getProperty(CTX_CHALLENGE);
+            if (isBlank(challenge)) {
+                diagnosticLogger.logRegistrationFailure(
+                        "Registration context not found for registrationId: " + registrationId);
+                ExecutorResponse response = new ExecutorResponse();
+                response.setResult(STATUS_USER_ERROR);
+                response.setErrorCode(ErrorMessage.ERROR_REGISTRATION_CONTEXT_NOT_FOUND.getCode());
+                response.setErrorMessage(ErrorMessage.ERROR_REGISTRATION_CONTEXT_NOT_FOUND.getMessage());
+                response.setErrorDescription(String.format(
+                        ErrorMessage.ERROR_REGISTRATION_CONTEXT_NOT_FOUND.getDescription(), registrationId));
+                return response;
+            }
+
             Map<String, String> input = context.getUserInputData();
             String deviceModel = input.get(FIELD_DEVICE_MODEL);
             String deviceName = buildDeviceName(context, deviceModel);
 
-            // Step 1: Verify signature and clear registration cache entry.
+            // Step 1: Verify signature.
             VerifiedDevice verified = DeviceRegistrationHandler.verify(
                     registrationId,
+                    challenge,
                     input.get(FIELD_PUBLIC_KEY),
                     input.get(FIELD_SIGNATURE),
                     deviceName,
                     deviceModel,
-                    input.get(FIELD_METADATA),
-                    context.getTenantDomain());
+                    input.get(FIELD_METADATA));
+
+            // Verification succeeded — discard the challenge so it cannot be reused. A failed
+            // verify() throws before this line, leaving the challenge in place so the client can
+            // retry with a corrected signature.
+            context.getProperties().remove(CTX_CHALLENGE);
 
             // Step 2: Policy compliance check (skipped when policyName not configured).
             String policyName = resolvePolicyName(context);

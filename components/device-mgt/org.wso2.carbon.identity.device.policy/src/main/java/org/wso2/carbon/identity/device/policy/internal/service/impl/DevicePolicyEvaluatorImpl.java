@@ -25,15 +25,15 @@ import org.wso2.carbon.identity.device.policy.internal.component.DevicePolicyCom
 import org.wso2.carbon.identity.device.policy.internal.config.DeviceFieldConfig;
 import org.wso2.carbon.identity.device.policy.internal.config.DeviceFieldConfigLoader;
 import org.wso2.carbon.identity.policy.evaluation.api.exception.PolicyEvaluationException;
+import org.wso2.carbon.identity.policy.evaluation.api.model.PolicyEvaluationContext;
 import org.wso2.carbon.identity.policy.evaluation.api.model.PolicyEvaluationResult;
+import org.wso2.carbon.identity.policy.evaluation.api.model.RuleResourceEvaluationResult;
 import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementException;
 import org.wso2.carbon.identity.policy.management.api.model.Policy;
 import org.wso2.carbon.identity.policy.management.api.model.PolicyResource;
 import org.wso2.carbon.identity.policy.management.api.model.ResourceType;
 import org.wso2.carbon.identity.policy.management.api.model.RulePolicyResource;
 import org.wso2.carbon.identity.rule.evaluation.api.exception.RuleEvaluationException;
-import org.wso2.carbon.identity.rule.evaluation.api.model.FlowContext;
-import org.wso2.carbon.identity.rule.evaluation.api.model.FlowType;
 import org.wso2.carbon.identity.rule.management.api.model.Expression;
 
 import java.util.List;
@@ -47,10 +47,15 @@ public class DevicePolicyEvaluatorImpl implements DevicePolicyEvaluator {
 
     private static final Log LOG = LogFactory.getLog(DevicePolicyEvaluatorImpl.class);
     private static final String DEVICE_PLATFORM_FIELD = "platform";
+    private static final String FLOW_TYPE_DEVICE_POLICY = "DEVICE_POLICY";
 
     @Override
-    public String evaluate(String policyName, Map<String, Object> deviceData, String tenantDomain)
+    public String evaluate(String policyName, Map<String, Object> deviceData, String appId, String tenantDomain)
             throws PolicyManagementException, RuleEvaluationException, PolicyEvaluationException {
+
+        DevicePolicyComponentServiceHolder.getInstance()
+                .getIntegrityDataEnricher()
+                .enrich(deviceData, appId, tenantDomain);
 
         String platform = (String) deviceData.get(DEVICE_PLATFORM_FIELD);
 
@@ -72,10 +77,11 @@ public class DevicePolicyEvaluatorImpl implements DevicePolicyEvaluator {
             return policyName + ":policy_not_found";
         }
 
-        FlowContext flowContext = new FlowContext(FlowType.DEVICE_POLICY, deviceData);
+        PolicyEvaluationContext context = PolicyEvaluationContext.create(FLOW_TYPE_DEVICE_POLICY);
+        deviceData.forEach(context::add);
         PolicyEvaluationResult result = DevicePolicyComponentServiceHolder.getInstance()
                 .getPolicyEvaluationService()
-                .evaluate(policyId, platform != null ? platform : "", flowContext, tenantDomain);
+                .evaluate(policyId, platform != null ? platform : "", context, tenantDomain);
 
         if (result == null) {
             if (LOG.isDebugEnabled()) {
@@ -85,9 +91,11 @@ public class DevicePolicyEvaluatorImpl implements DevicePolicyEvaluator {
         }
 
         if (!result.isSatisfied()) {
-            List<String> failedFields = result.getOutcomes().stream()
-                    .filter(outcome -> !outcome.isSatisfied())
-                    .flatMap(outcome -> outcome.getFailedFields().stream())
+            List<String> failedFields = result.getResults().stream()
+                    .filter(resourceResult -> !resourceResult.isSatisfied())
+                    .filter(resourceResult -> resourceResult instanceof RuleResourceEvaluationResult)
+                    .flatMap(resourceResult ->
+                            ((RuleResourceEvaluationResult) resourceResult).getFailedFields().stream())
                     .collect(Collectors.toList());
             return String.join(", ", failedFields);
         }

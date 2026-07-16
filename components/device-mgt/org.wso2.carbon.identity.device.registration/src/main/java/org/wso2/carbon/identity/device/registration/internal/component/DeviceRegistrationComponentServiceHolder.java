@@ -21,7 +21,6 @@ package org.wso2.carbon.identity.device.registration.internal.component;
 import org.wso2.carbon.identity.device.mgt.api.service.DeviceManagementService;
 import org.wso2.carbon.identity.device.policy.api.service.DevicePolicyEvaluator;
 import org.wso2.carbon.identity.device.policy.api.service.DeviceTokenVerifier;
-import org.wso2.carbon.identity.device.policy.api.service.IntegrityDataEnricher;
 
 /**
  * Holds OSGi service references for the device registration executor bundle.
@@ -34,7 +33,6 @@ public class DeviceRegistrationComponentServiceHolder {
     private DeviceManagementService deviceManagementService;
     private DevicePolicyEvaluator devicePolicyEvaluator;
     private DeviceTokenVerifier deviceTokenVerifier;
-    private IntegrityDataEnricher integrityDataEnricher;
 
     private DeviceRegistrationComponentServiceHolder() {
     }
@@ -65,13 +63,5 @@ public class DeviceRegistrationComponentServiceHolder {
 
     public void setDeviceTokenVerifier(DeviceTokenVerifier deviceTokenVerifier) {
         this.deviceTokenVerifier = deviceTokenVerifier;
-    }
-
-    public IntegrityDataEnricher getIntegrityDataEnricher() {
-        return integrityDataEnricher;
-    }
-
-    public void setIntegrityDataEnricher(IntegrityDataEnricher integrityDataEnricher) {
-        this.integrityDataEnricher = integrityDataEnricher;
     }
 }

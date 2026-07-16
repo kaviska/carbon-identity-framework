@@ -170,8 +170,6 @@
                             version="${osgi.service.component.imp.pkg.version.range}",
                             org.osgi.service.component.annotations;
                             version="${osgi.service.component.imp.pkg.version.range}",
-                            org.wso2.carbon.identity.core.cache;
-                            version="${carbon.identity.package.import.version.range}",
                             org.wso2.carbon.identity.device.mgt.api.constant;
                             version="${carbon.identity.package.import.version.range}",
                             org.wso2.carbon.identity.device.mgt.api.exception;

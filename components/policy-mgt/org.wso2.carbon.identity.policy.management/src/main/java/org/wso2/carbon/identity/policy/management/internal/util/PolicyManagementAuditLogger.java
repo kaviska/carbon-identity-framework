@@ -64,7 +64,7 @@ public class PolicyManagementAuditLogger {
         AuditLog.AuditLogBuilder auditLogBuilder = new AuditLog.AuditLogBuilder(getInitiatorId(),
                 LoggerUtils.getInitiatorType(getInitiatorId()),
                 targetId,
-                "Policy",
+                LoggerUtils.Target.Policy.name(),
                 operation.getLogAction()).
                 data(jsonObjectToMap(data));
         triggerAuditLogEvent(auditLogBuilder);

@@ -31,7 +31,6 @@ import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.identity.device.mgt.api.service.DeviceManagementService;
 import org.wso2.carbon.identity.device.policy.api.service.DevicePolicyEvaluator;
 import org.wso2.carbon.identity.device.policy.api.service.DeviceTokenVerifier;
-import org.wso2.carbon.identity.device.policy.api.service.IntegrityDataEnricher;
 import org.wso2.carbon.identity.device.registration.executor.DeviceRegistrationExecutor;
 import org.wso2.carbon.identity.device.registration.listener.RegistrationFlowCompletionListener;
 import org.wso2.carbon.identity.flow.execution.engine.graph.Executor;
@@ -135,25 +134,5 @@ public class DeviceRegistrationServiceComponent {
 
         LOG.debug("Unsetting DeviceTokenVerifier in the device registration executor.");
         DeviceRegistrationComponentServiceHolder.getInstance().setDeviceTokenVerifier(null);
-    }
-
-    @Reference(
-            name = "IntegrityDataEnricher",
-            service = IntegrityDataEnricher.class,
-            cardinality = ReferenceCardinality.MANDATORY,
-            policy = ReferencePolicy.DYNAMIC,
-            unbind = "unsetIntegrityDataEnricher"
-    )
-    protected void setIntegrityDataEnricher(IntegrityDataEnricher integrityDataEnricher) {
-
-        LOG.debug("Setting IntegrityDataEnricher in the device registration executor.");
-        DeviceRegistrationComponentServiceHolder.getInstance()
-                .setIntegrityDataEnricher(integrityDataEnricher);
-    }
-
-    protected void unsetIntegrityDataEnricher(IntegrityDataEnricher integrityDataEnricher) {
-
-        LOG.debug("Unsetting IntegrityDataEnricher in the device registration executor.");
-        DeviceRegistrationComponentServiceHolder.getInstance().setIntegrityDataEnricher(null);
     }
 }

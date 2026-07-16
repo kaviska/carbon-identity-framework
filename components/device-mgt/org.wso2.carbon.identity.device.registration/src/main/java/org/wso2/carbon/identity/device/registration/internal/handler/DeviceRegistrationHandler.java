@@ -20,8 +20,7 @@ package org.wso2.carbon.identity.device.registration.internal.handler;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.identity.device.mgt.api.exception.DeviceMgtClientException;
-import org.wso2.carbon.identity.device.mgt.api.exception.DeviceMgtException;
+import org.wso2.carbon.identity.device.registration.internal.exception.DeviceRegistrationException;
 import org.wso2.carbon.identity.device.registration.internal.model.DeviceRegistrationChallenge;
 import org.wso2.carbon.identity.device.registration.internal.util.DeviceSignatureVerifier;
 import org.wso2.carbon.identity.device.registration.model.VerifiedDevice;
@@ -58,10 +57,10 @@ public class DeviceRegistrationHandler {
      * @param username     Username of the registering user.
      * @param tenantDomain Tenant domain.
      * @return DeviceRegistrationChallenge containing registrationId and challenge (base64url).
-     * @throws DeviceMgtException If username or tenantDomain is invalid.
+     * @throws DeviceRegistrationException If username or tenantDomain is invalid.
      */
     public static DeviceRegistrationChallenge initiate(String username, String tenantDomain)
-            throws DeviceMgtException {
+            throws DeviceRegistrationException {
 
         validateRequiredField(username, "username");
         validateRequiredField(tenantDomain, "tenantDomain");
@@ -74,8 +73,7 @@ public class DeviceRegistrationHandler {
         String registrationId = UUID.randomUUID().toString();
 
         if (LOG.isDebugEnabled()) {
-            LOG.debug("Device registration initiated for user: " + username +
-                    " in tenant: " + tenantDomain +
+            LOG.debug("Device registration initiated in tenant: " + tenantDomain +
                     " with registrationId: " + registrationId);
         }
         return new DeviceRegistrationChallenge(registrationId, challenge);
@@ -99,7 +97,7 @@ public class DeviceRegistrationHandler {
      * @param metadata       Optional JSON string for extensible attributes (nullable).
      * @return A verified device that is not yet bound to a user. The caller must call
      *         {@link VerifiedDevice#bindTo(String)} before it can be persisted.
-     * @throws DeviceMgtException If the signature is invalid.
+     * @throws DeviceRegistrationException If the signature is invalid.
      */
     public static VerifiedDevice verify(
             String registrationId,
@@ -108,7 +106,7 @@ public class DeviceRegistrationHandler {
             String signature,
             String deviceName,
             String deviceModel,
-            String metadata) throws DeviceMgtException {
+            String metadata) throws DeviceRegistrationException {
 
         validateRequiredField(registrationId, "registrationId");
         validateRequiredField(challenge, "challenge");
@@ -132,10 +130,11 @@ public class DeviceRegistrationHandler {
     }
 
     private static void validateRequiredField(String value, String fieldName)
-            throws DeviceMgtClientException {
+            throws DeviceRegistrationException {
 
         if (value == null || value.trim().isEmpty()) {
-            throw new DeviceMgtClientException(
+            throw new DeviceRegistrationException(
+                    DeviceRegistrationException.ErrorType.CLIENT,
                     ERROR_INVALID_DEVICE_FIELD.getMessage(),
                     String.format(ERROR_INVALID_DEVICE_FIELD.getDescription(), fieldName),
                     ERROR_INVALID_DEVICE_FIELD.getCode());

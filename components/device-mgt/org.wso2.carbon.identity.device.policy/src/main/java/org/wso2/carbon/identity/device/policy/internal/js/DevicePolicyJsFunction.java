@@ -65,9 +65,8 @@ public class DevicePolicyJsFunction implements BiFunction<JsBaseAuthenticationCo
 
             String appId = context.getWrapped().getServiceProviderResourceId();
             DevicePolicyComponentServiceHolder holder = DevicePolicyComponentServiceHolder.getInstance();
-            holder.getIntegrityDataEnricher().enrich(deviceData, appId, tenantDomain);
 
-            return holder.getDevicePolicyEvaluator().evaluate(policyName, deviceData, tenantDomain);
+            return holder.getDevicePolicyEvaluator().evaluate(policyName, deviceData, appId, tenantDomain);
 
         } catch (PolicyManagementException e) {
             LOG.error("Error while evaluating device policy: " + policyName, e);

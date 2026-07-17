@@ -152,7 +152,8 @@ public class Constants {
                 FlowCompletionConfig.IS_FLOW_COMPLETION_NOTIFICATION_ENABLED),
         INVITED_USER_REGISTRATION("INVITED_USER_REGISTRATION", "defaultEnableInvitedUserRegistration",
                 FlowCompletionConfig.IS_AUTO_LOGIN_ENABLED,
-                FlowCompletionConfig.IS_FLOW_COMPLETION_NOTIFICATION_ENABLED);
+                FlowCompletionConfig.IS_FLOW_COMPLETION_NOTIFICATION_ENABLED),
+        DEVICE_REGISTRATION("DEVICE_REGISTRATION", "defaultEnableDeviceRegistration");
 
         private final String type;
         private final String defaultEnablementCompatibilityKey;

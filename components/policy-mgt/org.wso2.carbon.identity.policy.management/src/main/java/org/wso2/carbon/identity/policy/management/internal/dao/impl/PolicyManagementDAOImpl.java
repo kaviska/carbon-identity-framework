@@ -35,9 +35,9 @@ import org.wso2.carbon.identity.policy.management.api.model.PolicyBasicInfo;
 import org.wso2.carbon.identity.policy.management.api.model.PolicyResource;
 import org.wso2.carbon.identity.policy.management.api.model.ResourceType;
 import org.wso2.carbon.identity.policy.management.api.model.RulePolicyResource;
-import org.wso2.carbon.identity.policy.management.internal.util.PolicyManagementExceptionHandler;
 import org.wso2.carbon.identity.policy.management.internal.constant.PolicyMgtSQLConstants;
 import org.wso2.carbon.identity.policy.management.internal.dao.PolicyManagementDAO;
+import org.wso2.carbon.identity.policy.management.internal.util.PolicyManagementExceptionHandler;
 
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -405,17 +405,15 @@ public class PolicyManagementDAOImpl implements PolicyManagementDAO {
         return resources != null ? resources : Collections.emptyList();
     }
 
-    // Single extension point: add a case here (and a matching subclass of PolicyResource) for each new resource type.
+    // Single extension point: add a branch here (and a matching subclass of PolicyResource) for each new resource type.
     private PolicyResource mapPolicyResource(String id, String target, String resourceType, String resourceId)
             throws SQLException {
 
         ResourceType type = ResourceType.valueOf(resourceType);
-        switch (type) {
-            case RULE:
-                return new RulePolicyResource(id, target, resourceId, null);
-            default:
-                throw new SQLException("Unsupported policy resource type: " + type);
+        if (type == ResourceType.RULE) {
+            return new RulePolicyResource(id, target, resourceId, null);
         }
+        throw new SQLException("Unsupported policy resource type: " + type);
     }
 
 }

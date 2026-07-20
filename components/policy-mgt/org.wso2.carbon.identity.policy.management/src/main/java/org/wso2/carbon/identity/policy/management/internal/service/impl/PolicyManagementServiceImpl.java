@@ -29,7 +29,6 @@ import org.wso2.carbon.identity.policy.management.api.model.PolicyBasicInfo;
 import org.wso2.carbon.identity.policy.management.api.model.PolicyResource;
 import org.wso2.carbon.identity.policy.management.api.model.ResourceType;
 import org.wso2.carbon.identity.policy.management.api.service.PolicyManagementService;
-import org.wso2.carbon.identity.policy.management.internal.util.PolicyManagementExceptionHandler;
 import org.wso2.carbon.identity.policy.management.internal.component.PolicyMgtComponentServiceHolder;
 import org.wso2.carbon.identity.policy.management.internal.dao.PolicyManagementDAO;
 import org.wso2.carbon.identity.policy.management.internal.dao.impl.CacheBackedPolicyManagementDAO;
@@ -37,6 +36,7 @@ import org.wso2.carbon.identity.policy.management.internal.dao.impl.PolicyManage
 import org.wso2.carbon.identity.policy.management.internal.resourcemanager.PolicyResourceManager;
 import org.wso2.carbon.identity.policy.management.internal.util.PolicyManagementAuditLogger;
 import org.wso2.carbon.identity.policy.management.internal.util.PolicyManagementAuditLogger.Operation;
+import org.wso2.carbon.identity.policy.management.internal.util.PolicyManagementExceptionHandler;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -54,6 +54,7 @@ public class PolicyManagementServiceImpl implements PolicyManagementService {
 
     private static final Log LOG = LogFactory.getLog(PolicyManagementServiceImpl.class);
     private static final PolicyManagementAuditLogger AUDIT_LOGGER = new PolicyManagementAuditLogger();
+    private static final String POLICY_NAME_FIELD = "Policy name";
     private final PolicyManagementDAO policyManagementDAO;
 
     /**
@@ -196,7 +197,7 @@ public class PolicyManagementServiceImpl implements PolicyManagementService {
 
         if (policyName == null || policyName.trim().isEmpty()) {
             throw PolicyManagementExceptionHandler.handleClientException(
-                    ErrorMessage.ERROR_INVALID_POLICY_REQUEST_FIELD, "Policy name");
+                    ErrorMessage.ERROR_INVALID_POLICY_REQUEST_FIELD, POLICY_NAME_FIELD);
         }
         if (LOG.isDebugEnabled()) {
             LOG.debug(String.format("Retrieving policy with name: %s for tenant: %s",
@@ -215,7 +216,7 @@ public class PolicyManagementServiceImpl implements PolicyManagementService {
 
         if (policyName == null || policyName.trim().isEmpty()) {
             throw PolicyManagementExceptionHandler.handleClientException(
-                    ErrorMessage.ERROR_INVALID_POLICY_REQUEST_FIELD, "Policy name");
+                    ErrorMessage.ERROR_INVALID_POLICY_REQUEST_FIELD, POLICY_NAME_FIELD);
         }
         if (LOG.isDebugEnabled()) {
             LOG.debug(String.format("Resolving policy ID for name: %s for tenant: %s",
@@ -286,7 +287,7 @@ public class PolicyManagementServiceImpl implements PolicyManagementService {
         }
         if (policy.getName() == null || policy.getName().trim().isEmpty()) {
             throw PolicyManagementExceptionHandler.handleClientException(
-                    ErrorMessage.ERROR_INVALID_POLICY_REQUEST_FIELD, "Policy name");
+                    ErrorMessage.ERROR_INVALID_POLICY_REQUEST_FIELD, POLICY_NAME_FIELD);
         }
         validateUniqueTargetsPerResourceType(policy);
     }

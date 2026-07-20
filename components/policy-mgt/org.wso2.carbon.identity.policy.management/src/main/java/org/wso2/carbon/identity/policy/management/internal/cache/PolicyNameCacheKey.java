@@ -25,9 +25,8 @@ import java.util.Objects;
 /**
  * Cache key by policy name for PolicyIdByNameCache.
  */
-public final class PolicyNameCacheKey extends CacheKey {
+public class PolicyNameCacheKey extends CacheKey {
 
-    /** Serial version UID. */
     private static final long serialVersionUID = -8261947350129384756L;
 
     private final String policyName;
@@ -35,11 +34,11 @@ public final class PolicyNameCacheKey extends CacheKey {
     /**
      * Constructor to create PolicyNameCacheKey.
      *
-     * @param name Name of the policy.
+     * @param policyName Name of the policy.
      */
-    public PolicyNameCacheKey(final String name) {
+    public PolicyNameCacheKey(String policyName) {
 
-        this.policyName = name;
+        this.policyName = policyName;
     }
 
     /**
@@ -53,7 +52,7 @@ public final class PolicyNameCacheKey extends CacheKey {
     }
 
     @Override
-    public boolean equals(final Object o) {
+    public boolean equals(Object o) {
 
         if (this == o) {
             return true;

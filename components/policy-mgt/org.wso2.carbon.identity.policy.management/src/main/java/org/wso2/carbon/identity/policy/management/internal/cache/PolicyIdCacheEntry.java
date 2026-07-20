@@ -25,7 +25,6 @@ import org.wso2.carbon.identity.core.cache.CacheEntry;
  */
 public class PolicyIdCacheEntry extends CacheEntry {
 
-    /** Serial version UID. */
     private static final long serialVersionUID = 6248357192038471593L;
 
     private final String policyId;
@@ -33,11 +32,11 @@ public class PolicyIdCacheEntry extends CacheEntry {
     /**
      * Constructor to create PolicyIdCacheEntry.
      *
-     * @param id Policy Id of the policy to be added to the cache.
+     * @param policyId Policy Id of the policy to be added to the cache.
      */
-    public PolicyIdCacheEntry(final String id) {
+    public PolicyIdCacheEntry(String policyId) {
 
-        this.policyId = id;
+        this.policyId = policyId;
     }
 
     /**

@@ -32,12 +32,10 @@ import org.wso2.carbon.identity.rule.management.api.model.Rule;
 import org.wso2.carbon.identity.rule.management.api.service.RuleManagementService;
 
 /**
- * {@link PolicyResourceManager} for {@link ResourceType#RULE} resources,
- * backed by rule-mgt.
+ * {@link PolicyResourceManager} for {@link ResourceType#RULE} resources, backed by rule-mgt.
  */
-public final class RuleResourceManager implements PolicyResourceManager {
+public class RuleResourceManager implements PolicyResourceManager {
 
-    /** Logger for this class. */
     private static final Log LOG = LogFactory.getLog(RuleResourceManager.class);
 
     @Override
@@ -47,9 +45,7 @@ public final class RuleResourceManager implements PolicyResourceManager {
     }
 
     @Override
-    public PolicyResource create(
-            final PolicyResource resource, final String tenantDomain)
-            throws PolicyManagementException {
+    public PolicyResource create(PolicyResource resource, String tenantDomain) throws PolicyManagementException {
 
         if (!(resource instanceof RulePolicyResource)) {
             throw PolicyManagementExceptionHandler.handleServerException(
@@ -58,34 +54,24 @@ public final class RuleResourceManager implements PolicyResourceManager {
         }
         RulePolicyResource ruleResource = (RulePolicyResource) resource;
         try {
-            Rule createdRule = getRuleManagementService()
-                    .addRule(ruleResource.getRule(), tenantDomain);
+            Rule createdRule = getRuleManagementService().addRule(ruleResource.getRule(), tenantDomain);
             if (LOG.isDebugEnabled()) {
-                LOG.debug("Rule added for policy target '"
-                        + resource.getTarget()
+                LOG.debug("Rule added for policy target '" + resource.getTarget()
                         + "' with ruleId: " + createdRule.getId());
             }
-            return new RulePolicyResource(
-                    resource.getId(), resource.getTarget(),
-                    createdRule.getId(), null);
+            return new RulePolicyResource(resource.getId(), resource.getTarget(), createdRule.getId(), null);
         } catch (RuleManagementException e) {
             throw PolicyManagementExceptionHandler.handleServerException(
-                    ErrorMessage.ERROR_WHILE_ADDING_RULE_FOR_POLICY,
-                    e, resource.getTarget());
+                    ErrorMessage.ERROR_WHILE_ADDING_RULE_FOR_POLICY, e, resource.getTarget());
         }
     }
 
     @Override
-    public PolicyResource hydrate(
-            final PolicyResource resource, final String tenantDomain)
-            throws PolicyManagementException {
+    public PolicyResource hydrate(PolicyResource resource, String tenantDomain) throws PolicyManagementException {
 
         try {
-            Rule rule = getRuleManagementService()
-                    .getRuleByRuleId(resource.getResourceId(), tenantDomain);
-            return new RulePolicyResource(
-                    resource.getId(), resource.getTarget(),
-                    resource.getResourceId(), rule);
+            Rule rule = getRuleManagementService().getRuleByRuleId(resource.getResourceId(), tenantDomain);
+            return new RulePolicyResource(resource.getId(), resource.getTarget(), resource.getResourceId(), rule);
         } catch (RuleManagementException e) {
             throw PolicyManagementExceptionHandler.handleServerException(
                     ErrorMessage.ERROR_WHILE_RETRIEVING_POLICY, e);
@@ -93,26 +79,18 @@ public final class RuleResourceManager implements PolicyResourceManager {
     }
 
     @Override
-    public void delete(
-            final PolicyResource resource, final String tenantDomain) {
+    public void delete(PolicyResource resource, String tenantDomain) {
 
         try {
-            getRuleManagementService()
-                    .deleteRule(resource.getResourceId(), tenantDomain);
+            getRuleManagementService().deleteRule(resource.getResourceId(), tenantDomain);
         } catch (RuleManagementException e) {
             LOG.error("Failed to delete rule " + resource.getResourceId()
                     + " from rule-mgt. Rule may be orphaned.", e);
         }
     }
 
-    /**
-     * Returns the RuleManagementService from the service holder.
-     *
-     * @return RuleManagementService instance.
-     */
     private RuleManagementService getRuleManagementService() {
 
-        return PolicyMgtComponentServiceHolder.getInstance()
-                .getRuleManagementService();
+        return PolicyMgtComponentServiceHolder.getInstance().getRuleManagementService();
     }
 }

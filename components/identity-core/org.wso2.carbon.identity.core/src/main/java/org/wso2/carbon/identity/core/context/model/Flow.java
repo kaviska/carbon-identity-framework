@@ -182,7 +182,11 @@ public class Flow {
 
         // ---------User Group management flows--------------
         USER_GROUP_UPDATE,
-        GROUP_UPDATE
+        GROUP_UPDATE,
+        // --------------------------------------------------
+
+        // ---------Device management flows------------------
+        DEVICE_REGISTER
         // --------------------------------------------------
     }
 

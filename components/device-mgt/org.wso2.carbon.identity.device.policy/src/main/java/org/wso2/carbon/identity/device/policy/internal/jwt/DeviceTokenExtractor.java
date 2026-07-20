@@ -115,7 +115,6 @@ public class DeviceTokenExtractor {
             deviceId = deviceId.replaceAll("[\"\\\\]+$", "").replaceAll("^[\"\\\\]+", "").trim();
 
             // Only an ACTIVE device may be trusted for authentication — a deactivated (revoked)
-            // device must fail here even though its record still exists.
             Device device = DevicePolicyComponentServiceHolder.getInstance()
                     .getDeviceManagementService()
                     .getActiveDeviceById(deviceId, tenantDomain);

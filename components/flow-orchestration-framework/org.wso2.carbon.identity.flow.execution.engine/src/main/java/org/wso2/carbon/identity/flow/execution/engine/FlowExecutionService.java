@@ -199,7 +199,11 @@ public class FlowExecutionService {
                         .build());
                 return true;
             case DEVICE_REGISTRATION:
-                return false;
+                IdentityContext.getThreadLocalIdentityContext().enterFlow(new Flow.Builder()
+                        .name(Flow.Name.DEVICE_REGISTER)
+                        .initiatingPersona(Flow.InitiatingPersona.USER)
+                        .build());
+                return true;
             default:
                 return false;
         }

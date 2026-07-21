@@ -22,7 +22,6 @@ import org.wso2.carbon.identity.policy.evaluation.api.exception.PolicyEvaluation
 import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementException;
 import org.wso2.carbon.identity.rule.evaluation.api.exception.RuleEvaluationException;
 
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -49,12 +48,4 @@ public interface DevicePolicyEvaluator {
      */
     String evaluate(String policyName, Map<String, Object> deviceData, String appId, String tenantDomain)
             throws PolicyManagementException, RuleEvaluationException, PolicyEvaluationException;
-
-    /**
-     * Returns the list of device field names the evaluator recognises.
-     * Callers use this to know which keys to populate in the {@code deviceData} map.
-     *
-     * @return Unmodifiable list of field names (e.g., "platform", "osVersion", "isRooted").
-     */
-    List<String> getFieldNames();
 }

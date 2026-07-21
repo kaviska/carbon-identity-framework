@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.device.mgt.internal.dao.impl;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.database.utils.jdbc.NamedJdbcTemplate;
@@ -38,7 +39,7 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * JDBC implementation for registered device persistence.
+ * JDBC implementation for device registration.
  */
 public class DeviceManagementDAOImpl implements DeviceManagementDAO {
 
@@ -171,7 +172,7 @@ public class DeviceManagementDAOImpl implements DeviceManagementDAO {
             return Collections.emptyList();
         }
         int safeOffset = Math.max(offset, 0);
-        boolean filterByUser = isNotBlank(userId);
+        boolean filterByUser = StringUtils.isNotBlank(userId);
 
         NamedJdbcTemplate jdbcTemplate = new NamedJdbcTemplate(IdentityDatabaseUtil.getDataSource());
         try {
@@ -198,7 +199,11 @@ public class DeviceManagementDAOImpl implements DeviceManagementDAO {
                                 }
                                 bindPaginationParams(preparedStatement, style, safeOffset, limit);
                             }));
-            return devices != null ? devices : Collections.emptyList();
+            List<Device> result = devices != null ? devices : Collections.emptyList();
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Retrieved " + result.size() + " devices for tenant ID: " + tenantId);
+            }
+            return result;
         } catch (TransactionException | DataAccessException e) {
             throw DeviceManagementExceptionHandler.handleServerException(
                     ErrorMessage.ERROR_WHILE_RETRIEVING_DEVICE, e);
@@ -214,7 +219,7 @@ public class DeviceManagementDAOImpl implements DeviceManagementDAO {
     @Override
     public int getDeviceCount(int tenantId, String userId) throws DeviceMgtException {
 
-        boolean filterByUser = isNotBlank(userId);
+        boolean filterByUser = StringUtils.isNotBlank(userId);
         String query = filterByUser
                 ? DeviceMgtSQLConstants.Query.GET_DEVICES_COUNT_BY_USER
                 : DeviceMgtSQLConstants.Query.GET_DEVICES_COUNT;
@@ -231,16 +236,15 @@ public class DeviceManagementDAOImpl implements DeviceManagementDAO {
                                     preparedStatement.setString(DeviceMgtSQLConstants.Column.USER_ID, userId);
                                 }
                             }));
-            return count != null ? count : 0;
+            int result = count != null ? count : 0;
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Retrieved device count: " + result + " for tenant ID: " + tenantId);
+            }
+            return result;
         } catch (TransactionException e) {
             throw DeviceManagementExceptionHandler.handleServerException(
                     ErrorMessage.ERROR_WHILE_RETRIEVING_DEVICE, e);
         }
-    }
-
-    private static boolean isNotBlank(String value) {
-
-        return value != null && !value.trim().isEmpty();
     }
 
     /**

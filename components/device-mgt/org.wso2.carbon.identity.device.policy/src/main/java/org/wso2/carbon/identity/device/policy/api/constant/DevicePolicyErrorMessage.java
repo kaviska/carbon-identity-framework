@@ -24,14 +24,10 @@ package org.wso2.carbon.identity.device.policy.api.constant;
 public enum DevicePolicyErrorMessage {
 
     // Client errors.
-    ERROR_DEVICE_TOKEN_MISSING("DPM-60007", "Device token missing.",
-            "X-Device-Token header is not present in the request."),
     ERROR_DEVICE_TOKEN_PARSE_FAILED("DPM-60008", "Device token invalid.",
             "Failed to parse X-Device-Token JWT."),
     ERROR_DEVICE_TOKEN_MISSING_DEVICE_ID("DPM-60009", "Device token invalid.",
             "deviceId is missing from the JWT header."),
-    ERROR_DEVICE_NOT_REGISTERED("DPM-60010", "Device not registered.",
-            "No registered device found for deviceId: %s."),
     ERROR_DEVICE_TOKEN_SIGNATURE_INVALID("DPM-60011", "Device token signature invalid.",
             "JWT signature verification failed for deviceId: %s."),
     ERROR_DEVICE_TOKEN_MISSING_JTI("DPM-60012", "Device token invalid.",

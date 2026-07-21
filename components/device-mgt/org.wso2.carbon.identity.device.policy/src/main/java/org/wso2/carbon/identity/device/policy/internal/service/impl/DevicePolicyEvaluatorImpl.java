@@ -22,8 +22,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.device.policy.api.service.DevicePolicyEvaluator;
 import org.wso2.carbon.identity.device.policy.internal.component.DevicePolicyComponentServiceHolder;
-import org.wso2.carbon.identity.device.policy.internal.config.DeviceFieldConfig;
-import org.wso2.carbon.identity.device.policy.internal.config.DeviceFieldConfigLoader;
 import org.wso2.carbon.identity.policy.evaluation.api.exception.PolicyEvaluationException;
 import org.wso2.carbon.identity.policy.evaluation.api.model.PolicyEvaluationContext;
 import org.wso2.carbon.identity.policy.evaluation.api.model.PolicyEvaluationResult;
@@ -102,17 +100,6 @@ public class DevicePolicyEvaluatorImpl implements DevicePolicyEvaluator {
         return null;
     }
 
-    /**
-     * Returns a comma-separated list of fields the matching rule requires that the device did not
-     * supply, or null when the device supplied everything the rule needs.
-     *
-     * @param policyName   Policy name.
-     * @param platform     Device platform (rule selector).
-     * @param deviceData   Submitted device attributes.
-     * @param tenantDomain Tenant domain.
-     * @return Missing field names joined by ", ", or null if complete.
-     * @throws PolicyManagementException If the policy cannot be retrieved.
-     */
     private String findMissingRequiredFields(String policyName, String platform,
             Map<String, Object> deviceData, String tenantDomain) throws PolicyManagementException {
 
@@ -146,13 +133,5 @@ public class DevicePolicyEvaluatorImpl implements DevicePolicyEvaluator {
                 })
                 .collect(Collectors.toList());
         return missing.isEmpty() ? null : String.join(", ", missing);
-    }
-
-    @Override
-    public List<String> getFieldNames() {
-
-        return DeviceFieldConfigLoader.getInstance().getFields().stream()
-                .map(DeviceFieldConfig::getName)
-                .collect(Collectors.toList());
     }
 }

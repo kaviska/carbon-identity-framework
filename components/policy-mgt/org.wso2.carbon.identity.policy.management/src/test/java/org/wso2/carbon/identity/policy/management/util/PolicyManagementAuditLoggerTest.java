@@ -30,6 +30,7 @@ import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementClientException;
 import org.wso2.carbon.identity.policy.management.api.model.Policy;
 import org.wso2.carbon.identity.policy.management.api.model.ResourceType;
 import org.wso2.carbon.identity.policy.management.api.model.RulePolicyResource;
@@ -63,7 +64,7 @@ public class PolicyManagementAuditLoggerTest {
      * Set up mocks and test data.
      */
     @BeforeMethod
-    public void setUp() {
+    public void setUp() throws PolicyManagementClientException {
 
         MockitoAnnotations.openMocks(this);
         auditLogger = new PolicyManagementAuditLogger();
@@ -83,8 +84,15 @@ public class PolicyManagementAuditLoggerTest {
         loggerUtilsMockedStatic.when(() -> LoggerUtils.triggerAuditLogEvent(any(AuditLog.AuditLogBuilder.class)))
                 .then(invocation -> null);
 
-        policy = new Policy(POLICY_ID, POLICY_NAME, TENANT_DOMAIN, Collections.singletonList(
-                new RulePolicyResource(null, "android", "rule-1", null)));
+        policy = new Policy.Builder()
+                .id(POLICY_ID)
+                .name(POLICY_NAME)
+                .tenantDomain(TENANT_DOMAIN)
+                .resources(Collections.singletonList(new RulePolicyResource.Builder()
+                        .target("android")
+                        .resourceId("rule-1")
+                        .build()))
+                .build();
     }
 
     /**
@@ -156,7 +164,12 @@ public class PolicyManagementAuditLoggerTest {
     @Test
     public void testCreateAuditLogEntryForPolicyWithNoResources() throws Exception {
 
-        Policy emptyResourcePolicy = new Policy(POLICY_ID, POLICY_NAME, TENANT_DOMAIN, Collections.emptyList());
+        Policy emptyResourcePolicy = new Policy.Builder()
+                .id(POLICY_ID)
+                .name(POLICY_NAME)
+                .tenantDomain(TENANT_DOMAIN)
+                .resources(Collections.emptyList())
+                .build();
         JSONObject data = invokeCreateAuditLogEntry(emptyResourcePolicy);
         JSONArray resources = (JSONArray) data.get("Resources");
         Assert.assertEquals(resources.length(), 0);

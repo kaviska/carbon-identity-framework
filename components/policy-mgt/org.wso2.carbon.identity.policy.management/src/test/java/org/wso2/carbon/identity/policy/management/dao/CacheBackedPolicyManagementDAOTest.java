@@ -24,6 +24,7 @@ import org.testng.annotations.Test;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithRealmService;
 import org.wso2.carbon.identity.core.internal.component.IdentityCoreServiceDataHolder;
+import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementClientException;
 import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementException;
 import org.wso2.carbon.identity.policy.management.api.model.Policy;
 import org.wso2.carbon.identity.policy.management.internal.cache.PolicyCache;
@@ -81,9 +82,14 @@ public class CacheBackedPolicyManagementDAOTest {
         policyIdByNameCache.clear(TENANT_ID);
     }
 
-    private Policy policy() {
+    private Policy policy() throws PolicyManagementClientException {
 
-        return new Policy(POLICY_ID, POLICY_NAME, TENANT_DOMAIN, Collections.emptyList());
+        return new Policy.Builder()
+                .id(POLICY_ID)
+                .name(POLICY_NAME)
+                .tenantDomain(TENANT_DOMAIN)
+                .resources(Collections.emptyList())
+                .build();
     }
 
     @Test
@@ -208,8 +214,18 @@ public class CacheBackedPolicyManagementDAOTest {
     public void testUpdatePolicyWithRenameClearsIdAndOldNameEntries() throws PolicyManagementException {
 
         String oldName = "OldPolicy";
-        Policy existing = new Policy(POLICY_ID, oldName, TENANT_DOMAIN, Collections.emptyList());
-        Policy renamed = new Policy(POLICY_ID, POLICY_NAME, TENANT_DOMAIN, Collections.emptyList());
+        Policy existing = new Policy.Builder()
+                .id(POLICY_ID)
+                .name(oldName)
+                .tenantDomain(TENANT_DOMAIN)
+                .resources(Collections.emptyList())
+                .build();
+        Policy renamed = new Policy.Builder()
+                .id(POLICY_ID)
+                .name(POLICY_NAME)
+                .tenantDomain(TENANT_DOMAIN)
+                .resources(Collections.emptyList())
+                .build();
         policyCache.addToCacheOnRead(new PolicyCacheKey(POLICY_ID), new PolicyCacheEntry(existing), TENANT_ID);
         policyIdByNameCache.addToCacheOnRead(
                 new PolicyNameCacheKey(oldName), new PolicyIdCacheEntry(POLICY_ID), TENANT_ID);

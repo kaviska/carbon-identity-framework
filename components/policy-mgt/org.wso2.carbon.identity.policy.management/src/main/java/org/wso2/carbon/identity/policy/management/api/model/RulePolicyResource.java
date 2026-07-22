@@ -18,27 +18,24 @@
 
 package org.wso2.carbon.identity.policy.management.api.model;
 
+import org.apache.commons.lang.StringUtils;
+import org.wso2.carbon.identity.policy.management.api.constant.ErrorMessage;
+import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementClientException;
 import org.wso2.carbon.identity.rule.management.api.model.Rule;
 
 /**
  * Policy resource backed by an IS-native rule managed by rule-mgt.
+ * Instances are created through {@link Builder}, which validates the resource so that an invalid
+ * instance can never exist.
  */
 public class RulePolicyResource extends PolicyResource {
 
     private final Rule rule;
 
-    /**
-     * Creates a rule-backed policy resource.
-     *
-     * @param id         Row identifier, or {@code null} if not yet persisted.
-     * @param target     Selector value this resource applies to.
-     * @param resourceId ID of the rule in rule-mgt, or {@code null} if not yet created.
-     * @param rule       Rule payload, or {@code null} if not hydrated.
-     */
-    public RulePolicyResource(String id, String target, String resourceId, Rule rule) {
+    private RulePolicyResource(Builder builder) {
 
-        super(id, target, resourceId);
-        this.rule = rule;
+        super(builder.id, builder.target, builder.resourceId);
+        this.rule = builder.rule;
     }
 
     @Override
@@ -55,5 +52,83 @@ public class RulePolicyResource extends PolicyResource {
     public Rule getRule() {
 
         return rule;
+    }
+
+    /**
+     * Builder for {@link RulePolicyResource}.
+     */
+    public static class Builder {
+
+        private static final String TARGET_FIELD = "Target";
+
+        private String id;
+        private String target;
+        private String resourceId;
+        private Rule rule;
+
+        /**
+         * Sets the row identifier.
+         *
+         * @param id Row identifier, or {@code null} if not yet persisted.
+         * @return This builder.
+         */
+        public Builder id(String id) {
+
+            this.id = id;
+            return this;
+        }
+
+        /**
+         * Sets the selector value this resource applies to.
+         *
+         * @param target Selector value.
+         * @return This builder.
+         */
+        public Builder target(String target) {
+
+            this.target = target;
+            return this;
+        }
+
+        /**
+         * Sets the ID of the rule in rule-mgt.
+         *
+         * @param resourceId Rule ID, or {@code null} if not yet created.
+         * @return This builder.
+         */
+        public Builder resourceId(String resourceId) {
+
+            this.resourceId = resourceId;
+            return this;
+        }
+
+        /**
+         * Sets the rule payload.
+         *
+         * @param rule Rule payload, or {@code null} if not hydrated.
+         * @return This builder.
+         */
+        public Builder rule(Rule rule) {
+
+            this.rule = rule;
+            return this;
+        }
+
+        /**
+         * Builds the rule policy resource after validating that a target is present.
+         *
+         * @return RulePolicyResource instance.
+         * @throws PolicyManagementClientException If the target is null or blank.
+         */
+        public RulePolicyResource build() throws PolicyManagementClientException {
+
+            if (StringUtils.isBlank(target)) {
+                throw new PolicyManagementClientException(
+                        ErrorMessage.ERROR_INVALID_POLICY_REQUEST_FIELD.getMessage(),
+                        String.format(ErrorMessage.ERROR_INVALID_POLICY_REQUEST_FIELD.getDescription(), TARGET_FIELD),
+                        ErrorMessage.ERROR_INVALID_POLICY_REQUEST_FIELD.getCode());
+            }
+            return new RulePolicyResource(this);
+        }
     }
 }

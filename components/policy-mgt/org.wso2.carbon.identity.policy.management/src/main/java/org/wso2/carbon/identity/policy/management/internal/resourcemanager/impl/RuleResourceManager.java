@@ -23,7 +23,7 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.policy.management.api.constant.ErrorMessage;
 import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementException;
 import org.wso2.carbon.identity.policy.management.api.model.PolicyResource;
-import org.wso2.carbon.identity.policy.management.api.model.ResourceType;
+import org.wso2.carbon.identity.policy.management.api.model.PolicyResource.ResourceType;
 import org.wso2.carbon.identity.policy.management.api.model.RulePolicyResource;
 import org.wso2.carbon.identity.policy.management.internal.component.PolicyMgtComponentServiceHolder;
 import org.wso2.carbon.identity.policy.management.internal.resourcemanager.PolicyResourceManager;
@@ -72,7 +72,7 @@ public class RuleResourceManager implements PolicyResourceManager {
     }
 
     @Override
-    public PolicyResource hydrate(PolicyResource resource, String tenantDomain) throws PolicyManagementException {
+    public PolicyResource enrich(PolicyResource resource, String tenantDomain) throws PolicyManagementException {
 
         try {
             Rule rule = getRuleManagementService().getRuleByRuleId(resource.getResourceId(), tenantDomain);

@@ -20,7 +20,7 @@ package org.wso2.carbon.identity.policy.management.internal.resourcemanager;
 
 import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementException;
 import org.wso2.carbon.identity.policy.management.api.model.PolicyResource;
-import org.wso2.carbon.identity.policy.management.api.model.ResourceType;
+import org.wso2.carbon.identity.policy.management.api.model.PolicyResource.ResourceType;
 
 /**
  * Internal contract for managing a specific {@link ResourceType} of policy resource in its backing
@@ -46,14 +46,14 @@ public interface PolicyResourceManager {
     PolicyResource create(PolicyResource resource, String tenantDomain) throws PolicyManagementException;
 
     /**
-     * Hydrates the resource with its backing entity's full payload.
+     * Enriches the resource with its backing entity's full payload.
      *
-     * @param resource     Resource to hydrate.
+     * @param resource     Resource to enrich.
      * @param tenantDomain Tenant domain.
-     * @return A new, hydrated resource.
-     * @throws PolicyManagementException If hydration fails.
+     * @return A new, enriched resource.
+     * @throws PolicyManagementException If enrichment fails.
      */
-    PolicyResource hydrate(PolicyResource resource, String tenantDomain) throws PolicyManagementException;
+    PolicyResource enrich(PolicyResource resource, String tenantDomain) throws PolicyManagementException;
 
     /**
      * Deletes the resource's backing entity from its owning service. Best-effort: used both for

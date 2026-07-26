@@ -29,7 +29,7 @@ import org.wso2.carbon.identity.policy.evaluation.api.model.RuleResourceEvaluati
 import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementException;
 import org.wso2.carbon.identity.policy.management.api.model.Policy;
 import org.wso2.carbon.identity.policy.management.api.model.PolicyResource;
-import org.wso2.carbon.identity.policy.management.api.model.ResourceType;
+import org.wso2.carbon.identity.policy.management.api.model.PolicyResource.ResourceType;
 import org.wso2.carbon.identity.policy.management.api.model.RulePolicyResource;
 import org.wso2.carbon.identity.rule.evaluation.api.exception.RuleEvaluationException;
 import org.wso2.carbon.identity.rule.management.api.model.Expression;
@@ -75,7 +75,7 @@ public class DevicePolicyEvaluatorImpl implements DevicePolicyEvaluator {
             return policyName + ":policy_not_found";
         }
 
-        PolicyEvaluationContext context = PolicyEvaluationContext.create(FLOW_TYPE_DEVICE_POLICY);
+        PolicyEvaluationContext context = new PolicyEvaluationContext(FLOW_TYPE_DEVICE_POLICY);
         deviceData.forEach(context::add);
         PolicyEvaluationResult result = DevicePolicyComponentServiceHolder.getInstance()
                 .getPolicyEvaluationService()

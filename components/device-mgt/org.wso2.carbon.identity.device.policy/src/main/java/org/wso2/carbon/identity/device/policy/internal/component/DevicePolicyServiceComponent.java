@@ -37,26 +37,24 @@ import org.wso2.carbon.identity.device.mgt.api.service.DeviceManagementService;
 import org.wso2.carbon.identity.device.policy.api.service.DeviceFieldMetadataService;
 import org.wso2.carbon.identity.device.policy.api.service.DevicePolicyEvaluator;
 import org.wso2.carbon.identity.device.policy.api.service.DeviceTokenVerifier;
-import org.wso2.carbon.identity.device.policy.api.service.IntegrityDataEnricher;
 import org.wso2.carbon.identity.device.policy.internal.cleanup.DeviceTokenJtiCleanupService;
 import org.wso2.carbon.identity.device.policy.internal.config.DeviceFieldConfigLoader;
-import org.wso2.carbon.identity.device.policy.internal.config.DevicePolicyConfigException;
-import org.wso2.carbon.identity.device.policy.internal.config.OsVersionRegistry;
 import org.wso2.carbon.identity.device.policy.internal.js.DevicePolicyJsFunction;
 import org.wso2.carbon.identity.device.policy.internal.resolver.DeviceDataResolverImpl;
 import org.wso2.carbon.identity.device.policy.internal.rule.DevicePolicyEvaluationDataProvider;
+import org.wso2.carbon.identity.device.policy.internal.service.IntegrityDataEnricher;
 import org.wso2.carbon.identity.device.policy.internal.service.impl.DeviceFieldMetadataServiceImpl;
 import org.wso2.carbon.identity.device.policy.internal.service.impl.DevicePolicyEvaluatorImpl;
 import org.wso2.carbon.identity.device.policy.internal.service.impl.DeviceTokenVerifierImpl;
 import org.wso2.carbon.identity.device.policy.internal.service.impl.IntegrityDataEnricherImpl;
 import org.wso2.carbon.identity.policy.evaluation.api.service.PolicyEvaluationService;
+import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementServerException;
 import org.wso2.carbon.identity.policy.management.api.service.PolicyManagementService;
 import org.wso2.carbon.identity.rule.evaluation.api.provider.RuleEvaluationDataProvider;
-import org.wso2.carbon.identity.rule.evaluation.api.resolver.SymbolicValueResolverRegistry;
 
 /**
  * OSGi DS component for the device policy bundle.
- * Registers DevicePolicyEvaluator, IntegrityDataEnricher, RuleEvaluationDataProvider,
+ * Registers DevicePolicyEvaluator, RuleEvaluationDataProvider,
  * and the isDevicePolicyCompliant JS function.
  */
 @Component(
@@ -79,9 +77,9 @@ public class DevicePolicyServiceComponent {
 
         try {
             DeviceFieldConfigLoader.load();
-            OsVersionRegistry.load();
-        } catch (DevicePolicyConfigException e) {
-            throw new RuntimeException("Device policy config loading failed; bundle will not activate.", e);
+        } catch (PolicyManagementServerException e) {
+            throw new IllegalStateException(
+                    "Device policy config loading failed; bundle will not activate.", e);
         }
 
         try {
@@ -91,7 +89,6 @@ public class DevicePolicyServiceComponent {
             IntegrityDataEnricher integrityDataEnricher = new IntegrityDataEnricherImpl();
 
             bundleCtx.registerService(DevicePolicyEvaluator.class.getName(), devicePolicyEvaluator, null);
-            bundleCtx.registerService(IntegrityDataEnricher.class.getName(), integrityDataEnricher, null);
             bundleCtx.registerService(RuleEvaluationDataProvider.class.getName(),
                     new DevicePolicyEvaluationDataProvider(), null);
             bundleCtx.registerService(DeviceFieldMetadataService.class.getName(),
@@ -110,13 +107,6 @@ public class DevicePolicyServiceComponent {
                     "isDevicePolicyCompliant",
                     new DevicePolicyJsFunction());
 
-            OsVersionRegistry osVersionResolver = OsVersionRegistry.getInstance();
-            SymbolicValueResolverRegistry resolverRegistry = SymbolicValueResolverRegistry.getInstance();
-            resolverRegistry.register("androidOsVersion", osVersionResolver);
-            resolverRegistry.register("iosOsVersion", osVersionResolver);
-            resolverRegistry.register("macosOsVersion", osVersionResolver);
-            resolverRegistry.register("windowsOsVersion", osVersionResolver);
-
             startDeviceTokenJtiCleanup();
 
             LOG.debug("Device policy bundle activated.");
@@ -128,11 +118,6 @@ public class DevicePolicyServiceComponent {
     @Deactivate
     protected void deactivate(ComponentContext context) {
 
-        SymbolicValueResolverRegistry resolverRegistry = SymbolicValueResolverRegistry.getInstance();
-        resolverRegistry.deregister("androidOsVersion");
-        resolverRegistry.deregister("iosOsVersion");
-        resolverRegistry.deregister("macosOsVersion");
-        resolverRegistry.deregister("windowsOsVersion");
         if (deviceTokenJtiCleanupService != null) {
             deviceTokenJtiCleanupService.shutdown();
         }

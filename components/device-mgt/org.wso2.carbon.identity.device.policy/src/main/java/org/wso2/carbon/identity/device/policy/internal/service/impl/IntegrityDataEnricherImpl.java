@@ -24,8 +24,8 @@ import org.wso2.carbon.identity.client.attestation.mgt.exceptions.ClientAttestat
 import org.wso2.carbon.identity.client.attestation.mgt.model.ClientAttestationContext;
 import org.wso2.carbon.identity.client.attestation.mgt.services.ClientAttestationService;
 import org.wso2.carbon.identity.client.attestation.mgt.utils.Constants;
-import org.wso2.carbon.identity.device.policy.api.service.IntegrityDataEnricher;
 import org.wso2.carbon.identity.device.policy.internal.component.DevicePolicyComponentServiceHolder;
+import org.wso2.carbon.identity.device.policy.internal.service.IntegrityDataEnricher;
 import org.wso2.carbon.identity.device.policy.internal.util.DevicePolicyDiagnosticLogger;
 
 import java.util.List;

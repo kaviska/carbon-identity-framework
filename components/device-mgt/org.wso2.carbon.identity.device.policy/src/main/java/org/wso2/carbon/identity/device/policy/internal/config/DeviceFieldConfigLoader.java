@@ -23,6 +23,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.device.policy.api.constant.DevicePolicyErrorMessage;
+import org.wso2.carbon.identity.device.policy.internal.util.DevicePolicyExceptionHandler;
+import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementServerException;
 import org.wso2.carbon.utils.CarbonUtils;
 
 import java.io.File;
@@ -34,7 +37,7 @@ import java.util.List;
  * Loader for device-fields.json.
  * Must be initialised once at bundle activation via {@link #load()} before any call to
  * {@link #getInstance()}. If the config file is absent or unparseable, {@link #load()} throws
- * {@link DevicePolicyConfigException}, causing activation to fail loudly.
+ * {@link PolicyManagementServerException}, causing activation to fail loudly.
  */
 public class DeviceFieldConfigLoader {
 
@@ -56,14 +59,15 @@ public class DeviceFieldConfigLoader {
      * Loads device-fields.json from the IS config directory and initialises the singleton.
      * Must be called once from the OSGi component {@code @Activate} method.
      *
-     * @throws DevicePolicyConfigException If the file is absent or cannot be parsed.
+     * @throws PolicyManagementServerException If the file is absent or cannot be parsed.
      */
-    public static void load() throws DevicePolicyConfigException {
+    public static void load() throws PolicyManagementServerException {
 
         String filePath = CarbonUtils.getCarbonHome() + File.separator + CONFIG_PATH;
         File file = new File(filePath);
         if (!file.exists() || !file.isFile()) {
-            throw new DevicePolicyConfigException("device-fields.json not found at: " + file.getAbsolutePath());
+            throw DevicePolicyExceptionHandler.handleServerException(
+                    DevicePolicyErrorMessage.ERROR_DEVICE_FIELD_CONFIG_NOT_FOUND, file.getAbsolutePath());
         }
         try {
             ObjectMapper mapper = new ObjectMapper();
@@ -75,8 +79,8 @@ public class DeviceFieldConfigLoader {
                 LOG.debug("Loaded " + loaded.size() + " device field configs from: " + filePath);
             }
         } catch (IOException e) {
-            throw new DevicePolicyConfigException(
-                    "Failed to parse device-fields.json from: " + filePath, e);
+            throw DevicePolicyExceptionHandler.handleServerException(
+                    DevicePolicyErrorMessage.ERROR_DEVICE_FIELD_CONFIG_PARSE_FAILED, e, filePath);
         }
     }
 

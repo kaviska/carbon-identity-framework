@@ -16,7 +16,7 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.device.policy.api.service;
+package org.wso2.carbon.identity.device.policy.internal.service;
 
 import java.util.Map;
 

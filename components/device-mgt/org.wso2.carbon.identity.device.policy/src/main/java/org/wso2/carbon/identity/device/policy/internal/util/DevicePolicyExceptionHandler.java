@@ -59,6 +59,19 @@ public class DevicePolicyExceptionHandler {
     }
 
     /**
+     * Builds a server exception from a device policy error message.
+     */
+    public static PolicyManagementServerException handleServerException(DevicePolicyErrorMessage error,
+                                                                        String... data) {
+
+        String description = error.getDescription();
+        if (ArrayUtils.isNotEmpty(data)) {
+            description = String.format(description, (Object[]) data);
+        }
+        return new PolicyManagementServerException(error.getMessage(), description, error.getCode());
+    }
+
+    /**
      * Builds a server exception with a cause from a device policy error message.
      */
     public static PolicyManagementServerException handleServerException(DevicePolicyErrorMessage error, Throwable e,

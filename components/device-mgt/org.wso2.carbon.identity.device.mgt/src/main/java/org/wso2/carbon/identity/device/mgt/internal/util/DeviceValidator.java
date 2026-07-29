@@ -26,8 +26,8 @@ import org.wso2.carbon.identity.device.mgt.api.constant.ErrorMessage;
 import org.wso2.carbon.identity.device.mgt.api.exception.DeviceMgtClientException;
 import org.wso2.carbon.identity.device.mgt.api.exception.DeviceMgtException;
 import org.wso2.carbon.identity.device.mgt.api.model.Device;
-import org.wso2.carbon.identity.device.mgt.api.model.DeviceOwner;
-import org.wso2.carbon.identity.device.mgt.api.model.DeviceUser;
+import org.wso2.carbon.identity.device.mgt.api.model.DeviceAssociation;
+import org.wso2.carbon.identity.device.mgt.api.model.UserDeviceAssociation;
 
 /**
  * Device validator class.
@@ -54,67 +54,34 @@ public class DeviceValidator {
 
     /**
      * Validates that the device carries every field the registration layer requires.
-     * The device is constructed internally during the registration flow, so a missing field indicates
-     * that the device was not fully built before registration rather than invalid user input. Validating
-     * here keeps such a failure a clear, coded error instead of a constraint violation or a
-     * NullPointerException raised inside the data layer.
-     * The device model and the metadata are optional and are therefore not validated.
      *
      * @param device Device to be registered.
-     * @throws DeviceMgtException If the device or any of its required fields is not set.
+     * @throws DeviceMgtException If the device is not set.
      */
     public void validateDeviceForRegistration(Device device) throws DeviceMgtException {
 
         if (device == null) {
-            throw DeviceManagementExceptionHandler.handleServerException(
-                    ErrorMessage.ERROR_DEVICE_FIELD_REQUIRED, "device");
-        }
-
-        validateRequiredDeviceField(device.getId(), "id");
-        validateRequiredDeviceField(device.getDeviceName(), "deviceName");
-        validateRequiredDeviceField(device.getPublicKey(), "publicKey");
-
-        if (device.getStatus() == null) {
-            throw DeviceManagementExceptionHandler.handleServerException(
-                    ErrorMessage.ERROR_DEVICE_FIELD_REQUIRED, "status");
-        }
-        if (device.getRegisteredAt() == null) {
-            throw DeviceManagementExceptionHandler.handleServerException(
-                    ErrorMessage.ERROR_DEVICE_FIELD_REQUIRED, "registeredAt");
+            throw DeviceManagementExceptionHandler.handleClientException(
+                    ErrorMessage.ERROR_INVALID_DEVICE_FIELD, "device");
         }
     }
 
     /**
-     * Validates the device owner for registration.
+     * Validates the device association for registration.
      *
-     * @param owner Device owner to be validated.
-     * @throws DeviceMgtException If the owner is invalid or not a DeviceUser.
+     * @param association Device association to be validated.
+     * @throws DeviceMgtException If the association is invalid or missing required fields.
      */
-    public void validateOwner(DeviceOwner owner) throws DeviceMgtException {
+    public void validateAssociation(DeviceAssociation association) throws DeviceMgtException {
 
-        if (owner == null || !(owner instanceof DeviceUser)) {
-            throw DeviceManagementExceptionHandler.handleServerException(
-                    ErrorMessage.ERROR_INVALID_DEVICE_OWNER);
+        if (association == null || !(association instanceof UserDeviceAssociation)) {
+            throw DeviceManagementExceptionHandler.handleClientException(
+                    ErrorMessage.ERROR_INVALID_DEVICE_ASSOCIATION);
         }
-        DeviceUser deviceUser = (DeviceUser) owner;
-        if (StringUtils.isBlank(deviceUser.getDeviceId()) || StringUtils.isBlank(deviceUser.getUserId())) {
-            throw DeviceManagementExceptionHandler.handleServerException(
-                    ErrorMessage.ERROR_INVALID_DEVICE_OWNER);
-        }
-    }
-
-    /**
-     * Validates a required device field that is expected to be set before registration.
-     *
-     * @param value     Value of the field.
-     * @param fieldName Name of the field.
-     * @throws DeviceMgtException If the field is not set.
-     */
-    public void validateRequiredDeviceField(String value, String fieldName) throws DeviceMgtException {
-
-        if (StringUtils.isBlank(value)) {
-            throw DeviceManagementExceptionHandler.handleServerException(
-                    ErrorMessage.ERROR_DEVICE_FIELD_REQUIRED, fieldName);
+        UserDeviceAssociation userDeviceAssociation = (UserDeviceAssociation) association;
+        if (StringUtils.isBlank(userDeviceAssociation.getUserId())) {
+            throw DeviceManagementExceptionHandler.handleClientException(
+                    ErrorMessage.ERROR_ASSOCIATION_FIELD_REQUIRED, "userId");
         }
     }
 

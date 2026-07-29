@@ -21,7 +21,6 @@ package org.wso2.carbon.identity.device.mgt.api.model;
 import org.apache.commons.lang.StringUtils;
 
 import java.sql.Timestamp;
-import java.time.Instant;
 
 /**
  * Immutable model for a registered device.
@@ -34,8 +33,6 @@ public class Device {
     private final String publicKey;
     private final Status status;
     private final Timestamp registeredAt;
-    private final String metadata;
-
     private Device(Builder builder) {
 
         this.id = builder.id;
@@ -44,7 +41,6 @@ public class Device {
         this.publicKey = builder.publicKey;
         this.status = builder.status;
         this.registeredAt = builder.registeredAt;
-        this.metadata = builder.metadata;
     }
 
     /**
@@ -108,16 +104,6 @@ public class Device {
     }
 
     /**
-     * Returns the metadata payload.
-     *
-     * @return Metadata string.
-     */
-    public String getMetadata() {
-
-        return metadata;
-    }
-
-    /**
      * Builder for {@link Device}.
      */
     public static class Builder {
@@ -128,7 +114,6 @@ public class Device {
         private String publicKey;
         private Status status = Status.ACTIVE;
         private Timestamp registeredAt;
-        private String metadata;
 
         /**
          * Creates an empty builder.
@@ -149,7 +134,6 @@ public class Device {
             this.publicKey = device.publicKey;
             this.status = device.status;
             this.registeredAt = device.registeredAt;
-            this.metadata = device.metadata;
         }
 
         /**
@@ -225,18 +209,6 @@ public class Device {
         }
 
         /**
-         * Sets metadata.
-         *
-         * @param metadata Metadata value.
-         * @return Builder instance.
-         */
-        public Builder metadata(String metadata) {
-
-            this.metadata = metadata;
-            return this;
-        }
-
-        /**
          * Builds a registered device instance after validating required fields.
          *
          * @return Registered device instance.
@@ -244,9 +216,6 @@ public class Device {
          */
         public Device build() {
 
-            if (StringUtils.isBlank(id)) {
-                throw new IllegalArgumentException("Device id cannot be null or blank.");
-            }
             if (StringUtils.isBlank(deviceName)) {
                 throw new IllegalArgumentException("Device name cannot be null or blank.");
             }
@@ -255,9 +224,6 @@ public class Device {
             }
             if (status == null) {
                 this.status = Status.ACTIVE;
-            }
-            if (registeredAt == null) {
-                this.registeredAt = Timestamp.from(Instant.now());
             }
 
             return new Device(this);

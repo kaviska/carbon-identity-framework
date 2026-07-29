@@ -30,8 +30,8 @@ import org.wso2.carbon.identity.core.util.JdbcUtils;
 import org.wso2.carbon.identity.device.mgt.api.constant.ErrorMessage;
 import org.wso2.carbon.identity.device.mgt.api.exception.DeviceMgtException;
 import org.wso2.carbon.identity.device.mgt.api.model.Device;
-import org.wso2.carbon.identity.device.mgt.api.model.DeviceOwner;
-import org.wso2.carbon.identity.device.mgt.api.model.DeviceUser;
+import org.wso2.carbon.identity.device.mgt.api.model.DeviceAssociation;
+import org.wso2.carbon.identity.device.mgt.api.model.UserDeviceAssociation;
 import org.wso2.carbon.identity.device.mgt.internal.constant.DeviceMgtSQLConstants;
 import org.wso2.carbon.identity.device.mgt.internal.dao.DeviceManagementDAO;
 import org.wso2.carbon.identity.device.mgt.internal.util.DeviceManagementExceptionHandler;
@@ -48,14 +48,14 @@ public class DeviceManagementDAOImpl implements DeviceManagementDAO {
     private static final Log LOG = LogFactory.getLog(DeviceManagementDAOImpl.class);
 
     @Override
-    public Device registerDevice(Device device, DeviceOwner owner, int tenantId)
+    public Device registerDevice(Device device, DeviceAssociation association, int tenantId)
             throws DeviceMgtException {
 
-        if (!(owner instanceof DeviceUser)) {
+        if (!(association instanceof UserDeviceAssociation)) {
             throw DeviceManagementExceptionHandler.handleServerException(
-                    ErrorMessage.ERROR_INVALID_DEVICE_OWNER);
+                    ErrorMessage.ERROR_INVALID_DEVICE_ASSOCIATION);
         }
-        DeviceUser deviceUser = (DeviceUser) owner;
+        UserDeviceAssociation userDeviceAssociation = (UserDeviceAssociation) association;
 
         NamedJdbcTemplate jdbcTemplate = new NamedJdbcTemplate(IdentityDatabaseUtil.getDataSource());
 
@@ -75,15 +75,16 @@ public class DeviceManagementDAOImpl implements DeviceManagementDAO {
                             preparedStatement.setObject(
                                     DeviceMgtSQLConstants.Column.REGISTERED_AT, device.getRegisteredAt());
                             preparedStatement.setInt(DeviceMgtSQLConstants.Column.TENANT_ID, tenantId);
-                            preparedStatement.setString(DeviceMgtSQLConstants.Column.METADATA, device.getMetadata());
                         },
                         device,
                         false);
                 template.executeInsert(
                         DeviceMgtSQLConstants.Query.ADD_USER_DEVICE,
                         preparedStatement -> {
-                            preparedStatement.setString(DeviceMgtSQLConstants.Column.DEVICE_ID, owner.getDeviceId());
-                            preparedStatement.setString(DeviceMgtSQLConstants.Column.USER_ID, deviceUser.getUserId());
+                            preparedStatement.setString(
+                                    DeviceMgtSQLConstants.Column.DEVICE_ID, association.getDeviceId());
+                            preparedStatement.setString(
+                                    DeviceMgtSQLConstants.Column.USER_ID, userDeviceAssociation.getUserId());
                             preparedStatement.setInt(DeviceMgtSQLConstants.Column.TENANT_ID, tenantId);
                         },
                         device,
@@ -93,7 +94,7 @@ public class DeviceManagementDAOImpl implements DeviceManagementDAO {
 
         } catch (TransactionException e) {
             throw DeviceManagementExceptionHandler.handleServerException(
-                    ErrorMessage.ERROR_WHILE_REGISTERING_DEVICE, e);
+                    ErrorMessage.ERROR_WHILE_REGISTERING_DEVICE, e, device.getId());
         }
 
         if (LOG.isDebugEnabled()) {
@@ -120,7 +121,6 @@ public class DeviceManagementDAOImpl implements DeviceManagementDAO {
                                     .status(Device.Status.valueOf(
                                             resultSet.getString(DeviceMgtSQLConstants.Column.STATUS)))
                                     .registeredAt(resultSet.getTimestamp(DeviceMgtSQLConstants.Column.REGISTERED_AT))
-                                    .metadata(resultSet.getString(DeviceMgtSQLConstants.Column.METADATA))
                                     .build(),
                             preparedStatement -> {
                                 preparedStatement.setString(DeviceMgtSQLConstants.Column.ID, deviceId);
@@ -129,7 +129,7 @@ public class DeviceManagementDAOImpl implements DeviceManagementDAO {
 
         } catch (TransactionException e) {
             throw DeviceManagementExceptionHandler.handleServerException(
-                    ErrorMessage.ERROR_WHILE_RETRIEVING_DEVICE, e);
+                    ErrorMessage.ERROR_WHILE_RETRIEVING_DEVICE, e, deviceId);
         }
     }
 
@@ -173,7 +173,6 @@ public class DeviceManagementDAOImpl implements DeviceManagementDAO {
                                     .status(Device.Status.valueOf(
                                             resultSet.getString(DeviceMgtSQLConstants.Column.STATUS)))
                                     .registeredAt(resultSet.getTimestamp(DeviceMgtSQLConstants.Column.REGISTERED_AT))
-                                    .metadata(resultSet.getString(DeviceMgtSQLConstants.Column.METADATA))
                                     .build(),
                             preparedStatement -> {
                                 preparedStatement.setInt(DeviceMgtSQLConstants.Column.TENANT_ID, tenantId);
@@ -325,7 +324,7 @@ public class DeviceManagementDAOImpl implements DeviceManagementDAO {
 
         } catch (TransactionException e) {
             throw DeviceManagementExceptionHandler.handleServerException(
-                    ErrorMessage.ERROR_WHILE_UPDATING_DEVICE, e);
+                    ErrorMessage.ERROR_WHILE_UPDATING_DEVICE, e, deviceId);
         }
 
         if (LOG.isDebugEnabled()) {
@@ -355,7 +354,7 @@ public class DeviceManagementDAOImpl implements DeviceManagementDAO {
 
         } catch (TransactionException e) {
             throw DeviceManagementExceptionHandler.handleServerException(
-                    ErrorMessage.ERROR_WHILE_UPDATING_DEVICE, e);
+                    ErrorMessage.ERROR_WHILE_UPDATING_DEVICE, e, deviceId);
         }
 
         if (LOG.isDebugEnabled()) {
@@ -390,7 +389,7 @@ public class DeviceManagementDAOImpl implements DeviceManagementDAO {
 
         } catch (TransactionException e) {
             throw DeviceManagementExceptionHandler.handleServerException(
-                    ErrorMessage.ERROR_WHILE_DELETING_DEVICE, e);
+                    ErrorMessage.ERROR_WHILE_DELETING_DEVICE, e, deviceId);
         }
 
         if (LOG.isDebugEnabled()) {
@@ -399,32 +398,11 @@ public class DeviceManagementDAOImpl implements DeviceManagementDAO {
     }
 
     @Override
-    public List<String> getDeviceIdsByUserId(String userId, int tenantId) throws DeviceMgtException {
+    public List<Device> deleteDevicesByUserId(String userId, int tenantId) throws DeviceMgtException {
 
-        NamedJdbcTemplate jdbcTemplate = new NamedJdbcTemplate(IdentityDatabaseUtil.getDataSource());
-
-        try {
-            return jdbcTemplate.<List<String>, RuntimeException>withTransaction(
-                    template -> template.executeQuery(
-                            DeviceMgtSQLConstants.Query.GET_DEVICE_IDS_BY_USER,
-                            (resultSet, rowNumber) -> resultSet.getString(DeviceMgtSQLConstants.Column.DEVICE_ID),
-                            preparedStatement -> {
-                                preparedStatement.setString(DeviceMgtSQLConstants.Column.USER_ID, userId);
-                                preparedStatement.setInt(DeviceMgtSQLConstants.Column.TENANT_ID, tenantId);
-                            }));
-
-        } catch (TransactionException e) {
-            throw DeviceManagementExceptionHandler.handleServerException(
-                    ErrorMessage.ERROR_WHILE_RETRIEVING_DEVICE, e);
-        }
-    }
-
-    @Override
-    public void deleteDevicesByUserId(String userId, int tenantId) throws DeviceMgtException {
-
-        List<String> deviceIds = getDeviceIdsByUserId(userId, tenantId);
-        if (deviceIds.isEmpty()) {
-            return;
+        List<Device> devices = getDevicesByUserId(userId, tenantId, 0, Integer.MAX_VALUE);
+        if (devices.isEmpty()) {
+            return devices;
         }
 
         NamedJdbcTemplate jdbcTemplate = new NamedJdbcTemplate(IdentityDatabaseUtil.getDataSource());
@@ -437,11 +415,11 @@ public class DeviceManagementDAOImpl implements DeviceManagementDAO {
                             preparedStatement.setString(DeviceMgtSQLConstants.Column.USER_ID, userId);
                             preparedStatement.setInt(DeviceMgtSQLConstants.Column.TENANT_ID, tenantId);
                         });
-                for (String deviceId : deviceIds) {
+                for (Device device : devices) {
                     template.executeUpdate(
                             DeviceMgtSQLConstants.Query.DELETE_DEVICE,
                             preparedStatement -> {
-                                preparedStatement.setString(DeviceMgtSQLConstants.Column.ID, deviceId);
+                                preparedStatement.setString(DeviceMgtSQLConstants.Column.ID, device.getId());
                                 preparedStatement.setInt(DeviceMgtSQLConstants.Column.TENANT_ID, tenantId);
                             });
                 }
@@ -456,5 +434,6 @@ public class DeviceManagementDAOImpl implements DeviceManagementDAO {
         if (LOG.isDebugEnabled()) {
             LOG.debug("Devices deleted for user ID: " + userId + " in tenant: " + tenantId);
         }
+        return devices;
     }
 }

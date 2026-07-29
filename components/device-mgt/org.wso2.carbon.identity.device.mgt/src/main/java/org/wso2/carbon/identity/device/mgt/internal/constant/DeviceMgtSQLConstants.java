@@ -39,7 +39,6 @@ public final class DeviceMgtSQLConstants {
         public static final String PUBLIC_KEY = "PUBLIC_KEY";
         public static final String STATUS = "STATUS";
         public static final String REGISTERED_AT = "REGISTERED_AT";
-        public static final String METADATA = "METADATA";
         public static final String TENANT_ID = "TENANT_ID";
 
         public static final String LIMIT = "LIMIT";
@@ -59,9 +58,9 @@ public final class DeviceMgtSQLConstants {
         public static final String REGISTER_DEVICE =
                 "INSERT INTO IDN_DEVICE " +
                         "(ID, DEVICE_NAME, DEVICE_MODEL, PUBLIC_KEY, STATUS, REGISTERED_AT, " +
-                        "TENANT_ID, METADATA) " +
+                        "TENANT_ID) " +
                         "VALUES (:ID;, :DEVICE_NAME;, :DEVICE_MODEL;, :PUBLIC_KEY;, :STATUS;, " +
-                        ":REGISTERED_AT;, :TENANT_ID;, :METADATA;)";
+                        ":REGISTERED_AT;, :TENANT_ID;)";
 
         public static final String ADD_USER_DEVICE =
                 "INSERT INTO IDN_USER_DEVICE " +
@@ -70,18 +69,10 @@ public final class DeviceMgtSQLConstants {
 
         public static final String GET_DEVICE_BY_ID =
                 "SELECT D.ID, UD.USER_ID, D.DEVICE_NAME, D.DEVICE_MODEL, D.PUBLIC_KEY, D.STATUS, " +
-                        "D.REGISTERED_AT, D.METADATA, D.TENANT_ID " +
+                        "D.REGISTERED_AT, D.TENANT_ID " +
                         "FROM IDN_DEVICE D " +
                         "INNER JOIN IDN_USER_DEVICE UD ON D.ID = UD.DEVICE_ID AND D.TENANT_ID = UD.TENANT_ID " +
                         "WHERE D.ID = :ID; AND D.TENANT_ID = :TENANT_ID;";
-
-        public static final String GET_DEVICES_BY_USER_ID =
-                "SELECT D.ID, UD.USER_ID, D.DEVICE_NAME, D.DEVICE_MODEL, D.PUBLIC_KEY, D.STATUS, " +
-                        "D.REGISTERED_AT, D.METADATA, D.TENANT_ID " +
-                        "FROM IDN_DEVICE D " +
-                        "INNER JOIN IDN_USER_DEVICE UD ON D.ID = UD.DEVICE_ID AND D.TENANT_ID = UD.TENANT_ID " +
-                        "WHERE UD.USER_ID = :USER_ID; AND D.STATUS = 'ACTIVE' AND D.TENANT_ID = :TENANT_ID; " +
-                        "ORDER BY D.REGISTERED_AT DESC";
 
         public static final String UPDATE_DEVICE_NAME =
                 "UPDATE IDN_DEVICE SET DEVICE_NAME = :DEVICE_NAME; " +
@@ -97,7 +88,7 @@ public final class DeviceMgtSQLConstants {
         // Default: H2, MySQL, MariaDB, PostgreSQL.
         public static final String GET_ALL_DEVICES_PAGINATED =
                 "SELECT D.ID, UD.USER_ID, D.DEVICE_NAME, D.DEVICE_MODEL, D.PUBLIC_KEY, D.STATUS, " +
-                        "D.REGISTERED_AT, D.METADATA, D.TENANT_ID " +
+                        "D.REGISTERED_AT, D.TENANT_ID " +
                         "FROM IDN_DEVICE D " +
                         "INNER JOIN IDN_USER_DEVICE UD ON D.ID = UD.DEVICE_ID AND D.TENANT_ID = UD.TENANT_ID " +
                         "WHERE D.TENANT_ID = :TENANT_ID; ORDER BY D.REGISTERED_AT DESC, D.ID DESC " +
@@ -106,7 +97,7 @@ public final class DeviceMgtSQLConstants {
         // MS SQL Server.
         public static final String GET_ALL_DEVICES_PAGINATED_MSSQL =
                 "SELECT D.ID, UD.USER_ID, D.DEVICE_NAME, D.DEVICE_MODEL, D.PUBLIC_KEY, D.STATUS, " +
-                        "D.REGISTERED_AT, D.METADATA, D.TENANT_ID " +
+                        "D.REGISTERED_AT, D.TENANT_ID " +
                         "FROM IDN_DEVICE D " +
                         "INNER JOIN IDN_USER_DEVICE UD ON D.ID = UD.DEVICE_ID AND D.TENANT_ID = UD.TENANT_ID " +
                         "WHERE D.TENANT_ID = :TENANT_ID; ORDER BY D.REGISTERED_AT DESC, D.ID DESC " +
@@ -115,10 +106,10 @@ public final class DeviceMgtSQLConstants {
         // Oracle.
         public static final String GET_ALL_DEVICES_PAGINATED_ORACLE =
                 "SELECT ID, USER_ID, DEVICE_NAME, DEVICE_MODEL, PUBLIC_KEY, STATUS, REGISTERED_AT, " +
-                        "METADATA, TENANT_ID FROM (SELECT ID, USER_ID, DEVICE_NAME, DEVICE_MODEL, PUBLIC_KEY, " +
-                        "STATUS, REGISTERED_AT, METADATA, TENANT_ID, rownum AS rnum FROM " +
+                        "TENANT_ID FROM (SELECT ID, USER_ID, DEVICE_NAME, DEVICE_MODEL, PUBLIC_KEY, " +
+                        "STATUS, REGISTERED_AT, TENANT_ID, rownum AS rnum FROM " +
                         "(SELECT D.ID, UD.USER_ID, D.DEVICE_NAME, D.DEVICE_MODEL, D.PUBLIC_KEY, D.STATUS, " +
-                        "D.REGISTERED_AT, D.METADATA, D.TENANT_ID FROM IDN_DEVICE D " +
+                        "D.REGISTERED_AT, D.TENANT_ID FROM IDN_DEVICE D " +
                         "INNER JOIN IDN_USER_DEVICE UD ON D.ID = UD.DEVICE_ID AND D.TENANT_ID = UD.TENANT_ID " +
                         "WHERE D.TENANT_ID = :TENANT_ID; ORDER BY D.REGISTERED_AT DESC, D.ID DESC) " +
                         "WHERE rownum <= :UPPER_BOUND;) WHERE rnum > :OFFSET; ORDER BY rnum";
@@ -126,10 +117,10 @@ public final class DeviceMgtSQLConstants {
         // DB2.
         public static final String GET_ALL_DEVICES_PAGINATED_DB2 =
                 "SELECT ID, USER_ID, DEVICE_NAME, DEVICE_MODEL, PUBLIC_KEY, STATUS, REGISTERED_AT, " +
-                        "METADATA, TENANT_ID FROM (SELECT " +
+                        "TENANT_ID FROM (SELECT " +
                         "ROW_NUMBER() OVER(ORDER BY D.REGISTERED_AT DESC, D.ID DESC) AS rn, " +
                         "D.ID, UD.USER_ID, D.DEVICE_NAME, D.DEVICE_MODEL, D.PUBLIC_KEY, D.STATUS, " +
-                        "D.REGISTERED_AT, D.METADATA, D.TENANT_ID FROM IDN_DEVICE D " +
+                        "D.REGISTERED_AT, D.TENANT_ID FROM IDN_DEVICE D " +
                         "INNER JOIN IDN_USER_DEVICE UD ON D.ID = UD.DEVICE_ID AND D.TENANT_ID = UD.TENANT_ID " +
                         "WHERE D.TENANT_ID = :TENANT_ID;) WHERE rn BETWEEN :LOWER_BOUND; AND :UPPER_BOUND; " +
                         "ORDER BY rn";
@@ -145,7 +136,7 @@ public final class DeviceMgtSQLConstants {
         // Default: H2, MySQL, MariaDB, PostgreSQL.
         public static final String GET_ALL_DEVICES_PAGINATED_BY_USER =
                 "SELECT D.ID, UD.USER_ID, D.DEVICE_NAME, D.DEVICE_MODEL, D.PUBLIC_KEY, D.STATUS, " +
-                        "D.REGISTERED_AT, D.METADATA, D.TENANT_ID " +
+                        "D.REGISTERED_AT, D.TENANT_ID " +
                         "FROM IDN_DEVICE D " +
                         "INNER JOIN IDN_USER_DEVICE UD ON D.ID = UD.DEVICE_ID AND D.TENANT_ID = UD.TENANT_ID " +
                         "WHERE D.TENANT_ID = :TENANT_ID; AND UD.USER_ID = :USER_ID; " +
@@ -154,7 +145,7 @@ public final class DeviceMgtSQLConstants {
         // MS SQL Server.
         public static final String GET_ALL_DEVICES_PAGINATED_BY_USER_MSSQL =
                 "SELECT D.ID, UD.USER_ID, D.DEVICE_NAME, D.DEVICE_MODEL, D.PUBLIC_KEY, D.STATUS, " +
-                        "D.REGISTERED_AT, D.METADATA, D.TENANT_ID " +
+                        "D.REGISTERED_AT, D.TENANT_ID " +
                         "FROM IDN_DEVICE D " +
                         "INNER JOIN IDN_USER_DEVICE UD ON D.ID = UD.DEVICE_ID AND D.TENANT_ID = UD.TENANT_ID " +
                         "WHERE D.TENANT_ID = :TENANT_ID; AND UD.USER_ID = :USER_ID; " +
@@ -163,10 +154,10 @@ public final class DeviceMgtSQLConstants {
         // Oracle.
         public static final String GET_ALL_DEVICES_PAGINATED_BY_USER_ORACLE =
                 "SELECT ID, USER_ID, DEVICE_NAME, DEVICE_MODEL, PUBLIC_KEY, STATUS, REGISTERED_AT, " +
-                        "METADATA, TENANT_ID FROM (SELECT ID, USER_ID, DEVICE_NAME, DEVICE_MODEL, PUBLIC_KEY, " +
-                        "STATUS, REGISTERED_AT, METADATA, TENANT_ID, rownum AS rnum FROM " +
+                        "TENANT_ID FROM (SELECT ID, USER_ID, DEVICE_NAME, DEVICE_MODEL, PUBLIC_KEY, " +
+                        "STATUS, REGISTERED_AT, TENANT_ID, rownum AS rnum FROM " +
                         "(SELECT D.ID, UD.USER_ID, D.DEVICE_NAME, D.DEVICE_MODEL, D.PUBLIC_KEY, D.STATUS, " +
-                        "D.REGISTERED_AT, D.METADATA, D.TENANT_ID FROM IDN_DEVICE D " +
+                        "D.REGISTERED_AT, D.TENANT_ID FROM IDN_DEVICE D " +
                         "INNER JOIN IDN_USER_DEVICE UD ON D.ID = UD.DEVICE_ID AND D.TENANT_ID = UD.TENANT_ID " +
                         "WHERE D.TENANT_ID = :TENANT_ID; AND UD.USER_ID = :USER_ID; " +
                         "ORDER BY D.REGISTERED_AT DESC, D.ID DESC) " +
@@ -175,10 +166,10 @@ public final class DeviceMgtSQLConstants {
         // DB2.
         public static final String GET_ALL_DEVICES_PAGINATED_BY_USER_DB2 =
                 "SELECT ID, USER_ID, DEVICE_NAME, DEVICE_MODEL, PUBLIC_KEY, STATUS, REGISTERED_AT, " +
-                        "METADATA, TENANT_ID FROM (SELECT " +
+                        "TENANT_ID FROM (SELECT " +
                         "ROW_NUMBER() OVER(ORDER BY D.REGISTERED_AT DESC, D.ID DESC) AS rn, " +
                         "D.ID, UD.USER_ID, D.DEVICE_NAME, D.DEVICE_MODEL, D.PUBLIC_KEY, D.STATUS, " +
-                        "D.REGISTERED_AT, D.METADATA, D.TENANT_ID FROM IDN_DEVICE D " +
+                        "D.REGISTERED_AT, D.TENANT_ID FROM IDN_DEVICE D " +
                         "INNER JOIN IDN_USER_DEVICE UD ON D.ID = UD.DEVICE_ID AND D.TENANT_ID = UD.TENANT_ID " +
                         "WHERE D.TENANT_ID = :TENANT_ID; AND UD.USER_ID = :USER_ID;) " +
                         "WHERE rn BETWEEN :LOWER_BOUND; AND :UPPER_BOUND; ORDER BY rn";
@@ -196,18 +187,9 @@ public final class DeviceMgtSQLConstants {
                 "DELETE FROM IDN_DEVICE " +
                         "WHERE ID = :ID; AND TENANT_ID = :TENANT_ID;";
 
-        public static final String GET_DEVICE_IDS_BY_USER =
-                "SELECT DEVICE_ID FROM IDN_USER_DEVICE " +
-                        "WHERE USER_ID = :USER_ID; AND TENANT_ID = :TENANT_ID;";
-
         public static final String DELETE_USER_DEVICE_BY_USER_ID =
                 "DELETE FROM IDN_USER_DEVICE " +
                         "WHERE USER_ID = :USER_ID; AND TENANT_ID = :TENANT_ID;";
-
-        public static final String DELETE_DEVICES_BY_USER =
-                "DELETE FROM IDN_DEVICE WHERE ID IN " +
-                        "(SELECT DEVICE_ID FROM IDN_USER_DEVICE " +
-                        "WHERE USER_ID = :USER_ID; AND TENANT_ID = :TENANT_ID;)";
 
         private Query() {
         }

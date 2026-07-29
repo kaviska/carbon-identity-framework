@@ -18,15 +18,14 @@
 
 package org.wso2.carbon.identity.device.mgt.internal.service.impl;
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.device.mgt.api.constant.ErrorMessage;
 import org.wso2.carbon.identity.device.mgt.api.exception.DeviceMgtException;
 import org.wso2.carbon.identity.device.mgt.api.model.Device;
-import org.wso2.carbon.identity.device.mgt.api.model.DeviceOwner;
-import org.wso2.carbon.identity.device.mgt.api.model.DeviceUser;
+import org.wso2.carbon.identity.device.mgt.api.model.DeviceAssociation;
+import org.wso2.carbon.identity.device.mgt.api.model.UserDeviceAssociation;
 import org.wso2.carbon.identity.device.mgt.api.service.DeviceManagementService;
 import org.wso2.carbon.identity.device.mgt.internal.dao.DeviceManagementDAO;
 import org.wso2.carbon.identity.device.mgt.internal.dao.impl.CacheBackedDeviceManagementDAO;
@@ -35,7 +34,10 @@ import org.wso2.carbon.identity.device.mgt.internal.util.DeviceManagementAuditLo
 import org.wso2.carbon.identity.device.mgt.internal.util.DeviceManagementExceptionHandler;
 import org.wso2.carbon.identity.device.mgt.internal.util.DeviceValidator;
 
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Default implementation of {@link DeviceManagementService}.
@@ -68,19 +70,28 @@ public class DeviceManagementServiceImpl implements DeviceManagementService {
     }
 
     @Override
-    public Device registerDevice(Device device, DeviceOwner owner, String tenantDomain) throws DeviceMgtException {
+    public Device registerDevice(Device device, DeviceAssociation association, String tenantDomain)
+            throws DeviceMgtException {
 
         DEVICE_VALIDATOR.validateRequiredField(tenantDomain, FIELD_TENANT_DOMAIN);
         DEVICE_VALIDATOR.validateDeviceForRegistration(device);
-        DEVICE_VALIDATOR.validateOwner(owner);
-        if (!StringUtils.equals(owner.getDeviceId(), device.getId())) {
-            throw DeviceManagementExceptionHandler.handleServerException(
-                    ErrorMessage.ERROR_INVALID_DEVICE_OWNER);
-        }
-        Device registeredDevice = deviceManagementDAO.registerDevice(
-                device, owner, IdentityTenantUtil.getTenantId(tenantDomain));
+        DEVICE_VALIDATOR.validateAssociation(association);
 
-        String userId = ((DeviceUser) owner).getUserId();
+        String deviceId = UUID.randomUUID().toString();
+        Timestamp registeredAt = device.getRegisteredAt() != null
+                ? device.getRegisteredAt() : Timestamp.from(Instant.now());
+        device = new Device.Builder(device)
+                .id(deviceId)
+                .registeredAt(registeredAt)
+                .build();
+
+        UserDeviceAssociation userDeviceAssociation = (UserDeviceAssociation) association;
+        association = new UserDeviceAssociation(deviceId, userDeviceAssociation.getUserId());
+
+        Device registeredDevice = deviceManagementDAO.registerDevice(
+                device, association, IdentityTenantUtil.getTenantId(tenantDomain));
+
+        String userId = userDeviceAssociation.getUserId();
         AUDIT_LOGGER.printAuditLog(DeviceManagementAuditLogger.Operation.REGISTER,
                 registeredDevice != null ? registeredDevice : device, userId);
 

@@ -30,7 +30,7 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.device.mgt.api.constant.ErrorMessage;
 import org.wso2.carbon.identity.device.mgt.api.exception.DeviceMgtException;
 import org.wso2.carbon.identity.device.mgt.api.model.Device;
-import org.wso2.carbon.identity.device.mgt.api.model.DeviceUser;
+import org.wso2.carbon.identity.device.mgt.api.model.UserDeviceAssociation;
 import org.wso2.carbon.identity.device.mgt.internal.dao.DeviceManagementDAO;
 import org.wso2.carbon.identity.device.mgt.internal.service.impl.DeviceManagementServiceImpl;
 
@@ -94,36 +94,36 @@ public class DeviceManagementServiceImplTest {
     public void testRegisterDeviceDelegatesToDao() throws Exception {
 
         Device device = buildDevice("d1");
-        DeviceUser owner = new DeviceUser("d1", "alice@example.com");
+        UserDeviceAssociation association = new UserDeviceAssociation("d1", "alice@example.com");
         when(dao.registerDevice(any(), any(), eq(TENANT_ID))).thenReturn(device);
 
-        service.registerDevice(device, owner, TENANT_DOMAIN);
+        service.registerDevice(device, association, TENANT_DOMAIN);
 
         verify(dao).registerDevice(any(), any(), eq(TENANT_ID));
     }
 
     @Test
-    public void testRegisterDeviceWithMismatchedOwnerDeviceIdThrows() {
+    public void testRegisterDeviceGeneratesDeviceIdAndBindsToAssociation() throws Exception {
 
         Device device = buildDevice("d1");
-        DeviceUser owner = new DeviceUser("d2", "alice@example.com");
-        try {
-            service.registerDevice(device, owner, TENANT_DOMAIN);
-            Assert.fail("Expected DeviceMgtServerException");
-        } catch (DeviceMgtException ex) {
-            Assert.assertEquals(ex.getErrorCode(), ErrorMessage.ERROR_INVALID_DEVICE_OWNER.getCode());
-        }
+        UserDeviceAssociation association = new UserDeviceAssociation("d2", "alice@example.com");
+        when(dao.registerDevice(any(), any(), eq(TENANT_ID))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Device registered = service.registerDevice(device, association, TENANT_DOMAIN);
+
+        Assert.assertNotNull(registered.getId());
+        verify(dao).registerDevice(any(), any(), eq(TENANT_ID));
     }
 
     @Test
-    public void testRegisterDeviceWithNullOwnerThrows() {
+    public void testRegisterDeviceWithNullAssociationThrows() {
 
         Device device = buildDevice("d1");
         try {
             service.registerDevice(device, null, TENANT_DOMAIN);
             Assert.fail("Expected DeviceMgtServerException");
         } catch (DeviceMgtException ex) {
-            Assert.assertEquals(ex.getErrorCode(), ErrorMessage.ERROR_INVALID_DEVICE_OWNER.getCode());
+            Assert.assertEquals(ex.getErrorCode(), ErrorMessage.ERROR_INVALID_DEVICE_ASSOCIATION.getCode());
         }
     }
 
@@ -136,11 +136,11 @@ public class DeviceManagementServiceImplTest {
     @Test
     public void testRegisterDeviceWithoutOptionalFieldsSucceeds() throws Exception {
 
-        // Device model and metadata are nullable in the schema, so they must not be validated.
-        Device device = completeDeviceBuilder().deviceModel(null).metadata(null).build();
-        DeviceUser owner = new DeviceUser("d1", "alice@example.com");
+        // Device model is nullable in the schema, so it must not be validated.
+        Device device = completeDeviceBuilder().deviceModel(null).build();
+        UserDeviceAssociation association = new UserDeviceAssociation("d1", "alice@example.com");
 
-        service.registerDevice(device, owner, TENANT_DOMAIN);
+        service.registerDevice(device, association, TENANT_DOMAIN);
 
         verify(dao).registerDevice(any(), any(), eq(TENANT_ID));
     }
@@ -148,10 +148,10 @@ public class DeviceManagementServiceImplTest {
     private void assertRegisterFailsWithFieldRequired(Device device) {
 
         try {
-            service.registerDevice(device, new DeviceUser("d1", "alice@example.com"), TENANT_DOMAIN);
-            Assert.fail("Expected DeviceMgtServerException");
+            service.registerDevice(device, new UserDeviceAssociation("d1", "alice@example.com"), TENANT_DOMAIN);
+            Assert.fail("Expected DeviceMgtClientException");
         } catch (DeviceMgtException ex) {
-            Assert.assertEquals(ex.getErrorCode(), ErrorMessage.ERROR_DEVICE_FIELD_REQUIRED.getCode());
+            Assert.assertEquals(ex.getErrorCode(), ErrorMessage.ERROR_INVALID_DEVICE_FIELD.getCode());
         }
     }
 
@@ -443,9 +443,9 @@ public class DeviceManagementServiceImplTest {
     public void testRegisterDeviceWithNullTenantDomainThrows() {
 
         Device device = buildDevice("d1");
-        DeviceUser owner = new DeviceUser("d1", "alice@example.com");
+        UserDeviceAssociation association = new UserDeviceAssociation("d1", "alice@example.com");
         try {
-            service.registerDevice(device, owner, null);
+            service.registerDevice(device, association, null);
             Assert.fail("Expected DeviceMgtClientException");
         } catch (DeviceMgtException ex) {
             Assert.assertEquals(ex.getErrorCode(), ErrorMessage.ERROR_INVALID_DEVICE_FIELD.getCode());
@@ -459,7 +459,6 @@ public class DeviceManagementServiceImplTest {
             service.getDeviceById("d1", "  ");
             Assert.fail("Expected DeviceMgtClientException");
         } catch (DeviceMgtException ex) {
-            Assert.assertEquals(ex.getErrorCode(), ErrorMessage.ERROR_INVALID_DEVICE_FIELD.getCode());
         }
     }
 

@@ -27,21 +27,19 @@ public enum ErrorMessage {
             "No registered device found for the given device id: %s."),
     ERROR_INVALID_DEVICE_FIELD("DM-60002", "Invalid request.",
             "%s is empty or invalid."),
+    ERROR_ASSOCIATION_FIELD_REQUIRED("DM-60003", "Invalid device association.",
+            "%s field in device association is empty or invalid."),
 
     ERROR_WHILE_REGISTERING_DEVICE("DM-65001", "Error while registering device.",
-            "Error while registering device in the system."),
+            "Error while registering device with ID: %s in the system."),
     ERROR_WHILE_RETRIEVING_DEVICE("DM-65002", "Error while retrieving device.",
-            "Error while retrieving device from the system."),
+            "Error while retrieving device with ID: %s from the system."),
     ERROR_WHILE_UPDATING_DEVICE("DM-65003", "Error while updating device.",
-            "Error while updating device in the system."),
+            "Error while updating device with ID: %s in the system."),
     ERROR_WHILE_DELETING_DEVICE("DM-65004", "Error while deleting device.",
-            "Error while deleting device from the system."),
-    ERROR_USER_ID_REQUIRED("DM-65007", "User identifier required.",
-            "Cannot register device: a valid user identifier (userId) was not set before registration."),
-    ERROR_DEVICE_FIELD_REQUIRED("DM-65008", "Required device field missing.",
-            "Cannot register device: the required field '%s' was not set before registration."),
-    ERROR_INVALID_DEVICE_OWNER("DM-65009", "Invalid device owner.",
-            "Device owner must be a valid DeviceUser with matching device ID and non-blank user ID.");
+            "Error while deleting device with ID: %s from the system."),
+    ERROR_INVALID_DEVICE_ASSOCIATION("DM-65007", "Invalid device association.",
+            "Device association must be a valid UserDeviceAssociation with matching device ID and non-blank user ID.");
 
     private final String code;
     private final String message;

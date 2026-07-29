@@ -34,12 +34,10 @@ import org.wso2.carbon.identity.application.authentication.framework.device.Devi
 import org.wso2.carbon.identity.client.attestation.mgt.services.ClientAttestationService;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.device.mgt.api.service.DeviceManagementService;
-import org.wso2.carbon.identity.device.policy.api.exception.DevicePolicyServerException;
 import org.wso2.carbon.identity.device.policy.api.service.DeviceFieldMetadataService;
 import org.wso2.carbon.identity.device.policy.api.service.DevicePolicyEvaluator;
 import org.wso2.carbon.identity.device.policy.api.service.DeviceTokenVerifier;
 import org.wso2.carbon.identity.device.policy.internal.cleanup.DeviceTokenJtiCleanupService;
-import org.wso2.carbon.identity.device.policy.internal.config.DeviceFieldConfigLoader;
 import org.wso2.carbon.identity.device.policy.internal.js.DevicePolicyJsFunction;
 import org.wso2.carbon.identity.device.policy.internal.resolver.DeviceDataResolverImpl;
 import org.wso2.carbon.identity.device.policy.internal.rule.DevicePolicyEvaluationDataProvider;
@@ -74,13 +72,6 @@ public class DevicePolicyServiceComponent {
 
     @Activate
     protected void activate(ComponentContext context) {
-
-        try {
-            DeviceFieldConfigLoader.load();
-        } catch (DevicePolicyServerException e) {
-            throw new IllegalStateException(
-                    "Device policy config loading failed; bundle will not activate.", e);
-        }
 
         try {
             BundleContext bundleCtx = context.getBundleContext();

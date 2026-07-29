@@ -24,7 +24,7 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.device.DeviceDataResolver;
 import org.wso2.carbon.identity.device.policy.api.exception.DevicePolicyClientException;
 import org.wso2.carbon.identity.device.policy.api.exception.DevicePolicyException;
-import org.wso2.carbon.identity.device.policy.internal.jwt.DeviceTokenExtractor;
+import org.wso2.carbon.identity.device.policy.internal.util.DeviceTokenExtractor;
 
 import java.util.Map;
 import java.util.Optional;

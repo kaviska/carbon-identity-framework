@@ -16,7 +16,7 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.device.policy.internal.jwt;
+package org.wso2.carbon.identity.device.policy.internal.util;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.crypto.ECDSAVerifier;
@@ -34,9 +34,7 @@ import org.wso2.carbon.identity.device.policy.api.exception.DevicePolicyExceptio
 import org.wso2.carbon.identity.device.policy.api.exception.DevicePolicyServerException;
 import org.wso2.carbon.identity.device.policy.internal.component.DevicePolicyComponentServiceHolder;
 import org.wso2.carbon.identity.device.policy.internal.constant.DeviceTokenConstants;
-import org.wso2.carbon.identity.device.policy.internal.service.impl.DeviceTokenReplayService;
-import org.wso2.carbon.identity.device.policy.internal.util.DevicePolicyDiagnosticLogger;
-import org.wso2.carbon.identity.device.policy.internal.util.DevicePolicyExceptionHandler;
+import org.wso2.carbon.identity.device.policy.internal.service.impl.DeviceTokenReplayProtectionService;
 
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
@@ -60,7 +58,7 @@ public class DeviceTokenExtractor {
     private static final String DEVICE_ID_PARAM = "deviceId";
 
     private final DevicePolicyDiagnosticLogger diagnosticLogger = new DevicePolicyDiagnosticLogger();
-    private final DeviceTokenReplayService replayService = DeviceTokenReplayService.getInstance();
+    private final DeviceTokenReplayProtectionService replayService = DeviceTokenReplayProtectionService.getInstance();
 
     /**
      * Extracts verified device attributes from a raw JWT string.
@@ -228,7 +226,7 @@ public class DeviceTokenExtractor {
             byte[] keyBytes = Base64.getDecoder().decode(base64PublicKey);
             X509EncodedKeySpec keySpec = new X509EncodedKeySpec(keyBytes);
             return (ECPublicKey) KeyFactory.getInstance("EC").generatePublic(keySpec);
-        } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
+        } catch (IllegalArgumentException | NoSuchAlgorithmException | InvalidKeySpecException e) {
             throw DevicePolicyExceptionHandler.handleServerException(
                     DevicePolicyErrorMessage.ERROR_DEVICE_PUBLIC_KEY_DECODE_FAILED, e);
         }

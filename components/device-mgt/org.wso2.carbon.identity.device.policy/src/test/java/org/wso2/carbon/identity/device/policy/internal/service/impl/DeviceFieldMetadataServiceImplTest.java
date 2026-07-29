@@ -18,71 +18,87 @@
 
 package org.wso2.carbon.identity.device.policy.internal.service.impl;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.mockito.MockedStatic;
-import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
-import org.wso2.carbon.identity.device.policy.api.constant.DevicePolicyErrorMessage;
-import org.wso2.carbon.identity.device.policy.api.exception.DevicePolicyServerException;
-import org.wso2.carbon.identity.device.policy.internal.config.DeviceFieldConfigLoader;
+import org.wso2.carbon.identity.device.policy.api.model.Platform;
 
-import java.lang.reflect.Field;
+import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
-import static org.testng.Assert.assertTrue;
-import static org.testng.Assert.fail;
 
 public class DeviceFieldMetadataServiceImplTest {
 
-    @BeforeClass
-    public void setUpClass() {
+    @Test
+    public void testGetFieldsForAndroid() throws Exception {
 
-        System.setProperty("carbon.home", System.getProperty("user.dir") + "/src/test/resources");
+        DeviceFieldMetadataServiceImpl service = new DeviceFieldMetadataServiceImpl();
+        List<String> fields = service.getFieldsForPlatform(Platform.ANDROID);
+
+        List<String> expected = Arrays.asList(
+                "platform", "lockScreen", "androidOsVersion", "isRooted", "usbDebugging",
+                "hardwareKeystore", "biometric", "screenLockComplexity", "diskEncryption",
+                "networkProxies", "wifiNetworkSecurity", "androidIntegrity"
+        );
+        assertEquals(fields, expected);
     }
 
     @Test
-    public void testGetFieldApplicablePlatformsWhenNotLoaded() throws Exception {
-
-        // Ensure instance field is set to null via reflection
-        Field instanceField = DeviceFieldConfigLoader.class.getDeclaredField("instance");
-        instanceField.setAccessible(true);
-        DeviceFieldConfigLoader oldInstance = (DeviceFieldConfigLoader) instanceField.get(null);
-        instanceField.set(null, null);
+    public void testGetFieldsForIos() throws Exception {
 
         DeviceFieldMetadataServiceImpl service = new DeviceFieldMetadataServiceImpl();
+        List<String> fields = service.getFieldsForPlatform(Platform.IOS);
 
-        try {
-            service.getFieldApplicablePlatforms();
-            fail("Expected DevicePolicyServerException when loader is not initialized.");
-        } catch (DevicePolicyServerException e) {
-            assertEquals(e.getErrorCode(), DevicePolicyErrorMessage.ERROR_DEVICE_FIELD_CONFIG_NOT_LOADED.getCode());
-        } finally {
-            instanceField.set(null, oldInstance);
-        }
+        List<String> expected = Arrays.asList(
+                "platform", "lockScreen", "iosOsVersion", "iosIntegrity",
+                "passcode", "touchIdOrFaceId", "jailbreak"
+        );
+        assertEquals(fields, expected);
     }
 
     @Test
-    public void testGetFieldApplicablePlatformsSuccess() throws Exception {
-
-        Log mockLog = mock(Log.class);
-        when(mockLog.isDebugEnabled()).thenReturn(false);
-        try (MockedStatic<LogFactory> mockedLogFactory = mockStatic(LogFactory.class)) {
-            mockedLogFactory.when(() -> LogFactory.getLog(DeviceFieldConfigLoader.class)).thenReturn(mockLog);
-            DeviceFieldConfigLoader.load();
-        }
+    public void testGetFieldsForMacos() throws Exception {
 
         DeviceFieldMetadataServiceImpl service = new DeviceFieldMetadataServiceImpl();
-        Map<String, List<String>> result = service.getFieldApplicablePlatforms();
+        List<String> fields = service.getFieldsForPlatform(Platform.MACOS);
 
-        assertNotNull(result);
-        assertTrue(result.containsKey("device_model"));
-        assertEquals(result.get("device_model").size(), 2);
+        List<String> expected = Arrays.asList(
+                "platform", "lockScreen", "macosOsVersion", "diskEncryption", "secureEnclave"
+        );
+        assertEquals(fields, expected);
+    }
+
+    @Test
+    public void testGetFieldsForWindows() throws Exception {
+
+        DeviceFieldMetadataServiceImpl service = new DeviceFieldMetadataServiceImpl();
+        List<String> fields = service.getFieldsForPlatform(Platform.WINDOWS);
+
+        List<String> expected = Arrays.asList(
+                "platform", "lockScreen", "windowsOsVersion", "diskEncryption",
+                "windowsHello", "trustedPlatformModule"
+        );
+        assertEquals(fields, expected);
+    }
+
+    @Test
+    public void testGetFieldsForNullPlatform() throws Exception {
+
+        DeviceFieldMetadataServiceImpl service = new DeviceFieldMetadataServiceImpl();
+        List<String> fields = service.getFieldsForPlatform(null);
+
+        assertEquals(fields.size(), 22);
+    }
+
+    @Test
+    public void testGetSupportedPlatforms() {
+
+        DeviceFieldMetadataServiceImpl service = new DeviceFieldMetadataServiceImpl();
+        Set<Platform> supportedPlatforms = service.getSupportedPlatforms();
+
+        assertNotNull(supportedPlatforms);
+        assertEquals(supportedPlatforms, EnumSet.allOf(Platform.class));
     }
 }

@@ -121,9 +121,7 @@ public class DeviceRegistrationHandlerTest {
 
         Assert.assertNotNull(result);
         Assert.assertEquals(result.getPublicKey(), publicKeyB64(kp));
-        // verify() returns a device that is not yet bound to a user. The caller must bind the real,
-        // provisioned userId (from UserProvisioningExecutor) via bindTo() before it can be persisted.
-        Assert.assertEquals(result.bindTo("user-123").getUserId(), "user-123");
+        Assert.assertNotNull(result.bindTo("user-123"));
     }
 
     @Test

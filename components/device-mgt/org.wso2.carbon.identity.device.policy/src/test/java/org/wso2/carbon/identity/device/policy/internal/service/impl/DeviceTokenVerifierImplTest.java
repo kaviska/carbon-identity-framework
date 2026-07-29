@@ -21,7 +21,7 @@ package org.wso2.carbon.identity.device.policy.internal.service.impl;
 import org.mockito.MockedConstruction;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.device.policy.api.exception.DevicePolicyException;
-import org.wso2.carbon.identity.device.policy.internal.jwt.DeviceTokenExtractor;
+import org.wso2.carbon.identity.device.policy.internal.util.DeviceTokenExtractor;
 
 import java.util.HashMap;
 import java.util.Map;

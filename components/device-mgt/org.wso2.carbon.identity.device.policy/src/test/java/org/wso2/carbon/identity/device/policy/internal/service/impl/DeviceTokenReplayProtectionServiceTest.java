@@ -38,16 +38,16 @@ import static org.testng.Assert.fail;
 
 @WithH2Database(files = {"dbscripts/h2.sql"})
 @WithCarbonHome
-public class DeviceTokenReplayServiceTest {
+public class DeviceTokenReplayProtectionServiceTest {
 
-    private DeviceTokenReplayService deviceTokenReplayService;
+    private DeviceTokenReplayProtectionService deviceTokenReplayProtectionService;
     private MockedStatic<LoggerUtils> mockedLoggerUtils;
 
     @BeforeMethod
     public void setUp() {
         mockedLoggerUtils = mockStatic(LoggerUtils.class);
         mockedLoggerUtils.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(false);
-        deviceTokenReplayService = DeviceTokenReplayService.getInstance();
+        deviceTokenReplayProtectionService = DeviceTokenReplayProtectionService.getInstance();
     }
 
     @AfterMethod
@@ -60,7 +60,7 @@ public class DeviceTokenReplayServiceTest {
     @Test
     public void testGetInstance() {
 
-        assertNotNull(DeviceTokenReplayService.getInstance());
+        assertNotNull(DeviceTokenReplayProtectionService.getInstance());
     }
 
     @Test
@@ -71,10 +71,10 @@ public class DeviceTokenReplayServiceTest {
         String correlationId = "corr-1";
         Date iat = new Date();
 
-        deviceTokenReplayService.assertUnusedAndRecord(jti, iat, tenantId, correlationId);
+        deviceTokenReplayProtectionService.assertUnusedAndRecord(jti, iat, tenantId, correlationId);
 
         try {
-            deviceTokenReplayService.assertUnusedAndRecord(jti, iat, tenantId, correlationId);
+            deviceTokenReplayProtectionService.assertUnusedAndRecord(jti, iat, tenantId, correlationId);
             fail("Expected DevicePolicyClientException");
         } catch (DevicePolicyClientException e) {
             assertTrue(e.getErrorCode().equals(DevicePolicyErrorMessage.ERROR_DEVICE_TOKEN_REPLAYED.getCode()));
@@ -83,7 +83,7 @@ public class DeviceTokenReplayServiceTest {
 
     @Test
     public void testRemoveExpiredTokens() throws DevicePolicyException {
-        deviceTokenReplayService.removeExpiredTokens();
+        deviceTokenReplayProtectionService.removeExpiredTokens();
         assertTrue(true);
     }
 }

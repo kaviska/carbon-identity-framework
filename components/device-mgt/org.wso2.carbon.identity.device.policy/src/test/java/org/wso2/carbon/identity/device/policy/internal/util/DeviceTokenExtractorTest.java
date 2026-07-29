@@ -16,7 +16,7 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.device.policy.internal.jwt;
+package org.wso2.carbon.identity.device.policy.internal.util;
 
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
@@ -41,7 +41,7 @@ import org.wso2.carbon.identity.device.policy.api.exception.DevicePolicyExceptio
 import org.wso2.carbon.identity.device.policy.api.exception.DevicePolicyServerException;
 import org.wso2.carbon.identity.device.policy.internal.component.DevicePolicyComponentServiceHolder;
 import org.wso2.carbon.identity.device.policy.internal.constant.DeviceTokenConstants;
-import org.wso2.carbon.identity.device.policy.internal.service.impl.DeviceTokenReplayService;
+import org.wso2.carbon.identity.device.policy.internal.service.impl.DeviceTokenReplayProtectionService;
 
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -81,9 +81,9 @@ public class DeviceTokenExtractorTest {
 
     private DeviceTokenExtractor extractor;
     private MockedStatic<IdentityTenantUtil> mockedIdentityTenantUtil;
-    private MockedStatic<DeviceTokenReplayService> mockedReplayServiceStatic;
+    private MockedStatic<DeviceTokenReplayProtectionService> mockedReplayServiceStatic;
     private MockedStatic<LoggerUtils> mockedLoggerUtils;
-    private DeviceTokenReplayService replayServiceMock;
+    private DeviceTokenReplayProtectionService replayServiceMock;
     private DeviceManagementService deviceManagementServiceMock;
 
     private KeyPair keyPair;
@@ -99,9 +99,9 @@ public class DeviceTokenExtractorTest {
         mockedIdentityTenantUtil = mockStatic(IdentityTenantUtil.class);
         mockedIdentityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString())).thenReturn(TENANT_ID);
 
-        replayServiceMock = mock(DeviceTokenReplayService.class);
-        mockedReplayServiceStatic = mockStatic(DeviceTokenReplayService.class);
-        mockedReplayServiceStatic.when(DeviceTokenReplayService::getInstance).thenReturn(replayServiceMock);
+        replayServiceMock = mock(DeviceTokenReplayProtectionService.class);
+        mockedReplayServiceStatic = mockStatic(DeviceTokenReplayProtectionService.class);
+        mockedReplayServiceStatic.when(DeviceTokenReplayProtectionService::getInstance).thenReturn(replayServiceMock);
 
         deviceManagementServiceMock = mock(DeviceManagementService.class);
         DevicePolicyComponentServiceHolder.getInstance().setDeviceManagementService(deviceManagementServiceMock);

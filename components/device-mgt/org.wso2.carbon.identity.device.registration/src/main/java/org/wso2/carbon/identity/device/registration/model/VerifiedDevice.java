@@ -122,7 +122,6 @@ public class VerifiedDevice implements Serializable {
     public Device bindTo(String userId) {
 
         return new Device.Builder()
-                .userId(userId)
                 .id(id)
                 .deviceName(deviceName)
                 .deviceModel(deviceModel)

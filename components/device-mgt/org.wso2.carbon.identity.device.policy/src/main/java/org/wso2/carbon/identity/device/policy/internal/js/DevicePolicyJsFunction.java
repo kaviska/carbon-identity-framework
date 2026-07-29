@@ -25,6 +25,7 @@ import org.wso2.carbon.identity.application.authentication.framework.config.mode
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.device.policy.api.exception.DevicePolicyClientException;
 import org.wso2.carbon.identity.device.policy.api.exception.DevicePolicyException;
+import org.wso2.carbon.identity.device.policy.api.model.DevicePolicyEvaluationResult;
 import org.wso2.carbon.identity.device.policy.internal.component.DevicePolicyComponentServiceHolder;
 import org.wso2.carbon.identity.device.policy.internal.util.DevicePolicyDiagnosticLogger;
 
@@ -65,7 +66,21 @@ public class DevicePolicyJsFunction implements BiFunction<JsBaseAuthenticationCo
             String appId = context.getWrapped().getServiceProviderResourceId();
             DevicePolicyComponentServiceHolder holder = DevicePolicyComponentServiceHolder.getInstance();
 
-            return holder.getDevicePolicyEvaluator().evaluate(policyName, deviceData, appId, tenantDomain);
+            DevicePolicyEvaluationResult result =
+                    holder.getDevicePolicyEvaluator().evaluate(policyName, deviceData, appId, tenantDomain);
+
+            switch (result.getStatus()) {
+                case COMPLIANT:
+                    return null;
+                case NON_COMPLIANT:
+                    return String.join(", ", result.getFailedFields());
+                case INCOMPLETE_DEVICE_DATA:
+                    return String.join(", ", result.getMissingFields());
+                case POLICY_NOT_FOUND:
+                    return result.getPolicyName() + ":policy_not_found";
+                default:
+                    return null;
+            }
 
         } catch (DevicePolicyClientException e) {
             LOG.error("Error while evaluating device policy: " + policyName, e);
@@ -75,5 +90,4 @@ public class DevicePolicyJsFunction implements BiFunction<JsBaseAuthenticationCo
             return policyName + ":evaluation_error";
         }
     }
-
 }

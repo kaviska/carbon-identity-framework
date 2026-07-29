@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.device.policy.api.service;
 
 import org.wso2.carbon.identity.device.policy.api.exception.DevicePolicyException;
+import org.wso2.carbon.identity.device.policy.api.model.DevicePolicyEvaluationResult;
 
 import java.util.Map;
 
@@ -41,10 +42,10 @@ public interface DevicePolicyEvaluator {
      * @param deviceData   Mutable map of device field names to their values.
      * @param appId        App resource ID for loading credentials.
      * @param tenantDomain Tenant domain for policy lookup and evaluation.
-     * @return {@code null} if compliant, or a failure reason string if not.
+     * @return A {@link DevicePolicyEvaluationResult} representing the evaluation status and field details.
      * @throws DevicePolicyException If an error occurs during policy evaluation.
      */
-    String evaluate(String policyName, Map<String, Object> deviceData,
-                    String appId, String tenantDomain)
+    DevicePolicyEvaluationResult evaluate(String policyName, Map<String, Object> deviceData,
+                                           String appId, String tenantDomain)
             throws DevicePolicyException;
 }

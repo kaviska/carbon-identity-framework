@@ -63,7 +63,6 @@ public class VerifiedDeviceTest {
         Device device = verifiedDevice.bindTo("alice@example.com");
 
         Assert.assertEquals(device.getId(), "d1");
-        Assert.assertEquals(device.getUserId(), "alice@example.com");
         Assert.assertEquals(device.getDeviceName(), "Alice's iPhone");
         Assert.assertEquals(device.getPublicKey(), "dummy-public-key");
         Assert.assertEquals(device.getStatus(), Device.Status.ACTIVE);

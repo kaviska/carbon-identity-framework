@@ -26,7 +26,7 @@ import java.sql.Timestamp;
  * DAO for the device token replay store. Tracks accepted token identifiers (jti) so that a previously
  * seen device token cannot be replayed within its freshness window.
  */
-public interface DeviceTokenReplayDAO {
+public interface DeviceTokenJtiDAO {
 
     /**
      * Checks whether a device token with the given jti has already been accepted for the tenant.

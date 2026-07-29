@@ -24,8 +24,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.device.policy.api.constant.DevicePolicyErrorMessage;
+import org.wso2.carbon.identity.device.policy.api.exception.DevicePolicyServerException;
 import org.wso2.carbon.identity.device.policy.internal.util.DevicePolicyExceptionHandler;
-import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementServerException;
 import org.wso2.carbon.utils.CarbonUtils;
 
 import java.io.File;
@@ -37,7 +37,7 @@ import java.util.List;
  * Loader for device-fields.json.
  * Must be initialised once at bundle activation via {@link #load()} before any call to
  * {@link #getInstance()}. If the config file is absent or unparseable, {@link #load()} throws
- * {@link PolicyManagementServerException}, causing activation to fail loudly.
+ * {@link DevicePolicyServerException}, causing activation to fail loudly.
  */
 public class DeviceFieldConfigLoader {
 
@@ -59,9 +59,9 @@ public class DeviceFieldConfigLoader {
      * Loads device-fields.json from the IS config directory and initialises the singleton.
      * Must be called once from the OSGi component {@code @Activate} method.
      *
-     * @throws PolicyManagementServerException If the file is absent or cannot be parsed.
+     * @throws DevicePolicyServerException If the file is absent or cannot be parsed.
      */
-    public static void load() throws PolicyManagementServerException {
+    public static void load() throws DevicePolicyServerException {
 
         String filePath = CarbonUtils.getCarbonHome() + File.separator + CONFIG_PATH;
         File file = new File(filePath);

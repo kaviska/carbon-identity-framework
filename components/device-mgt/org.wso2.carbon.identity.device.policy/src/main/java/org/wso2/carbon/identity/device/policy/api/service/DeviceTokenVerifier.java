@@ -18,29 +18,32 @@
 
 package org.wso2.carbon.identity.device.policy.api.service;
 
-import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementException;
+import org.wso2.carbon.identity.device.policy.api.exception.DevicePolicyException;
 
 import java.util.Map;
 
 /**
- * Verifies a device-data JWT against a caller-supplied public key and returns the verified claims.
- * Used where trust in the key has already been established out of band (e.g. the device registration
- * executor, which verifies the key via the challenge signature) and the device is not yet persisted,
- * so a registry lookup is neither possible nor required.
+ * Verifies a device-data JWT against a caller-supplied public key and returns
+ * the verified claims. Used where trust in the key has already been
+ * established out of band (e.g. the device registration executor, which
+ * verifies the key via the challenge signature) and the device is not yet
+ * persisted, so a registry lookup is neither possible nor required.
  */
 public interface DeviceTokenVerifier {
 
     /**
-     * Verifies a device-data JWT signed with the given public key and returns its claims.
-     * Runs signature, {@code iat} freshness and {@code jti} single-use checks before the claims are trusted.
+     * Verifies a device-data JWT signed with the given public key and returns
+     * its claims. Runs signature, {@code iat} freshness and {@code jti}
+     * single-use checks before the claims are trusted.
      *
      * @param token           Raw JWT string carrying the device attributes.
-     * @param base64PublicKey Base64-encoded X.509 EC public key to verify the signature against.
-     * @param correlationId   Identifier used only for diagnostic correlation (e.g. the registrationId).
+     * @param base64PublicKey Base64-encoded X.509 EC public key to verify.
+     * @param correlationId   Identifier used only for diagnostic correlation.
      * @param tenantDomain    Tenant domain used for replay-store scoping.
-     * @return Map of device field names to their values from verified JWT claims.
-     * @throws PolicyManagementException If the token is invalid, stale, or replayed.
+     * @return Map of device field names to their values from verified JWT.
+     * @throws DevicePolicyException If the token is invalid or stale.
      */
-    Map<String, Object> verifyWithPublicKey(String token, String base64PublicKey, String correlationId,
-            String tenantDomain) throws PolicyManagementException;
+    Map<String, Object> verifyWithPublicKey(String token, String base64PublicKey,
+                                            String correlationId, String tenantDomain)
+            throws DevicePolicyException;
 }

@@ -18,9 +18,12 @@
 
 package org.wso2.carbon.identity.device.policy.internal.service.impl;
 
+import org.wso2.carbon.identity.device.policy.api.constant.DevicePolicyErrorMessage;
+import org.wso2.carbon.identity.device.policy.api.exception.DevicePolicyServerException;
 import org.wso2.carbon.identity.device.policy.api.service.DeviceFieldMetadataService;
 import org.wso2.carbon.identity.device.policy.internal.config.DeviceFieldConfig;
 import org.wso2.carbon.identity.device.policy.internal.config.DeviceFieldConfigLoader;
+import org.wso2.carbon.identity.device.policy.internal.util.DevicePolicyExceptionHandler;
 
 import java.util.HashMap;
 import java.util.List;
@@ -32,10 +35,16 @@ import java.util.Map;
 public class DeviceFieldMetadataServiceImpl implements DeviceFieldMetadataService {
 
     @Override
-    public Map<String, List<String>> getFieldApplicablePlatforms() {
+    public Map<String, List<String>> getFieldApplicablePlatforms() throws DevicePolicyServerException {
+
+        DeviceFieldConfigLoader loader = DeviceFieldConfigLoader.getInstance();
+        if (loader == null) {
+            throw DevicePolicyExceptionHandler.handleServerException(
+                    DevicePolicyErrorMessage.ERROR_DEVICE_FIELD_CONFIG_NOT_LOADED);
+        }
 
         Map<String, List<String>> result = new HashMap<>();
-        for (DeviceFieldConfig f : DeviceFieldConfigLoader.getInstance().getFields()) {
+        for (DeviceFieldConfig f : loader.getFields()) {
             if (!f.isUniversal()) {
                 result.put(f.getName(), f.getApplicablePlatforms());
             }

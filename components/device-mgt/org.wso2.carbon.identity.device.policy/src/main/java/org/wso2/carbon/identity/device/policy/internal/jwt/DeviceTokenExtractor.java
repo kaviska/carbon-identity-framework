@@ -30,13 +30,13 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.device.mgt.api.exception.DeviceMgtException;
 import org.wso2.carbon.identity.device.mgt.api.model.Device;
 import org.wso2.carbon.identity.device.policy.api.constant.DevicePolicyErrorMessage;
+import org.wso2.carbon.identity.device.policy.api.exception.DevicePolicyException;
+import org.wso2.carbon.identity.device.policy.api.exception.DevicePolicyServerException;
 import org.wso2.carbon.identity.device.policy.internal.component.DevicePolicyComponentServiceHolder;
 import org.wso2.carbon.identity.device.policy.internal.constant.DeviceTokenConstants;
 import org.wso2.carbon.identity.device.policy.internal.service.impl.DeviceTokenReplayService;
 import org.wso2.carbon.identity.device.policy.internal.util.DevicePolicyDiagnosticLogger;
 import org.wso2.carbon.identity.device.policy.internal.util.DevicePolicyExceptionHandler;
-import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementException;
-import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementServerException;
 
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
@@ -69,10 +69,10 @@ public class DeviceTokenExtractor {
      * @param token        Raw JWT string to parse and verify.
      * @param tenantDomain Tenant domain used for device lookup.
      * @return Map of device field names to their values from verified JWT claims.
-     * @throws PolicyManagementException If the token is invalid or signature verification fails.
+     * @throws DevicePolicyException If the token is invalid or signature verification fails.
      */
     public Map<String, Object> extractFromToken(String token, String tenantDomain)
-            throws PolicyManagementException {
+            throws DevicePolicyException {
 
         try {
             SignedJWT signedJWT = parseSignedJWT(token);
@@ -127,10 +127,10 @@ public class DeviceTokenExtractor {
      * @param correlationId   Identifier used only for diagnostic correlation (e.g. the registrationId).
      * @param tenantDomain    Tenant domain used for replay-store scoping.
      * @return Map of device field names to their values from verified JWT claims.
-     * @throws PolicyManagementException If the token is invalid, stale, or replayed.
+     * @throws DevicePolicyException If the token is invalid, stale, or replayed.
      */
     public Map<String, Object> extractWithPublicKey(String token, String base64PublicKey,
-            String correlationId, String tenantDomain) throws PolicyManagementException {
+            String correlationId, String tenantDomain) throws DevicePolicyException {
 
         try {
             SignedJWT signedJWT = parseSignedJWT(token);
@@ -149,7 +149,7 @@ public class DeviceTokenExtractor {
         }
     }
 
-    private SignedJWT parseSignedJWT(String token) throws PolicyManagementException, ParseException {
+    private SignedJWT parseSignedJWT(String token) throws DevicePolicyException, ParseException {
 
         JWT parsedJWT = JWTParser.parse(token);
         if (!(parsedJWT instanceof SignedJWT)) {
@@ -162,7 +162,7 @@ public class DeviceTokenExtractor {
 
     private Map<String, Object> verifyAndExtract(SignedJWT signedJWT, ECPublicKey publicKey,
             String correlationId, String tenantDomain)
-            throws PolicyManagementException, JOSEException, ParseException {
+            throws DevicePolicyException, JOSEException, ParseException {
 
         if (!signedJWT.verify(new ECDSAVerifier(publicKey))) {
             diagnosticLogger.logTokenValidationFailure(correlationId, "Device token signature is invalid.");
@@ -191,7 +191,7 @@ public class DeviceTokenExtractor {
     }
 
     private void verifyTokenFreshnessAndUniqueness(String correlationId, JWTClaimsSet claimsSet, int tenantId)
-            throws PolicyManagementException {
+            throws DevicePolicyException {
 
         String jti = claimsSet.getJWTID();
         if (jti == null || jti.trim().isEmpty()) {
@@ -222,7 +222,7 @@ public class DeviceTokenExtractor {
     }
 
     private ECPublicKey decodePublicKey(String base64PublicKey)
-            throws PolicyManagementServerException {
+            throws DevicePolicyServerException {
 
         try {
             byte[] keyBytes = Base64.getDecoder().decode(base64PublicKey);

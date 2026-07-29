@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.device.policy.api.service;
 
+import org.wso2.carbon.identity.device.policy.api.exception.DevicePolicyServerException;
+
 import java.util.List;
 import java.util.Map;
 
@@ -28,9 +30,17 @@ public interface DeviceFieldMetadataService {
 
     /**
      * Returns a map of field name to the list of platforms the field applies to.
-     * Fields that apply to all platforms are omitted from the map.
+     * Fields that apply to all platforms are omitted from the map, so a field absent from the map
+     * is applicable to every platform.
+     *
+     * <p>Consumed by the device policy REST API layer in the identity-api-server repository, which
+     * holds the authoritative DEVICE_POLICY field list from the rule metadata service and uses this
+     * map to filter that list down to a requested platform. The map is keyed by field name because
+     * the caller already has the field list and needs a per-field lookup rather than a per-platform
+     * one.
      *
      * @return map of field name -> applicable platforms.
+     * @throws DevicePolicyServerException If the field configuration is not loaded.
      */
-    Map<String, List<String>> getFieldApplicablePlatforms();
+    Map<String, List<String>> getFieldApplicablePlatforms() throws DevicePolicyServerException;
 }

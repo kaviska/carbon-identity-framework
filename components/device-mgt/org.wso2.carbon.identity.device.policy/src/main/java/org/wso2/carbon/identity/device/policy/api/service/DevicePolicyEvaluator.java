@@ -18,34 +18,33 @@
 
 package org.wso2.carbon.identity.device.policy.api.service;
 
-import org.wso2.carbon.identity.policy.evaluation.api.exception.PolicyEvaluationException;
-import org.wso2.carbon.identity.policy.management.api.exception.PolicyManagementException;
-import org.wso2.carbon.identity.rule.evaluation.api.exception.RuleEvaluationException;
+import org.wso2.carbon.identity.device.policy.api.exception.DevicePolicyException;
 
 import java.util.Map;
 
 /**
- * Evaluates device policy compliance against a named policy using device attribute data.
- * Enriches the device data with platform-verified integrity values before finding the rule for the
- * device's platform and evaluating it. If no rule is configured for the platform, the policy does
- * not restrict that platform and the device is treated as compliant.
+ * Evaluates device policy compliance against a named policy using device
+ * attribute data. Enriches the device data with platform-verified integrity
+ * values before finding the rule for the device's platform and evaluating it.
+ * If no rule is configured for the platform, the policy does not restrict
+ * that platform and the device is treated as compliant.
  */
 public interface DevicePolicyEvaluator {
 
     /**
-     * Evaluates device policy compliance for the given policy and device data. The device data is
-     * enriched with platform-verified integrity values internally before evaluation, so callers do
-     * not need to enrich it themselves.
+     * Evaluates device policy compliance for the given policy and device data.
+     * The device data is enriched with platform-verified integrity values
+     * internally before evaluation, so callers do not need to enrich it
+     * themselves.
      *
      * @param policyName   Name of the policy to evaluate against.
      * @param deviceData   Mutable map of device field names to their values.
-     * @param appId        Application resource ID for loading attestation credentials.
-     * @param tenantDomain Tenant domain for policy lookup and rule evaluation.
-     * @return {@code null} if the device is compliant, or a failure reason string if not.
-     * @throws PolicyManagementException If the policy cannot be retrieved.
-     * @throws RuleEvaluationException   If rule evaluation fails.
-     * @throws PolicyEvaluationException If policy evaluation fails.
+     * @param appId        App resource ID for loading credentials.
+     * @param tenantDomain Tenant domain for policy lookup and evaluation.
+     * @return {@code null} if compliant, or a failure reason string if not.
+     * @throws DevicePolicyException If an error occurs during policy evaluation.
      */
-    String evaluate(String policyName, Map<String, Object> deviceData, String appId, String tenantDomain)
-            throws PolicyManagementException, RuleEvaluationException, PolicyEvaluationException;
+    String evaluate(String policyName, Map<String, Object> deviceData,
+                    String appId, String tenantDomain)
+            throws DevicePolicyException;
 }
